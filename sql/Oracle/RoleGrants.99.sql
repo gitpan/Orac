@@ -3,29 +3,42 @@
 /* lomasky@earthlink.net */
 
 Declare
-cursor o_c is
-select grantee,owner,table_name,privilege,decode(grantable,'YES',' WITH GRANT OPTION;',';')
-from sys.dba_tab_privs
-where grantee like ?
-order by 2,3,1,4;
-cursor c_c is
-select grantee,owner,table_name,column_name,privilege,
-decode(grantable,'YES',' WITH GRANT OPTION;',';')
-from sys.dba_col_privs
-where grantee like ?
-order by 2,3,4,5,1;
-cursor s_c is
-select grantee,privilege,decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
-from sys.dba_sys_privs
-where grantee like ?
-order by 1,2;
-cursor r_c is
-select grantee,granted_role,decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
-from sys.dba_role_privs
-where grantee like ?
-order by 1,2;
-cursor p_c (c_user varchar2) is
-select password from sys.dba_users where username = c_user;
+--
+   cursor p_c (c_user varchar2) is
+      select password 
+      from sys.dba_users 
+      where username = c_user;
+--
+   cursor o_c (c_gen_role varchar2) is
+      select grantee,owner,table_name,privilege,decode(grantable,'YES',' WITH GRANT OPTION;',';')
+      from sys.dba_tab_privs
+      where grantee like c_gen_role
+      order by 2,3,1,4;
+--
+   cursor c_c (c_gen_role varchar2) is
+      select grantee,owner,table_name,column_name,privilege,
+      decode(grantable,'YES',' WITH GRANT OPTION;',';')
+      from sys.dba_col_privs
+      where grantee like c_gen_role
+      order by 2,3,4,5,1;
+--
+   cursor s_c (c_gen_role varchar2) is
+      select grantee,privilege,
+             decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
+      from sys.dba_sys_privs
+      where grantee like c_gen_role
+      order by 1,2;
+--
+   cursor r_c (c_gen_role varchar2) is
+      select grantee,granted_role,
+             decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
+      from sys.dba_role_privs
+      where grantee like c_gen_role
+      order by 1,2;
+--
+l_gen_role sys.dba_roles.role%TYPE;
+l_dummy sys.dba_roles.role%TYPE;
+--
 l_gt sys.dba_tab_privs.grantee%TYPE;
 l_on sys.dba_tab_privs.owner%TYPE;
 l_tn sys.dba_tab_privs.table_name%TYPE;
@@ -73,6 +86,8 @@ end if;
 end if;
 end wri;
 begin
+l_gen_role := ? ;
+l_dummy := ? ;
 a_lin := '';
 l_ln := 0;
 prev_grantee := '@';
@@ -83,7 +98,7 @@ prev_grantable := '';
 privs := '';
 a_lin := wri(a_lin,'rem *** Object Privileges ***',1);
 a_lin := '';
-open o_c;
+open o_c (l_gen_role);
 loop
 fetch o_c into l_gt,l_on,l_tn,l_pv,l_grntl;
 exit when o_c%NOTFOUND;
@@ -166,7 +181,7 @@ prev_table_name := '';
 prev_column_name := '';
 prev_grantable := '';
 privs := '';
-open c_c;
+open c_c (l_gen_role);
 loop
 fetch c_c into l_gt,l_on,l_tn,l_cn,l_pv,l_grntl;
 exit when c_c%NOTFOUND;
@@ -248,7 +263,7 @@ a_lin := '';
 a_lin := wri(a_lin,'connect system/xyzzy',1);
 prev_grantee := '@';
 prev_grantable := '';
-open s_c;
+open s_c (l_gen_role);
 loop
 fetch s_c into l_gt,l_pv,l_grntl;
 exit when s_c%NOTFOUND;
@@ -276,7 +291,7 @@ a_lin := wri(a_lin,'rem *** Role Privileges ***',1);
 a_lin := '';
 prev_grantee := '@';
 prev_grantable := '';
-open r_c;
+open r_c (l_gen_role);
 loop
 fetch r_c into l_gt,l_gnrole,l_grntl;
 exit when r_c%NOTFOUND;

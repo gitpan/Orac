@@ -45,7 +45,6 @@ db_info^Database Info^
 db_recr_sql^Database Recreation SQL^
 db_type^Database Type^
 dba_views^DBA Tables Viewer^
-quick_sql^Quick SQL Execution^
 dbish^GUI Dbish^
 dbwr^Database Writer^
 dbwr_io_rp^DBWR I/O Report^
@@ -175,6 +174,7 @@ procss_wts^Processes Experiencing Waits^
 profiles^Profiles^
 profiles_db^Profiles on Database^
 prov_sql^Provide SQL, indicate order, then^
+quick_sql^Quick SQL Execution^
 quots^Quotas^
 raw_db_sql^Raw Database Component SQL^
 rec_of^Record of^

@@ -1,8 +1,8 @@
 select /*+ ORDERED */
-s.sid,s.osuser,s.username,
-nvl(s.machine,' ? ') machine,
-nvl(s.program,' ? ') program,
-s.process Fground,p.spid Bground,X.sql_text
+s.sid "Sid",s.osuser "OS User",s.username "Username",
+nvl(s.machine,' ? ') "Machine",
+nvl(s.program,' ? ') "Program",
+s.process "Foreground",p.spid "Background",X.sql_text "SQL Text"
 from sys.v_$session S,
 sys.v_$process P,
 sys.v_$sqlarea X

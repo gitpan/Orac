@@ -1,12 +1,13 @@
 select /*+ ORDERED */
-s.sid,
-s.username,
-s.osuser,
-nvl(s.machine,'?') machine,
-nvl(s.program,'?') program,
-s.process FGrnd,
-p.spid BGrnd,
-X.sql_text
+s.username "Hold User",
+s.osuser "OS User",
+s.serial# "Ser#",
+s.sid "Sid",
+X.sql_text "SQL Text",
+nvl(s.program,'?') "Program",
+nvl(s.machine,'?') "Machine",
+s.process "Foreground Process",
+p.spid "Background Spid"
 from sys.v_$session S,
 sys.v_$process P,
 sys.v_$sqlarea X

@@ -1,14 +1,14 @@
-select substr(s1.username,1,12) "WAIT_User",
+select substr(s1.username,1,12) "Wait User",
 substr(s1.osuser,1,8) "OS User",
 s1.serial# "Ser#",
 substr(to_char(w.sid),1,5) "Sid",
-P1.spid "PID",
+P1.spid "Pid",
 '=>' "=>",
-substr(s2.username,1,12) "HOLD_User",
+substr(s2.username,1,12) "Hold User",
 substr(s2.osuser,1,8) "OS User",
 s2.serial# "Ser#",
 substr(to_char(h.sid),1,5) "Sid",
-P2.spid "PID"
+P2.spid "Pid"
 from sys.v_$process P1,sys.v_$process P2,
 sys.v_$session S1,sys.v_$session S2,
 sys.v_$lock w,sys.v_$lock h

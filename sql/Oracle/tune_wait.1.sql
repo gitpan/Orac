@@ -4,9 +4,9 @@
 /* This Book comes with a Five Star Orac Rating */
 
 select event "Event Name",
-total_waits "No of Waits",
-time_waited "Time Waited (secs)",
-average_wait "Avg Wait s*100"
+total_waits "Waits",
+time_waited "TimeWaited (s)",
+average_wait "AvgWait (s*100)"
 from v$system_event
 where event not in ('Null event','client message','smon timer',
 'rdbms ipc message','pmon timer','WMON goes to sleep',

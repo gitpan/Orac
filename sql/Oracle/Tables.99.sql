@@ -46,17 +46,6 @@ begin
    loop
       fetch ctc into ctr;
       exit when ctc%notfound;
-      if ? = 'Y' then
-         open csc (ctr.capown,ctr.captab);
-         fetch csc into csr;
-         if csc%found then
-            ctr.initial_extent := csr.bytes;
-            if ctr.next_extent > ctr.initial_extent then
-               ctr.next_extent := ctr.initial_extent;
-            end if;
-         end if;
-         close csc;
-      end if;
       dbms_output.put_line('create table '||ctr.capown||'.'||ctr.captab||' (');
       open ccc(ctr.capown,ctr.captab);
       loop
