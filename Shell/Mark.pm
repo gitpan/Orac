@@ -5,10 +5,11 @@
 package Shell::Mark;
 
 use strict;
+use Carp;
 
 use Exporter ();
 use vars qw(@ISA $VERSION);
-$VERSION = $VERSION = q{1.0};
+$VERSION = $VERSION = q{1.1};
 @ISA=('Exporter');
 
 
@@ -114,7 +115,7 @@ sub new {
    my $proto = shift;
    my $class = ref($proto) || $proto;
    my $self  = {
-       count => \$statement_count,
+       count => $statement_count,
       mark => undef,
     };
 
@@ -124,6 +125,23 @@ sub new {
 	 undef(%marks);
 
    return $self;
+}
+sub AUTOLOAD {
+	my $self = shift;
+	my $type = ref($self) || croak "$self is not an object";
+	use vars qw($AUTOLOAD);
+	my $option = $AUTOLOAD;
+	$option =~ s/.*:://;
+	
+	unless (exists $self->{$option}) {
+		croak "Can't access '$option' field in object of class $type";
+	}
+	if (@_) {
+		return $self->{$option} = shift;
+	} else {
+		return $self->{$option};
+	}
+	croak qq{This line shouldn't ever be seen}; #'
 }
 
 1;

@@ -3089,12 +3089,17 @@ sub tab_det_orac {
    my $sth = $self->{Database_conn}->prepare( $cm ) ||
                 die $self->{Database_conn}->errstr;
 
-   if($func eq 'tab_det_orac'){
-      my $i;
-      for ($i = 1;$i <= 6;$i++){
-         $sth->bind_param($i,$Block_Size);
-      }
-   }
+   # 3 jan 2000, Andre Seesink <Andre.Seesink@CreXX.nl>
+   # commented out, because we do not need this anymore
+   # the new tab_det_orac.1.sql does not need the blocksize anymore
+   #
+   #   if($func eq 'tab_det_orac'){
+   #      my $i;
+   #      for ($i = 1;$i <= 6;$i++){
+   #         $sth->bind_param($i,$Block_Size);
+   #      }
+   #   }
+
    $sth->execute;
 
    my $i = 1;
@@ -3127,10 +3132,14 @@ sub tab_det_orac {
      } else {
         ($T_Space,$Fname,$Total,$Used_Mg,$Free_Mg,$Use_Pct) = @res;
      }
-     if ((!defined($Used_Mg)) || (!defined($Use_Pct))){
-        $Used_Mg = 0.00;
-        $Use_Pct = 0.00;
-     }
+     # 3 jan 2000, Andre Seesink <Andre.Seesink@CreXX.nl>
+     # there will be no more variables undefined after we use the new 
+     # tab_det_orac.1.sql script
+     #
+     #     if ((!defined($Used_Mg)) || (!defined($Use_Pct))){
+     #        $Used_Mg = 0.00;
+     #        $Use_Pct = 0.00;
+     #     }
      $Grand_Total = $Grand_Total + $Total;
      $Grand_Used_Mg = $Grand_Used_Mg + $Used_Mg;
      if (defined($Free_Mg)){

@@ -32,20 +32,36 @@ functions.
 =cut
 
 # Pick up all the standard modules necessary to run the program
+# Make sure we have the minimal versions of Perl, DBI and Tk.
+# (thanks to Tom Lowery)
 
-use Tk;
+require 5.00502;
+use Tk '800.015';
+
+use FindBin;
+use lib $FindBin::RealBin;
+
+# Splash Screen
+
+main::splash_screen(0);
+
+# More requirements, and the rest of the code to be loaded
+# before the main loop.
+
+use DBI '1.13';
+$VERSION = '1.148';
+
+# Now enter strict mode
 use strict;
+
 use Carp;
 use FileHandle;
 use Cwd;
 use Time::Local;
-use DBI;
 use File::Copy;
 use File::Basename;
 # Thanks to Sean Kamath :-)
 use File::Spec;
-use FindBin;
-use lib $FindBin::RealBin;
 
 # A hunky clundgy kinda-of-a-thing
 # to handle screen resizing
@@ -76,8 +92,6 @@ $main::mw = MainWindow->new();
 main::read_language();
 
 # Some hard-coded defaults
-
-$main::orac_version = '1.1.44';
 
 $main::ssq = $main::lg{see_sql};
 
@@ -297,15 +311,25 @@ $main::balloon = $main::mw->Balloon(-statusbar => $balloon_status,
                                     -state => 'status',
                                    );
 
-# The Reconnection Button
+# The Orac Text Label
 
-my $b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/recon.gif");
+my $b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/s_splash.gif");
 
 my $b = $bb->Button(-image=>$b_image,
                     -command=>sub{main::bz();
-                                  main::get_db();
+                                  main::splash_screen(1);
                                   main::ubz()}
                    )->pack(side=>'left');
+
+# The Reconnection Button
+
+$b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/recon.gif");
+
+$b = $bb->Button(-image=>$b_image,
+                 -command=>sub{main::bz();
+                               main::get_db();
+                               main::ubz()}
+                )->pack(side=>'left');
 
 $main::balloon->attach($b, -msg => $main::lg{reconn});
 
@@ -468,7 +492,7 @@ $main::v_text->pack(-expand=>1,-fill=>'both');
 
 # Set main window title and set window icon
 
-$main::mw->title( "$main::lg{orac_pan} $main::orac_version" );
+$main::mw->title( "$main::lg{orac_pan} VERSION $main::VERSION" );
 main::iconize($main::mw);
 
 # Sort out which database we're going to be working with
@@ -488,6 +512,8 @@ if ((!defined($main::orac_curr_db_typ)) ||
 main::get_db();
 
 # Here we go, lights, cameras, action!
+
+main::destroy_splash();
 
 MainLoop();
 
@@ -619,7 +645,7 @@ sub get_connected {
          require db::orac_Oracle;
          $main::current_db = orac_Oracle->new( $main::mw,
                                                $main::v_text,
-                                               $main::orac_version );
+                                               $main::VERSION);
 
       }
       elsif($main::orac_curr_db_typ eq 'Informix'){
@@ -627,7 +653,7 @@ sub get_connected {
          require db::orac_Informix;
          $main::current_db = orac_Informix->new( $main::mw,
                                                  $main::v_text,
-                                                 $main::orac_version );
+                                                 $main::VERSION );
 
       }
       elsif($main::orac_curr_db_typ eq 'Sybase'){
@@ -635,7 +661,7 @@ sub get_connected {
          require db::orac_Sybase;
          $main::current_db = orac_Sybase->new( $main::mw,
                                                $main::v_text,
-                                               $main::orac_version );
+                                               $main::VERSION );
 
       }
       else {
@@ -644,7 +670,7 @@ sub get_connected {
             orac_Base->new( 'Base',
                             $main::mw,
                             $main::v_text,
-                            $main::orac_version );
+                            $main::VERSION );
 
       }
 
@@ -2652,6 +2678,43 @@ sub font_button_message {
 
    $$balloon_ref->attach($$font_button_ref, -msg => $message );
    return $font;
+}
+
+sub splash_screen {
+
+   my($please_destroy_flag) = @_;
+
+   $main::splash_screen = MainWindow->new();
+   $main::splash_screen->overrideredirect(1);
+
+   my $splash_image = 
+      $main::splash_screen->Photo(-file=>"$FindBin::RealBin/img/splash.gif");
+
+   Tk::wm($main::splash_screen, "geometry",
+          "+" . 
+          int(($main::splash_screen->screenwidth)/2 - 
+              ($splash_image->width)/2) .
+          "+" . 
+          int(($main::splash_screen->screenheight)/2 - 
+              ($splash_image->height)/2));
+   
+   my $splash_label = 
+      $main::splash_screen->Button( -image => $splash_image,
+                                  )->pack(-fill=>'both', -expand => 1);
+   Tk::update($main::splash_screen);
+
+   if($please_destroy_flag){
+      sleep 5;
+      main::destroy_splash();
+   }
+}
+
+sub destroy_splash {
+
+   if ($main::splash_screen) {
+      $main::splash_screen->destroy()
+   }
+
 }
 
 sub colour_menu {

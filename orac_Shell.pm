@@ -1,9 +1,10 @@
 #
-# vim: ts=2:sw=2:ai:aw
+# vim:ts=2:sw=2:ai:aw:tw=78
+#
 ################################################################################
 #
 # Orac DBI Visual Shell.
-# Versions 1.0.10
+# Versions 1.0.14
 #
 # Copyright (c) 1998,1999 Andy Duncan, Thomas A. Lowery
 #
@@ -31,14 +32,16 @@ package orac_Shell;
 	Shell::Format
 	Shell::Menu
 	Shell::Meta
+	Shell::Results
 };
 
 use Exporter;
 
 use Tk 800.014;
-use Tk::Pretty;
-use Tk::Dialog;
 use Tk::Adjuster;
+use Tk::Dialog;
+use Tk::Pretty;
+use Tk::Listbox;
 
 use Carp;
 
@@ -56,17 +59,19 @@ use Shell::Menu 1.0;
 use Shell::Meta 1.0;
 use Shell::Properties 1.0;
 use Shell::Options;
+use Shell::Results 1.0;
 
 use strict;
 
-my $VERSION;
-$VERSION = $VERSION = qq{1.0.10};
+use vars q($VERSION);
 
-my ($ind_txt);
-my (@ind_txt);
+$VERSION = $VERSION = qq{1.0.14};
+
 my ($entry_frm);
 my $_Dbistatus;
 my %rmarkers;
+
+my ($xc, $yc, @id);
 
 sub new
 {
@@ -285,6 +290,8 @@ sub dbish_open {
 	$self->print_error($self->dbh->{PrintError});
 	$self->raise_error($self->dbh->{RaiseError});
 		
+	# Tell the current statement handler where to find the entry window.
+	$self->current->entry($self->entry_txt);
 
    # Make the Main Window and icon.
         # Disable button, calling orac_Shell
@@ -294,8 +301,10 @@ sub dbish_open {
    $self->status("Window for Tk created.");
 
    # Last thing is focus on the entry box.
-   $self->entry_txt->focusForce();
-   $self->rslt_txt->configure( -state => 'disabled' );
+		$self->entry_txt->focusForce();
+		$self->entry_txt->insert( '1.0', "", q{Indent} );
+		#$self->tag_entry( q{Indent}, '1.0', 'end' );
+		$self->rslt_txt->configure( -state => 'disabled' );
 
 }
 
@@ -328,14 +337,6 @@ sub buttons_configure {
 	}
 	return undef;
 }
-
-my ($curx);
-sub where_am_i {
-   my ($self, $x, $y, $txt ) = @_;
-   $curx = $x;
-   $self->entry_txt->focus();
-
-};
 
 sub new_entry {
 	my ($self, $x) = @_;
@@ -383,30 +384,18 @@ sub new_entry {
 
    my $ysb = $s->Subwidget( "yscrollbar" );
 
-   $ind_txt = $s->Text( 
-	 	-width => 0,
-		-state => 'normal',
-		-borderwidth => 0,
-		); 
    my ($this,$last);
    $this = $last = 0;
    my $ss = sub {
       $s->Subwidget( "yscrollbar" )->set(@_);
       $this = $s->Subwidget( "yscrollbar" )->get();
-      if ($this < $last) {
-         $ind_txt->yview("scroll", -1, "units" );
-      } else {
-         $ind_txt->yview("scroll", 1, "units" );
-      }
-
       $last = $this;
-
    };
 
 
    $self->entry_txt($s->Text( # 'Text',
       -relief => 'groove',
-      -width => 74,
+      -width => 78,
       # -height => 3,
       -cursor=>undef,
       -foreground=>$main::fc,
@@ -414,36 +403,35 @@ sub new_entry {
       -yscrollcommand => $ss,
 			-font=>$main::font{name},
 			-borderwidth => 0,
+			-wrap => "word",
 			-setgrid => 1,
+			-spacing1 => 0,
    ));
 
 	my $sc = sub {
       $self->entry_txt->yview(@_);
-      #$ind_txt->yview(@_);
 	};
 
 	$ysb->configure( -command => $sc );
 
 
-	#$ind_txt->pack( 
-		#-side => 'left',
-		#-pady => 1,
-		#-expand => 0,
-		#-fill => 'both',
-	#);
 	$self->entry_txt->pack(
 		-side => 'left',
-		-pady => 1,
+		-padx => 0,
+		-pady => 0,
 		-expand => 1,
 		-fill => 'both',
 	);
 	$self->rslt_txt->pack( -expand=>1, -fill=>'both', -side => 'top' );
-	$ind_txt->configure( -state => 'disabled', );
 
-	# Pick up the Return key ... see return_press.
-	$self->entry_txt->bind( "<Return>", sub { $self->return_press() } );
+	# Pick up the Return key ... see key_return.
+	$self->entry_txt->bind( "<Return>", sub { $self->key_return() } );
+	$self->entry_txt->bind( "<Delete>", sub { $self->key_del() } );
+	$self->entry_txt->bind( "<BackSpace>", sub { $self->key_del() } );
+	#$self->entry_txt->bind( "<Key>", [ sub { print "Key: $_[1]\n"; }, Ev('K') ] );
 	$self->entry_txt->tagConfigure( "Exec",  -foreground => "green" );
 	$self->entry_txt->tagConfigure( "Error",  -foreground => "red" );
+	$self->entry_txt->tagConfigure( "Indent",  -lmargin1 => 10, -lmargin2 => 10 );
 
 	# Tags for the results window.
 	$self->rslt_txt->tagConfigure( "Bold", -background => "white" );
@@ -532,10 +520,7 @@ sub raise_error {
 sub commit {
 	my $self = shift;
 	$self->dbh->commit;
-	$self->rslt_txt->configure( -state => q{normal} );
-	print RSLT_TXT qq{\nCommitted!\n};
-	$self->rslt_txt->see(q{end});
-	$self->rslt_txt->configure( -state => q{disabled} );
+	return $self->write_results( qq{Committed}, q{end}, 1);
 }
 
 #
@@ -544,10 +529,7 @@ sub commit {
 sub rollback {
 	my $self = shift;
 	$self->dbh->rollback;
-	$self->rslt_txt->configure( -state => q{normal} );
-	print RSLT_TXT qq{\nRolled Back!\n};
-	$self->rslt_txt->see(q{end});
-	$self->rslt_txt->configure( -state => q{disabled} );
+	return $self->write_results( qq{Rolled back}, q{end}, 1);
 }
 
 #
@@ -555,121 +537,65 @@ sub rollback {
 # button, if the only character on a line is /, execute the above
 # statement.
 #
-sub return_press {
-   my $self = shift;
 
-   # Determine where the cursor is.
-   my $ind = $self->entry_txt->index( 'insert - 1 lines lineend' );
+my $t_lngth = 2;
 
-   # Grab the last line of text.
-   my $txt = $self->entry_txt->get( "$ind - 1 chars" , "$ind" );
-   chomp $txt;
+sub key_return {
+	my $self = shift;
+	# If the autoexec is off, just continue.
+	#$self->tag_entry( q{Indent}, '1.0', 'end' );
+	return unless $self->options->autoexec;
+	my $ind = $self->entry_txt->index( 'insert - 1 lines lineend' );
+	# Grab the last line of text.
+	my $txt = $self->entry_txt->get( "$ind - 1 chars" , "$ind" );
 
-	# The previously entered line is only a /, exeucte.
-	if ($txt =~ m:[/;]$: and $self->options->autoexec) {
+	my $term = $self->options->statement_term . q{$};
 
+	# If the pattern matchs, execute.
+	if ($txt =~ m:$term:o) {
 		$self->doit( $ind );
+	}
 
-	} 
+	return;
 }
 
-sub check_ind_txt {
+
+sub key_del {
+	my ($self, $pl) = @_;
+}
+
+sub key_bs {
    my ($self, $pl) = @_;
-
-   if ($ind_txt->compare( 'end', "<=", "$pl.0" ) ) {
-      $ind_txt->insert( 'end', "\n" );
-   }
+	 #print STDERR qq{BackSpace key: },
+	 #$self->entry_txt->index( q{current} ), q{ },
+		#$self->entry_txt->index( q{insert} ), q{ },
+		#$self->entry_txt->index( q{end linestart} ),
+		#qq{\n};
+	$t_lngth = int($self->entry_txt->index( q{end} ));
 }
+
 
 #
 # Tag Statement Errored: The statement failed to execute.
 #
 
-sub tag_statement_errored {
-	my ($self, $beg, $end) = @_;
+sub tag_entry {
+	my ($self, $tag_lbl, $beg, $end) = @_;
+	return undef unless $tag_lbl;
 	$beg = $self->current->beg unless $beg;
 	$end = $self->current->end unless $end;
-	$self->entry_txt->tagAdd( 'Error', $beg, $end );
-	$self->marks->remove($self->current->stat_num);
+	$self->entry_txt->tagAdd( $tag_lbl, $beg, $end );
+	return;
 }
 
-sub untag_statement_errored {
-	my ($self, $beg, $end) = @_;
-
+sub untag_entry {
+	my ($self, $tag_lbl, $beg, $end) = @_;
+	return undef unless $tag_lbl;
 	$beg = $self->current->beg unless $beg;
 	$end = $self->current->end unless $end;
+	$self->entry_txt->tagRemove( $tag_lbl, $beg, $end );
+	return;
 
-	$self->entry_txt->tagRemove( 'Error', $beg, $end );
-}
-
-#
-# Create the results button next to the statement
-# executed.  The results button is only created, if
-# one does not currently exist.
-#
-
-sub create_results_btn {
-	my ($self, $bl) = @_;
-	$bl = $self->current->stat_num unless $bl;
-	if (!$self->current->is_marked) {
-		return $self->set_results_btn($bl);
-	}
-	return 0;
-}
-# 
-# Determine where the markers go
-#
-
-
-sub set_results_btn {
-	my ($self, $c, $inx ) = @_;
-
-	$c = $self->current->stat_num unless $c;
-
-	# Enable the ind widget to accept the line number.
-	$ind_txt->configure( -state => 'normal' );
-
-	 # Round off the current
-   my $pl = int( 
-	 	$self->entry_txt->index( $self->marks->get_mark_beg($c)) + .99 );
-
-   $self->check_ind_txt($pl);
-
-   # Add just a line place for statement marker.
-   # Using closure witht the button, instead of a subroutine.
-   # see Advanced Perl Programming p60.
-   my $mv_to_res = sub { 
-      $self->move_to_results( $c )
-   };
-
-
-	$rmarkers{$c} = $self->entry_txt->Button( # -text => '',
-         -image => $self->icon(q{checkmark}),
-         #-background=>$main::bc,
-         -justify => 'center',
-         -height => 8,
-         -width => 8,
-         -highlightthickness => 1,
-         -relief => 'raised',
-				 -command => $mv_to_res,
-      );
-
-	$self->bind_message( $rmarkers{$c}, q{Scroll results window to statement results.} );
-
-	$self->entry_txt->windowCreate( "$pl.0", -window => $rmarkers{$c} );
-	$self->entry_txt->insert( "$pl.1", " " );
-
-	$ind_txt->configure( -state => 'disabled' );
-}
-
-#
-# Set the current buffer to null (undefined)
-#
-sub clear_current_buffer {
-	my $self = shift;
-	foreach (keys %{$self->current}) {
-		$self->current->$_(undef);
-	}
 }
 
 sub get_all_text_buffer {
@@ -677,71 +603,6 @@ sub get_all_text_buffer {
 	$cinx = q{end} unless $cinx;
 	return $self->entry_txt->get(q{1.0}, $cinx);
 }
-
-#
-# Get the current buffer text.
-#
-
-sub get_current_buffer {
-   my ($self, $cinx) = @_;
-   my $stinx;
-
-	 # First, clear the current buffer.
-	 $self->clear_current_buffer();
-
-	 $cinx = 'insert' unless $cinx;
-	 # Determine where we are.
-   $self->current->cmark($self->entry_txt->index( $cinx ));
-
-	 # Search the statement.
-   my $inx = $self->entry_txt->search( 
-      -backwards, 
-      -regexp, 
-      '[;/]$', #',
-      $stinx = $self->entry_txt->index( "$cinx - 2 chars"),
-      "1.0",
-   );
-
-   # The buffer could have more than one statement in it.
-   # Find the last statement. Look for the new statement on
-   # the next line.
-   $self->current->beg("1.0");
-   if (defined $inx and length($inx) > 0) {
-      # Convert the index to something more usable.
-      $self->current->beg( $self->entry_txt->index("$inx + 1 chars")); 
-   } 
-
-	 # Get the current statement.
-   $self->current->statement($self->entry_txt->get( $self->current->beg, $self->current->cmark));
-   $self->entry_txt->tagAdd( 'Exec', $self->current->beg, $self->current->cmark );
-
-	$self->current->end($self->current->cmark);
-   #
-   # The statement determined, now set the begin and end marks.
-   #
-
-   my $marks = $self->marks;
-   my $cc = $marks->is_marked($self->current->beg);
-
-
-   if (not defined($cc)) {
-      $cc = $marks->mark( $self->current->beg, $self->current->cmark );
-			$self->current->stat_num($cc);
-      $self->entry_txt->markSet( $marks->get_mark_beg($cc),
-			$marks->get_beg($cc) );
-      $self->entry_txt->markGravity( $marks->get_mark_beg($cc), "left" );
-			$self->current->is_marked(0);
-   } else {
-      # Statement is marked already, update the index information.
-      $marks->set_mark_beg($cc,$self->current->beg);
-      $marks->set_mark_end($cc,$self->current->cmark);
-			$self->current->stat_num($cc);
-			$self->current->is_marked(1);
-   }
-
-   $cc;
-}
-
 
 sub bind_message {
    my $self = shift;
@@ -801,13 +662,6 @@ sub clear_all {
 	# Clear the entry window.
 	$self->clear_entry;
 
-	# Clear the indicator window.
-	#$ind_txt->configure( -state => 'normal' );
-	#$ind_txt->delete( "1.0", 'end' );
-	#$ind_txt->configure( -state => 'disabled' );
-
-	# Release the marks structure and rebuild the object.
-
 	return;
 }
    
@@ -823,12 +677,12 @@ sub tba {
 #
 sub move_to_results {
    my ($self, $c) = @_;
-	if( $self->{rslt_txt}->tagRanges( "Bold" ) ) {
-		$self->{rslt_txt}->tagRemove( 'Bold', $self->{rslt_txt}->tagRanges( "Bold" ) );
+	if( $self->rslt_txt->tagRanges( "Bold" ) ) {
+		$self->rslt_txt->tagRemove( 'Bold', $self->rslt_txt->tagRanges( "Bold" ) );
 	}
-	 my $rslt_inx =$self->{rslt_txt}->index( $self->{marks}->get_results($c));
-   $self->{rslt_txt}->see( $rslt_inx );
-	 $self->{rslt_txt}->tagAdd( 'Bold', $rslt_inx, "$rslt_inx lineend" );
+	 my $rslt_inx =$self->rslt_txt->index( $self->marks->get_results($c));
+   $self->rslt_txt->see( $rslt_inx );
+	 $self->rslt_txt->tagAdd( 'Bold', $rslt_inx, "$rslt_inx lineend" );
 }
 
 #
@@ -837,33 +691,29 @@ sub move_to_results {
 sub doit {
 	my ($self, $inx) = @_;
 
+	# Change the window to pointer to Busy.
+	$self->dbiwd->Busy;
 
 	$inx = $self->entry_txt->index( 'insert lineend' ) unless $inx;
 
-	#print STDERR "doit: $inx\n";
-
 	# get current buffer finds the sql statement.
-	$self->get_current_buffer( $inx );
+	$self->current->populate( $inx );
+
+	$self->tag_entry( q{Exec} );
 
 	# now execute it;
 	$self->execute_sql();
 
-	# If the execution happened, do a number of things.
-	# Mark the results or tag as errored.
-	if (!$self->current->status) {
-		#my ($start, $end) = $self->entry_txt->tagNextrange( 'Error', $begLn );
-		# Untag the statement if error tagged.
-		$self->untag_statement_errored();
-		$self->create_results_btn();
-	} else {
-		# Change the text to a error.
-		$self->tag_statement_errored();
-		# Put up a dialog box with the error message.
-		$self->message_dialog(qq{Error Message},
-			$self->current->msg . qq{\n\n$self->current->statement\n} )
-		if ($self->options->stop_on_error); #
-	}
+	# Remove the exec tag
+	$self->untag_entry( q{Exec} );
 
+	# Deal with results.
+	$self->handle_results;
+
+	# Remove the busy pointer.
+	$self->dbiwd->Unbusy;
+
+	return;
 }
 
 #
@@ -888,15 +738,18 @@ sub message_dialog {
 #
 #
 sub search_forward {
-	my ($self, $inx) = @_;
+	my ($self, $beg) = @_;
 
-	$inx = $self->entry_txt->index( 'current' ) unless $inx;
+	$beg = $self->entry_txt->index( 'current' ) unless $beg;
+	my $end = q{end};
 
+	my $term = $self->options->statement_term . q{$};
 	return $self->entry_txt->search( 
       -regexp, 
-      '[;/]$', #',
-      $inx,
-      "end",
+      q{--},
+			$term,
+      $beg,
+      $end,
    );
 }
 
@@ -933,19 +786,19 @@ sub execute_sql {
 
    my $self = shift;
 
-    $self->dbiwd->Busy;
     my $statement = $self->current->statement;
     chomp $statement;
-    $statement =~ s:[/;]$::;  # Replace the last / with nothing.
+		my $term = $self->options->statement_term;
+    $statement =~ s:$term$::;  # Replace the last / with nothing.
     
    my $sth = $self->do_prepare( $statement );
-   $self->no_go("Failed to prepare statement!" ), return undef
+   return $self->failed("Failed to prepare statement!" )
 	 	if ($self->current->status);
 
    # Statement is prepared, now execute or do.
    my $rv = $self->sth_go( $sth, 1 );
 
-   $self->no_go("Statement execute failed!" ), return undef 
+   return $self->failed("Statement execute failed!" )
 	 	if ($self->current->status);
 
 		# OK, at this point mark the results window.
@@ -957,14 +810,11 @@ sub execute_sql {
 		# Does the statement require row displayed? If doesn't then
 		# show the status from the executed statement.
 		#
-		$self->no_go( "completed" );
-		return $self->current->status(0) unless $self->current->status;
+		return $self->current->status;
 }
 
 sub display_results {
 	my ($self, $sth) = @_;
-
-	$self->dbiwd->Busy;
 
 	my $sav_state = $self->rslt_txt->cget( -state );
 	$self->rslt_txt->configure( -state => q{normal} );
@@ -988,21 +838,49 @@ sub display_results {
 
 	$self->rslt_txt->see( q{end linestart});
 	$self->rslt_txt->configure( -state => $sav_state );
-	$self->dbiwd->Unbusy;
 }
 
-sub no_go {
+sub handle_results {
+	my $self = shift;
+	# If the execution happened, do a number of things.
+	# Mark the results or tag as errored.
+	if (!$self->current->status) {
+		# If the statement executed previously as an error now
+		# success remove the error tag.
+		$self->untag_entry( 'Error' );
+		$self->results_button;
+	} else {
+		# An error occurred, tag the text with an error tag.
+		# Display a message dialog box, unless stop on error.
+		# Write the error message to the results windows if write to results
+		# is true.
+		$self->tag_entry(q{Error});
+		# Build the message using the database results and the current statement.
+		my $msg = $self->current->msg . qq{\n\n} . 
+			$self->current->statement . qq{\n};
+		# Put up a dialog box with the error message.
+		$self->message_dialog(qq{Error Message}, $msg)
+			if ($self->options->stop_on_error); #
+		# Write the message to the results window.
+		$self->write_results($msg, q{end}) 
+			if $self->options->write_error_rslt;
+	}
+}
+
+#
+# Failed, display a status message and return undefined.
+#
+sub failed {
    my $self = shift;
    $self->status(shift);
-   $self->entry_txt->tagRemove( 'Exec', $self->current->beg, $self->current->cmark );
-   $self->rslt_txt->configure( -state => 'disabled' );
-   $self->dbiwd->Unbusy;
-   return;
+   return undef;
 }
+
 sub results_mark {
 	my ($self, $stn) = @_;
 	my $marks = $self->{marks};
 	$stn = $self->current->stat_num unless $stn;
+	#print STDOUT "Statement number: $stn\n";
 	$marks->set_results($stn);
 	$self->rslt_txt->configure( -state => 'normal' );
 	$self->rslt_txt->markSet( 
@@ -1013,17 +891,6 @@ sub results_mark {
 }
 
 
-# This method is used to track the X text widgets with the scroll bar.
-sub sync_txt {
-   my $self = shift;
-   my ($sb, $scrolled, $lbs, @args) = @_;
-   $sb->set(@args);
-   my ($top, $bottom) = $scrolled->yview();
-   foreach my $list (@$lbs) {
-      $list->yviewMoveto($top);
-   }
-}
-
 sub status {
 	my $self = shift;
 	if (@_) {
@@ -1031,6 +898,19 @@ sub status {
 	} else {
 		return $_Dbistatus;
 	}
+}
+sub write_results {
+	my ($self, $msg, $where, $see) = @_;
+	return unless $msg;
+	
+	$where = q{end} unless $where;
+	my $sav_state = $self->rslt_txt->cget( -state );
+	$self->rslt_txt->configure( -state => q{normal} );
+	$self->rslt_txt->see( $where );
+	print RSLT_TXT $msg;
+	$self->rslt_txt->see( $where ) if $see;
+	$self->rslt_txt->configure( -state => $sav_state );
+	return;
 }
 
 sub AUTOLOAD {
@@ -1052,3 +932,4 @@ sub AUTOLOAD {
 }
 
 1;
+__END__
