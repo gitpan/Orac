@@ -2,11 +2,12 @@
 /* Guy Harrison */
 /* ISBN 0-13-614231-1 */
 /* This Book comes with a Five Star Orac Rating */
+/* INIT and MAXTRANS change by Tom Lowery 22-10-1999 */
 
 declare
    cursor ctc is
       select upper(owner) capown,upper(table_name) captab,pct_free,pct_used,
-             decode(ini_trans,0,1) initrans,decode(max_trans,0,1) maxtrans,
+             nvl(ini_trans,1) initrans,nvl(max_trans,1) maxtrans,
              tablespace_name,initial_extent,next_extent,min_extents,
              max_extents,freelists,freelist_groups,pct_increase
       from dba_tables

@@ -10,7 +10,7 @@ add_butt_mess^Please pick the cascade you wish to attach button to^
 add_button^Add Button^
 add_cascade^Add Cascade^
 are_you_sure^Please Confirm^
-back_col_menu^Background Colour Menu^
+back_col_menu^Background Colour^
 back_dir^Go Back a Directory^
 back_procs^Background Processes^
 bar_col^red^
@@ -88,6 +88,7 @@ doub_click^Double-Click Selection^
 ed_sql_mess2^Please pick a Button^
 ed_sql_mess^Please pick a Cascade^
 ed_sql_txt^Edit the SQL Text and save its attachment to Button^
+entry_col_menu^Text Entry Colour^
 err_obj^Errored Objects^
 execute_sql^Execute SQL^
 exit^Exit^
@@ -101,10 +102,13 @@ file_viewer^Main File Viewer^
 font_message^Please Create a New Font^
 font_sel^Font Selector^
 font_warning^If New Font doesn't display, change Parameters & Re-Apply^
+fore_col_menu^Foreground Colour^
 form_short^Form^
 form^Interactive Form^
 form_for^Form for^
 freespace^Free Space within Data Object^
+frag^Genereate SQL to improve fragmentation in the database^
+frag_ind^Genereate SQL to improve fragmentation in the database^
 full^Full^
 funcs^Functions^
 gh_summ_sess^Summary of Session Waits & CPU^
@@ -315,6 +319,7 @@ vers_info^Version Info^
 views^Views^
 what_sql^What SQL^
 what_sql_users^What SQL statements are Users Processing?^
+what_memory^What SQL objects are currently loaded in memory?^
 who_accs_obj^Who's accessing which objects?^
 who_hold^Who's holding back Whom?^
 wrong_dbi^You may have selected the wrong database type for your system^

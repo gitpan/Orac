@@ -542,6 +542,7 @@ sub univ_form {
 
    my $forward_b = $bb->Button( -image=>$image,
                                 -command=>sub{
+                               $univ_form_win->Busy(-recurse=>1);
                                $self->selector( \$univ_form_win,
                                                 \$screen_type,,
                                                 \$screen_title,
@@ -552,6 +553,7 @@ sub univ_form {
                                                 \@ordered_entry,
                                                 \@sql_entry,
                                               );
+                               $univ_form_win->Unbusy;
                                              }
                               )->pack (-side=>'left',
                                        -anchor=>'w');
@@ -1495,6 +1497,7 @@ sub add_item {
    $c->create(   (   'text',
                      '0.4c',
                      "$y_start" . 'c',
+                     -fill=>$main::fc,
                      -anchor=>'nw',
                      -justify=>'left',
                      -text=>$this_text  ,
@@ -1509,6 +1512,7 @@ sub add_item {
       $c->create( ( 'text',
                     '5.2c',
                     "$y_start" . 'c',
+                     -fill=>$main::fc,
                     -anchor=>'nw',
                     -justify=>'left',
                      -font => $main::font{name},
@@ -1690,6 +1694,7 @@ sub dbwr_print_fileio {
       $c->create(   (   'text',
                         "$txt_name" . 'c',
                         "$txt_y_start" . 'c',
+                        -fill=>$main::fc,
                         -anchor=>'nw',
                         -justify=>'left',
                         -font => $main::font{name},
@@ -1701,6 +1706,7 @@ sub dbwr_print_fileio {
       $c->create(   (   'text',
                         "$act_figure_pos" . 'c',
                         "$txt_y_start" . 'c',
+                        -fill=>$main::fc,
                         -anchor=>'nw',
                         -justify=>'left',
                         -font => $main::font{name},
@@ -1715,6 +1721,7 @@ sub dbwr_print_fileio {
    $c->create(   (   'text',
                      "$x_start" . 'c',
                      "$txt_y_start" . 'c',
+                     -fill=>$main::fc,
                      -anchor=>'nw',
                      -justify=>'left',
                      -font => $main::font{name},
@@ -1782,7 +1789,7 @@ sub errors_orac {
    }
    $sth->finish;
    if($detected == 0){
-      $self->{Main_window}->Busy;
+      $self->{Main_window}->Busy(-recurse=>1);
       main::mes($self->{Main_window},$main::lg{no_rows_found});
       $self->{Main_window}->Unbusy;
    } else {
@@ -1791,7 +1798,7 @@ sub errors_orac {
 
       $window->{text}->bind(
          '<Double-1>',
-         sub{  $window->Busy;
+         sub{  $window->Busy(-recurse=>1);
                $self->selected_error(
                $window->{text}->get('active')
                                      );
@@ -1851,7 +1858,7 @@ sub dbas_orac {
    }
    $sth->finish;
    if($detected == 0){
-      $self->{Main_window}->Busy;
+      $self->{Main_window}->Busy(-recurse=>1);
       main::mes($self->{Main_window},$main::lg{no_rows_found});
       $self->{Main_window}->Unbusy;
    } else {
@@ -1861,8 +1868,8 @@ sub dbas_orac {
       $window->{text}->bind(
          '<Double-1>',
          sub{
-              $window->Busy;
-              $self->{Main_window}->Busy;
+              $window->Busy(-recurse=>1);
+              $self->{Main_window}->Busy(-recurse=>1);
 
               $self->univ_form( 'SYS',
                                 $window->{text}->get('active'),
@@ -1930,7 +1937,7 @@ sub addr_orac {
 
    if($detected == 0){
 
-      $self->{Main_window}->Busy;
+      $self->{Main_window}->Busy(-recurse=>1);
       main::mes($self->{Main_window},$main::lg{no_rows_found});
       $self->{Main_window}->Unbusy;
 
@@ -2005,7 +2012,7 @@ sub sids_orac {
    }
    $sth->finish;
    if($detected == 0){
-      $self->{Main_window}->Busy;
+      $self->{Main_window}->Busy(-recurse=>1);
       main::mes($self->{Main_window},$main::lg{no_rows_found});
       $self->{Main_window}->Unbusy;
    } else {
@@ -2014,7 +2021,7 @@ sub sids_orac {
 
       $window->{text}->bind(
          '<Double-1>',
-         sub { $window->Busy;
+         sub { $window->Busy(-recurse=>1);
 
                $self->f_clr( $main::v_clr );
                my $sid_param = $window->{text}->get('active');
@@ -2153,7 +2160,7 @@ sub explain_plan {
       my $clr_b = $dmb->Button(  -image=>$img,
                                  -command=>sub{
 
-                         $window->Busy;
+                         $window->Busy(-recurse=>1);
 
                          $w_explain[2]->delete('1.0','end');
                          $w_holders[0] = $main::v_sys;
@@ -2664,7 +2671,7 @@ sub who_hold
       $scroll_box->bind(
 
             '<Double-1>',
-            sub{  $self->{Main_window}->Busy;
+            sub{  $self->{Main_window}->Busy(-recurse=>1);
                   my @first_string = split(',', $scroll_box->get('active') );
 
                   my @v_osuser = split('\:', $first_string[1]);
@@ -2765,7 +2772,7 @@ sub mts_mem
       $scroll_box->bind(
 
             '<Double-1>',
-            sub{  $self->{Main_window}->Busy;
+            sub{  $self->{Main_window}->Busy(-recurse=>1);
                   my @stat_str = split('\:', $scroll_box->get('active') );
 
                   $self->who_what( 2,
@@ -2801,7 +2808,7 @@ sub do_a_generic {
 
    my ($l_mw, $l_gen_sep, $l_hlst, $input) = @_;
 
-   $l_mw->Busy;
+   $l_mw->Busy(-recurse=>1);
    my $owner;
    my $generic;
    my $dum;
@@ -2911,7 +2918,7 @@ sub do_a_generic {
 
                              -command=> sub{
 
-                         $window->Busy;
+                         $window->Busy(-recurse=>1);
 
                          my @lines_of_txt = split(/^/, $text_lines);
 
@@ -2945,7 +2952,7 @@ sub do_a_generic {
             my $b = $menu_bar->Button(-image=>$b_images{form},
                                      -command=> sub{
 
-                                  $window->Busy;
+                                  $window->Busy(-recurse=>1);
 
                                   $self->univ_form($owner,
                                                    $generic,
@@ -2962,7 +2969,7 @@ sub do_a_generic {
             $b = $menu_bar->Button( -image=>$b_images{sizeindex},
                                     -command=> sub {
 
-                              $window->Busy;
+                              $window->Busy(-recurse=>1);
                               $self->univ_form($owner,
                                                $generic,
                                                'index'
@@ -3021,7 +3028,7 @@ sub do_a_generic {
 
          my $b = $menu_bar->Button(
             -image=>$b_images{form},
-            -command=>sub{  $window->Busy;
+            -command=>sub{  $window->Busy(-recurse=>1);
 
                             $self->univ_form(  $owner,
                                                $generic,

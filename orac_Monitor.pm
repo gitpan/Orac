@@ -77,10 +77,10 @@ sub orac_monitor {
    # Establish we have a directory for
    # storing all our stuff in locally
 
-   my $dir = File::Spec->join($main::orac_home, 'monitor');
+   my $dir = File::Spec->catfile($main::orac_home, 'monitor');
 
    mkdir ($dir, 0755) unless -d $dir;
-   my $monitor_file = File::Spec->join($dir, 'monitor.txt');
+   my $monitor_file = File::Spec->catfile($dir, 'monitor.txt');
 
    my $mon_img;
    $self->get_img( \$self->{window}, \$mon_img, 'monitor' );
@@ -579,7 +579,7 @@ sub run_monitor {
    $self->{monitor_dir} = File::Basename::dirname($monitor_config);
    my $basename = File::Basename::basename($monitor_config);
 
-   $monitor_config = File::Spec->join($self->{monitor_dir}, $basename);
+   $monitor_config = File::Spec->catfile($self->{monitor_dir}, $basename);
 
    my $mon_text = $monitor_config;
 
@@ -638,7 +638,7 @@ sub run_monitor {
    $start_but->configure(-image => $img, );
    $start_but->configure(-command => sub {
 
-             $self->run_the_monkey( \$countdown,
+             $self->run_the_startup( \$countdown,
                                     \$mon_text,
                                     \$stopper,
                                     \$self->{mon_win},
@@ -1009,7 +1009,7 @@ sub fill_options {
    return;
 }
 
-sub run_the_monkey {
+sub run_the_startup {
 
    my $self = shift;
 
@@ -1064,9 +1064,9 @@ sub run_the_monkey {
 
    # Run some checking Baby!
 
-   $self->{mon_win}->Busy;
+   $self->{mon_win}->Busy(-recurse=>1);
 
-   $self->check_the_monkey;
+   $self->check_the_monitor;
 
    $self->{mon_win}->Unbusy;
 
@@ -1090,14 +1090,12 @@ sub run_the_monkey {
 
       if (($$stop_ref) && ($$countdown_ref <= 0.05))
       {
-         $$mon_text_ref = 'Houston, We Have Lift-Off...';
+         $$mon_text_ref = 'Initialising...';
 
          # Lock out the screen, then Launch, Launch, Launch!!!
 
          $self->{mon_win}->Busy;
-
-         $self->check_the_monkey;
-
+         $self->check_the_monitor;
          $self->{mon_win}->Unbusy;
 
          if ( Tk::Exists($$prog_bar_ref) )
@@ -1166,7 +1164,7 @@ sub run_the_monkey {
    return;
 }
 
-sub check_the_monkey {
+sub check_the_monitor {
 
    my $self = shift;
 
@@ -1174,57 +1172,28 @@ sub check_the_monkey {
    {
       if (not (defined ( $self->{nm}->{$db}->{connect} )))
       {
-         # Try same technique as main program.
-         # This time however, we switch off all warnings until
-         # we're fully completed.
+         # Unlike main program, to avoid ENV variables
+         # interfering with connection, we'll use fully qualified
+         # database name.
+
+         # switch off warnings.
 
          $main::conn_comm_flag = 1;
 
          my $data_source_1 = 'dbi:' .
                              $main::orac_curr_db_typ .
-                             ':';
-
-         my $data_source_2 = 'dbi:' .
-                             $main::orac_curr_db_typ .
                              ':' .
                              $db;
 
          $self->base_connector(  $db,
-                                 $data_source_2,
+                                 $data_source_1,
                                  $self->{nm}->{$db}->{user},
-                                 $self->{nm}->{$db}->{password},
+                                 $self->{nm}->{$db}->{password}
                               );
-
-         if (defined($DBI::errstr)){
-
-            # Set flag, to now allow proper warnings, on the last
-            # attempted connection
-
-            $self->base_connector(  $db,
-                                    $data_source_1,
-                                    $self->{nm}->{$db}->{user},
-                                    $self->{nm}->{$db}->{password},
-                                 );
-
-         }
-         else
-         {
-            # Connected
-         }
 
          # Now we go back to normal error reporting
 
          $main::conn_comm_flag = 0;
-
-         if (!defined($DBI::errstr)){
-
-            # We have connected
-
-         }
-         else
-         {
-            # Failed to Connect
-         }
       }
 
       # Now we've attempted, or have a connection,
@@ -1238,16 +1207,13 @@ sub check_the_monkey {
 
          $self->shutdown_db($db);
 
-      }
-      else
-      {
+      } else {
+
          # Connection defined, therefore set green.
 
          $self->{nm}->{$db}->{labf}->{flag}->{up}->configure(
-
-                                   -image=> $self->{ball}->{green},
-
-                                                                  );
+                                             -image=> $self->{ball}->{green}
+                                                            );
 
          # Now run through the rest of the checks required,
          # and set flags accordingly.
@@ -1258,7 +1224,7 @@ sub check_the_monkey {
          {
             unless ($key eq 'up')
             {
-               $ret_value = $self->slap_the_banana( $db, $key, );
+               $ret_value = $self->refresh_the_monitor( $db, $key, );
             }
 
             if ($ret_value)
@@ -1268,73 +1234,51 @@ sub check_the_monkey {
          }
       }
    }
-
    return;
-
 }
 
 sub base_connector {
 
    my $self = shift;
 
-   my ( $db,
-        $dbi_string,
-        $user,
-        $password,
-
-      ) = @_;
+   my ( $db, $dbi_string, $user, $password) = @_;
 
    $self->{nm}->{$db}->{connect} =
               DBI->connect($dbi_string, $user, $password);
 
-   return;
+   if (defined($DBI::errstr)){
 
+      # Wipe out any possible duff value, if we fail to connect
+
+      $self->{nm}->{$db}->{connect} = undef;
+   }
+   return;
 }
 
 sub shutdown_db {
 
    my $self = shift;
-
    my ($database) = @_;
 
    my $colour;
 
    foreach my $key ( keys(%{$self->{nm}->{$database}->{labf}->{flag}} ))
    {
-      if ($key eq 'up')
-      {
-         $colour = 'red';
+      if ($key eq 'up') { $colour = 'red' } else { $colour = 'white' }
 
-         $self->{nm}->{$database}->{labf}->{flag}->{up}->{errstr} =
-
-            $database . ' ' . 'up' . ' ' . 'flag' . "\n\n" .
-            'Last Possible Error? : ' . $DBI::errstr;
-      }
-      else
-      {
-         $colour = 'white';
-         $self->{nm}->{$database}->{labf}->{flag}->{$key}->configure(
-
-                                    -state=> 'disabled',
-
-                                                                    );
-      }
       $self->{nm}->{$database}->{labf}->{flag}->{$key}->configure(
-
+                                    #-state=> 'disabled',
                                     -image=> $self->{ball}->{$colour},
-
-                                                           );
+                                                                 );
    }
-
    if (defined($self->{nm}->{$database}->{connect}))
    {
       $self->{nm}->{$database}->{connect} = undef;
    }
-
    return;
 }
 
-sub slap_the_banana {
+sub refresh_the_monitor {
 
    my $self = shift;
 
@@ -1346,15 +1290,11 @@ sub slap_the_banana {
    my $sql_file =
       $self->{nm}->{$db}->{labf}->{flag}->{$key}->{sql_file} =
 
-      File::Spec->join(  $self->{monitor_dir},
-                         $key . '.' . 'sql'
-                      );
+      File::Spec->catfile(  $self->{monitor_dir}, $key . '.' . 'sql');
 
    my $sql_command =
       $self->{nm}->{$db}->{labf}->{flag}->{$key}->{sql_command} =
-
-      $self->gf_str( $sql_file,
-                   );
+         $self->gf_str($sql_file);
 
    # Right, we have the particular db, and the particular
    # check we are carrying out.  We also have the connection
@@ -1363,54 +1303,62 @@ sub slap_the_banana {
    # If any part of this fails, the whole thing is set to 'shutdown'
    # on the screen.
 
-   # Switch off Error reporting
+   # Switch off Error reporting.  Check for Sean H, on 
+   # the connection handle.  If not there, bail out.
 
    $main::conn_comm_flag = 1;
 
-   my $ary_ref =
-      $self->{nm}->{$db}->{connect}->selectall_arrayref($sql_command);
-
-   if (defined($DBI::errstr)){
-
-      # A problem has occurred.  Therefore, switch the whole thing
-      # off.
-
+   if (not (defined ( $self->{nm}->{$db}->{connect} )))
+   { 
       $self->shutdown_db($db);
-
       $ret_value = 1;
    }
    else
    {
-      # Finally, finally, we have a key value.
-      # Compare this to our warning flag values
+      my $ary_ref =
+         $self->{nm}->{$db}->{connect}->selectall_arrayref($sql_command);
 
-      my $curr_ref = $ary_ref->[0];
-
-      my $key_value =
-         $self->{nm}->{$db}->{labf}->{flag}->{$key}->{lastval} =
-         $curr_ref->[0];
-
-      if ($key_value <= $self->{nm}->{$db}->{labf}->{flag}->{$key}->{redf})
-      {
-         $colour = 'red';
-      }
-      elsif ($key_value <= $self->{nm}->{$db}->{labf}->{flag}->{$key}->{yelf})
-      {
-         $colour = 'yellow';
+      if (defined($DBI::errstr)){
+   
+         # A problem has occurred.  Therefore, switch the whole thing off.
+   
+         $self->shutdown_db($db);
+         $ret_value = 1;
       }
       else
       {
-         $colour = 'green';
+         # Finally, finally, we have a key value.
+         # Compare this to our warning flag values
+   
+         my $curr_ref = $ary_ref->[0];
+   
+         my $key_value =
+            $self->{nm}->{$db}->{labf}->{flag}->{$key}->{lastval} =
+            $curr_ref->[0];
+   
+         if ($key_value <= $self->{nm}->{$db}->{labf}->{flag}->{$key}->{redf})
+         {
+            $colour = 'red';
+         }
+         elsif ($key_value <= 
+                   $self->{nm}->{$db}->{labf}->{flag}->{$key}->{yelf})
+         {
+            $colour = 'yellow';
+         }
+         else
+         {
+            $colour = 'green';
+         }
+   
+         $self->{nm}->{$db}->{labf}->{flag}->{$key}->configure(
+   
+                                              -state=>'normal',
+                                              -image=> $self->{ball}->{$colour},
+   
+                                                              );
+         $ret_value = 0;
+   
       }
-
-      $self->{nm}->{$db}->{labf}->{flag}->{$key}->configure(
-
-                                           -state=>'normal',
-                                           -image=> $self->{ball}->{$colour},
-
-                                                           );
-      $ret_value = 0;
-
    }
 
    # Switch normal erroring back on

@@ -561,7 +561,7 @@ sub f_str {
 
       my $dirname = File::Basename::dirname($file);
       my $basename = File::Basename::basename($file);
-      $file = File::Spec->join($dirname, $basename);
+      $file = File::Spec->catfile($dirname, $basename);
 
       #print STDERR "f_str: file >$file<\n" if ($main::debug > 0);
 
@@ -926,7 +926,8 @@ sub show_or_hide
    my $x = $path;
 
    #print STDERR "before x=>$x<\n" if ($main::debug > 0);
-   $x =~ s/[^.$gen_sep]//g;
+   #$x =~ s/[^.$gen_sep]//g;
+   $x =~ s/[^$gen_sep]//g;
    #print STDERR "after  x=>$x<\n" if ($main::debug > 0);
 
    $g_hlvl = length($x) + 1;
@@ -990,7 +991,8 @@ sub add_contents
 
    # is there another level down?
    my $x = $path;
-   $x =~ s/[^.$gen_sep]//g;
+   #$x =~ s/[^.$gen_sep]//g;
+   $x =~ s/[^$gen_sep]//g;
    $g_hlvl = length($x) + 2;
    my $bitmap = (sql_file_exists($self->{Database_type}, $g_hlst, $g_hlvl + 1)
                 ? $closed_folder_bitmap
@@ -1190,7 +1192,7 @@ sub see_sql_but {
 
                           -command=> sub{
 
-                             $$win_ref->Busy;
+                             $$win_ref->Busy(-recurse=>1);
                              $self->see_sql($$win_ref,$$cm_ref);
                              $$win_ref->Unbusy;
 

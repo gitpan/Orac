@@ -11,7 +11,7 @@ to our "docs" directory.
 
 ################################################################################
 # The next stable version of Orac will be Orac-1.2.0, which we hope to release
-# before the end of summer, however,this is a very flexible date.
+# before the end of the year, however,this is a very flexible date.
 #
 # However, as the Orac-1.1.z series progresses, it should hopefully gather
 # stability and functionality.  To try out all new Orac functionality, keep
@@ -25,7 +25,11 @@ Orac WEB PAGE:
 
 You can usually find our web page at:
 
-=> http://www.kkitts.com/
+=> http://www.kkitts.com/orac-dba/
+
+We also have a mirror at:
+
+=> http://www.tux.org/orac-dba/ 
 
 This is managed by Kevin Kitts.  Please go here for the latest information,
 on Orac.
@@ -158,7 +162,7 @@ Kevin Brannen  <kbrannen@physiciansdata.com>    Informix/RulesMeister
 
 Andy Duncan    <andy_j_duncan@yahoo.com>        Oracle
 
-Sean Hull      <shull@panix.com>                Linux/Oracle
+Sean Hull      <sean.hull@pobox.com>            Linux/Oracle
                http://www.iheavy.com/
 
 Kevin Kitts    <kkitts@his.com>                 Linux/Webmaster
@@ -306,6 +310,16 @@ Orac-1.1.33 Tidying, fixing etc,etc - thanks to Sean Kamath - and
 Orac-1.1.34 Cleaning up newly introduced bugs.
 Orac-1.1.35 Horrible bug fix for ActiveState not requiring ORACLE_HOME,
             where unixlike does.
+Orac-1.1.36 Attempt on Monitor fix.  Steve Humpage 'join' to 'catfile'
+            fix for backward compatibility.
+Orac-1.1.37 New orac_Sybase from Alex.
+Orac-1.1.38 -
+Orac-1.1.40 Final 1.1 KevinB Informix change, +changes to Shell
+Orac-1.1.41 -
+Orac-1.1.43 - ... Shell development, trying to fix Monitor Bug
+Orac-1.1.44 Monitor Bug is an Oracle-Linux bug.  Oracle have been told
+            and hopefully will fix in later Oracle version.
+
 
 EXTRA NOTES FOR LINUX USERS:
 
@@ -337,6 +351,17 @@ Make sure that you can get sql*plus to work first. If that works, make sure
 that the DBI/DBD make tests pass. If all of the above condtions hold true
 you should have no problem running Orac.
 
+KNOWN LINUX-ORACLE BUG
+
+There is a known Oracle-Linux bug, which may cause the Orac Monitor to fail
+when attempting to connect to recently shutdown databases.  Oracle have been
+informed, and will hopefully fix bug in a future release.  This is a general
+OCI bug, and has caused problems with other programs.  One workround is not
+to use Orac Monitor, but if this required, if you don't need LOBS etc then 
+you could try recompiling DBI with 'perl Makefile.PL -8'.  See DBI README
+for more details on this.
+
+This bug may also occur on other OSes, but cannot be replicated on Solaris.
 
 EXTRA NOTES FOR WINDOWS NT USERS:
 
@@ -346,7 +371,7 @@ Environment required:
 
 Basic Perl Requirement:
 
-*. ActivePerl build 519
+*. ActivePerl build 519 (or latest)
 
 Packages on top:
 

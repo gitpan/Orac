@@ -76,7 +76,7 @@ sub req_filebox {
    my $dirname = File::Basename::dirname($start_directory);
    my $basename = File::Basename::basename($start_directory);
 
-   $start_directory = File::Spec->join($dirname, $basename);
+   $start_directory = File::Spec->catfile($dirname, $basename);
 
    # Set up window, menus etc
 
@@ -193,7 +193,7 @@ sub ListInvoke {
    my($text) = @_;
 
    return if ($text eq '');
-   my $file = File::Spec->join($self->{selectPath}, $text);
+   my $file = File::Spec->catfile($self->{selectPath}, $text);
 
    if (-d $file) {
 
@@ -350,7 +350,7 @@ sub Update {
 
    # Turn on the busy cursor.
 
-   $self->{window}->Busy;
+   $self->{window}->Busy(-recurse=>1);
    $self->{window}->idletasks;
 
    $self->{window}->{text}->DeleteAll;

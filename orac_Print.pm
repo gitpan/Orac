@@ -103,8 +103,8 @@ sub orac_printer {
 
    my $dirname = File::Basename::dirname($main::orac_home);
    my $basename = File::Basename::basename($main::orac_home);
-   my $pre_filename = File::Spec->join($dirname, $basename);
-   my $filename = File::Spec->join($pre_filename, 'orac.ps');
+   my $pre_filename = File::Spec->catfile($dirname, $basename);
+   my $filename = File::Spec->catfile($pre_filename, 'orac.ps');
 
    $self->top_left_message( \$printsel_menu,
                             'Setup Printer Requirements'
