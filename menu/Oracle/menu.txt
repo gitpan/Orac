@@ -1,9 +1,9 @@
 Menubutton^struct^
 command^0^0^summ_tabsp^orac_Oracle::tab_det_orac^$lg{summ_tabsp}+'tabspace_diag'^
 command^0^0^det_tab_datafil^orac_Oracle::tab_det_orac^$lg{det_tab_datafil}+'tab_det_orac'^
-command^0^1^tabsp_txt^main::prp_lp^$lg{tabsp_txt}+'kkspace'+'1'+$rfm{r6_opt8}^
+command^0^1^tabsp_txt^main::prp_lp^$lg{tabsp_txt}+'kkspace'+'1'+$rfm{r6_opt8}+0^
 separator^
-command^0^1^db_files^main::prp_lp^$lg{db_files}+'datafile_orac'+'1'+$rfm{r5_opt2}^
+command^0^1^db_files^main::prp_lp^$lg{db_files}+'datafile_orac'+'1'+$rfm{r5_opt2}+0^
 command^0^1^ext_rep^main::prp_lp^$lg{ext_rep}+'ext_orac'+'1'+$rfm{r8_opt3}+0^
 command^0^1^max_exts_free^main::prp_lp^$lg{max_exts_free}+'max_ext_orac'+'1'+$rfm{r8a_bits}+0+$Block_Size+$Block_Size+$Block_Size+$Block_Size+$Block_Size+$Block_Size+$Block_Size+$Block_Size+$Block_Size^
 command^dbas_orac^0^dba_views^orac_Oracle::dbas_orac^^
@@ -110,4 +110,4 @@ casc_command^0^1^tabsp_frag^main::prp_lp^$lg{tabsp_frag}+'defragger'+'1'+$rfm{r8
 casc_command^0^1^tabsp_sp_shorts^main::prp_lp^$lg{tabsp_sp_shorts}+'tab_shortage'+'1'+$rfm{r6_opt9}+0+$Block_Size+$Block_Size^
 Menubutton^sql_menu^
 command^explain_plan^0^explain_plan^orac_Oracle::explain_plan^^
-command^dbish^0^dbish^orac_Oracle::dbish^^
+command^dbish^0^dbish^orac_Shell::dbish^^

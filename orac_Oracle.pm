@@ -21,6 +21,13 @@ sub init2_orac_Oracle {
    ($Block_Size) = $sth->fetchrow;
    $sth->finish;
 
+   $cm = ' select user_id from dba_users ' .
+         ' where username = \'' . $v_sys . '\' ';
+   $sth = $dbh->prepare($cm) || die $dbh->errstr; 
+   $sth->execute;
+   ($v_user_id) = $sth->fetchrow;
+   $sth->finish;
+
    # Enable the PL/SQL memory area, for this 
    # database connection
 
@@ -1420,14 +1427,56 @@ sub explain_plan {
    my $orac_li = $sw[$swc{explain_plan}]->Pixmap(-file=>'img/orac.bmp');
    $dmb->Label(-image=>$orac_li,-borderwidth=>2,-relief=>'flat')->pack(-side=>'left',-anchor=>'w');
 
+   # Add buttons.  Add a holder for the actual explain plan
+   # button so we can enable/disable it later
+
+   $expl_butt = $dmb->Button(-text=>$lg{explain},-command=>sub{ orac_Oracle::explain_it() }
+               )->pack(side=>'left');
+
+   $dmb->Button(-text=>$lg{clear},-command=>sub{
+                      $sw[$swc{explain_plan}]->Busy;
+                      $sql_txt->delete('1.0','end');
+                      $w_user_name = $v_sys;
+                      $expl_butt->configure(-state=>'normal');
+                      $sw[$swc{explain_plan}]->Unbusy;
+                                               }
+               )->pack(side=>'left');
+
+   $dmb->Button(-text=>$lg{exit},-command=> sub{
+                      $sw[$swc{explain_plan}]->withdraw();
+                      $sw_flg[$swc{explain_plan}]->configure(-state=>'active');
+                      undef $sql_browse_arr} 
+               )->pack(-side=>'left');
+
+
    (@exp_lay) = qw/-side top -padx 5 -expand yes -fill both/;
    $top_slice = $sw[$swc{explain_plan}]->Frame->pack(@exp_lay);
 
    my $sql_txt_width = 50;
-   $sql_txt = $top_slice->Scrolled('Text',-wrap=>'none',-cursor=>undef,-height=>16,-width=>$sql_txt_width,
-                                      -foreground=>$fc,-background=>$ec);
-   $sql_txt->pack(-expand=>1,-fil=>'both');
+   my $sql_txt_height = 15;
+   $sw_hand[$swc{explain_plan}] = $top_slice->Scrolled('Text',-wrap=>'none',-cursor=>undef,
+                                                       -height=>($sql_txt_height + 3),-width=>($sql_txt_width + 2),
+                                                       -foreground=>$fc,-background=>$bc);
+
+   # Set the holding variables
+
+   $w_user_name = '';
+   $w_orig_sql_string = '';
+
+   $w_user_id = $sw_hand[$swc{explain_plan}]->Entry(-textvariable=>\$w_user_name,-cursor=>undef,-width=>30);
+   $w_user_id->configure(-background=>$ec,-foreground=>$fc);
+   $sw_hand[$swc{explain_plan}]->windowCreate('end',-window=>$w_user_id);
+   $sw_hand[$swc{explain_plan}]->insert('end', "\n");
+   
+   $sql_txt = $sw_hand[$swc{explain_plan}]->Scrolled('Text',-wrap=>'none',-cursor=>undef,
+                                                     -height=>$sql_txt_height,-width=>$sql_txt_width,
+                                                     -foreground=>$fc,-background=>$ec);
    tie (*SQL_TXT, 'Tk::Text', $sql_txt);
+
+   $sw_hand[$swc{explain_plan}]->windowCreate('end',-window=>$sql_txt);
+   $sw_hand[$swc{explain_plan}]->insert('end', "\n");
+
+   $sw_hand[$swc{explain_plan}]->pack(-expand=>1,-fil=>'both');
 
    # Now build up the slider, which will trawl through v$sqlarea to
    # paste up various bits of SQL text currently in database.
@@ -1455,22 +1504,6 @@ sub explain_plan {
       # There are no rows (very unlikely) so blatt out memory
       undef $sql_browse_arr;
    }
-   # Add buttons
-   $dmb->Button(-text=>$lg{explain},-command=>sub{ orac_Oracle::explain_it() }
-               )->pack(side=>'left');
-
-   $dmb->Button(-text=>$lg{clear},-command=>sub{
-                      $sw[$swc{explain_plan}]->Busy;
-                      $sql_txt->delete('1.0','end');
-                      $sw[$swc{explain_plan}]->Unbusy}
-               )->pack(side=>'left');
-
-   $dmb->Button(-text=>$lg{exit},-command=> sub{
-                      $sw[$swc{explain_plan}]->withdraw();
-                      $sw_flg[$swc{explain_plan}]->configure(-state=>'active');
-                      undef $sql_browse_arr} 
-               )->pack(-side=>'left');
-
    $sw_flg[$swc{explain_plan}]->configure(-state=>'disabled');
    main::iconize($sw[$swc{explain_plan}]);
    return;
@@ -1548,12 +1581,29 @@ sub pick_up_sql {
       $format = $format . '<';
    }
    $format = $format . 'xyzzyxxyzzyx ~~';
-   my $string = crt_rp_do($format, $curr_ref->[0]);
+
+   # Put up the name in the holding variable
+   $w_user_name = $curr_ref->[0];
+
+   # Format output the string.  Also, hold
+   # it in another variable for the original.
+
+   $w_orig_sql_string = $curr_ref->[1];
+   my $string = crt_rp_do($format, $w_orig_sql_string);
    $string =~ s/xyzzyxxyzzyx/\n/g;
    
    $sql_txt->delete('1.0','end');
    $sql_txt->insert('1.0',$string);
    $sql_slider->set(($sql_row_count + 1));
+
+   # Enable the 'Explain Plan' button, if the logged on
+   # user, is the same as the SQL's user
+
+   if($v_sys eq $w_user_name){
+      $expl_butt->configure(-state => 'normal');
+   } else {
+      $expl_butt->configure(-state => 'disabled');
+   }
 
    return;
 }
@@ -1573,45 +1623,5 @@ sub check_exp_plan {
    }
    $sth->finish;
    return $detected;
-}
-sub dbish {
-   package main;
-print TEXT "Nowhere near ready yet, sorry\n";
-return;
-
-   if(!defined($swc{dbish})){
-      $swc{dbish} = $global_sub_win_count;
-      $global_sub_win_count++;
-   }
-
-   $sw[$swc{dbish}] = MainWindow->new();
-   $sw[$swc{dbish}]->title($lg{dbish});
-
-   my(@dbish_lay) = qw/-side top -padx 5 -expand no -fill both/;
-   $dbish_menu = $sw[$swc{dbish}]->Frame->pack(@dbish_lay);
-   my $orac_li = $sw[$swc{dbish}]->Pixmap(-file=>'img/orac.bmp');
-   $dbish_menu->Label(-image=>$orac_li,-borderwidth=>2,-relief=>'flat')->pack(-side=>'left',-anchor=>'w');
-
-   (@dbish_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-   $top_slice = $sw[$swc{dbish}]->Frame->pack(@dbish_lay);
-
-   my $dbish_txt_width = 50;
-   $dbish_txt = $top_slice->Scrolled('Text',-wrap=>'none',-cursor=>undef,-height=>16,-width=>$dbish_txt_width,
-                                      -foreground=>$fc,-background=>$ec);
-   $dbish_txt->pack(-expand=>1,-fil=>'both');
-   tie (*STDIN, 'Tk::Text', $sql_txt);
-
-   $dbish_menu->Button(-text=>$lg{exit},-command=> sub{
-                      $sw[$swc{dbish}]->withdraw();
-                      $sw_flg[$swc{dbish}]->configure(-state=>'active');} 
-               )->pack(-side=>'left');
-
-   $sw_flg[$swc{dbish}]->configure(-state=>'disabled');
-   main::iconize($sw[$swc{dbish}]);
-package DBI::Shell;
-shell(@ARGV);
-#exit(0);
-package main;
-   return;
 }
 1;

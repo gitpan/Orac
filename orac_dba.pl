@@ -23,7 +23,6 @@ use FileHandle;
 use Cwd;
 use Time::Local;
 use DBI;
-use DBI::Shell;
 use Tk::DialogBox;
 use Tk::Pretty;
 use Tk::HList;
@@ -34,6 +33,8 @@ require Tk::BrowseEntry;
 use orac_Oracle;
 use orac_Informix;
 use orac_Sybase;
+
+use orac_Shell;
 
 # Read the menu/language.txt file to pick up all text
 # for use with the rest of the program
@@ -284,7 +285,7 @@ sub get_connected {
       # Now verify all input and attempt connection to chosen database
 
       if ($mn_b eq $lg{connect}) {
-         my $v_sys = $ps_u->get;
+         $v_sys = $ps_u->get;
          if (defined($v_sys) && length($v_sys)){
             my $v_ps = $ps_e->get;
             if (defined($v_ps) && length($v_ps)){

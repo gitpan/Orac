@@ -68,10 +68,11 @@ ed_sql_mess2^Please pick a Button^
 ed_sql_mess^Please pick a Cascade^
 ed_sql_txt^Edit the SQL Text and save its attachment to Button^
 err_obj^Errored Objects^
+execute_sql^Execute SQL^
 exit^Exit^
 explain^Explain^
 explain_plan^SQL Browser/Explain Plan^
-dbish^Dbish GUI^
+dbish^On-the-fly SQL Execution^
 ext_rep^Extents Report^
 file^File^
 file_io^File I/O^
