@@ -65,12 +65,13 @@ command^0^1^who_accs_obj^main::prp_lp^$lg{who_accs_obj}+'lock_objects'+'1'+$rfm{
 command^0^1^rollbk_lcks^main::prp_lp^$lg{rollbk_lcks}+'rollback_locks'+'1'+$rfm{r11_spread}+0^
 command^0^1^sess_wt_stats^orac_Oracle::tune_wait^^
 command^0^1^gh_summ_sess^main::prp_lp^$lg{gh_summ_sess}+'gh_summ_sess'+'1'+$rfm{r2_wait}+0^
-command^0^1^mem_hogs^orac_Oracle::tune_pigs^^
 Menubutton^tune^
-command^explain_plan^0^explain_plan^orac_Oracle::explain_plan^^
-separator^
 command^0^0^hits^orac_Oracle::tab_det_orac^$lg{hits}+'tune_health'^
-command^0^1^pool_frag^orac_Oracle::gh_pool_frag^^
+command^explain_plan^0^explain_plan^orac_Oracle::explain_plan^^
+cascade^shared_pool_sql^
+casc_command^0^1^mem_hogs1^orac_Oracle::tune_pigs^1^
+casc_command^0^1^mem_hogs2^orac_Oracle::tune_pigs^2^
+casc_command^0^1^pool_frag^orac_Oracle::gh_pool_frag^^
 separator^
 cascade^rollback^
 casc_command^0^1^rollbk_stats^orac_Oracle::gh_roll_stats^^

@@ -1,4 +1,5 @@
-use strict;
+#use strict;
+#use pretty_print; # for serious debugging
 package orac_Informix;
 
 # what I really need is a init0_orac_Informix();
@@ -7,14 +8,14 @@ package orac_Informix;
 sub init0_orac_Informix
 {
    # Place here anything you need before connecting to the DB.
-   print STDERR "init0_orac_Informix()\n" if ($main::debug > 0);
-   $main::dont_need_sys = 1;
-   $main::dont_need_ps = 1;
+print STDERR "init0_orac_Informix()\n" if ($main::debug > 0);
+    $main::dont_need_sys = 1;
+    $main::dont_need_ps = 1;
 }
 sub init1_orac_Informix
 {
    package main;
-   print STDERR "init1_orac_Informix()\n" if ($main::debug > 0);
+print STDERR "init1_orac_Informix()\n" if ($main::debug > 0);
 
    # Place here whatever environmental variables are needed
    # for dbi:Informix, eg (for oracle):
@@ -24,7 +25,8 @@ sub init1_orac_Informix
    #   INFORMIXDIR
    #   INFORMIXSERVER
    #   ONCONFIG
-   # hmm, don't know what to do if we don't have these, can we croak to a dialog?
+   # hmm, don't know what to do if we don't have these, can we croak to a 
+   # dialog?
    # i have no way to guess values...
 
    # also useful, but optional
@@ -67,7 +69,7 @@ print STDERR "init3_orac_Informix()\n" if ($main::debug > 0);
 sub init4_orac_Informix
 {
    package main;
-   print STDERR "init4_orac_Informix()\n" if ($main::debug > 0);
+print STDERR "init4_orac_Informix()\n" if ($main::debug > 0);
 
    my $flag = shift;
 
@@ -75,309 +77,411 @@ sub init4_orac_Informix
    # You do not need to do anything here, for now.
 
 }
-##################### Database dependent code functions below here #####################
+############# Database dependent code functions below here #####################
+# show the list of the databases, and info about them
 sub onstat_databases
 {
     # Do your stuff
-    show_sql(main::f_str("Databases", "1"));
+    orac_Base::show_sql(main::f_str("Databases", "1"));
 }
+# show the list of DBSpaces, and info about them
 sub onstat_dbspaces
 {
     # Do your stuff
-    show_sql(main::f_str("DBSpaces", "1"));
+    orac_Base::show_sql(main::f_str("DBSpaces", "1"));
 }
+# the the list of DB chunks and info about them
 sub onstat_chunks
 {
     # Do your stuff
-    show_sql(main::f_str("Chunks", "1"));
+    orac_Base::show_sql(main::f_str("Chunks", "1"));
 }
+# show the current $ONCONFIG file
 sub onstat_onconfig_params
 {
     # Do your stuff
     $main::v_text->insert('end', main::gf_str("$ENV{INFORMIXDIR}/etc/$ENV{ONCONFIG}"));
 }
+# show the extents being used & check for errors
 sub oncheck_extents
 {
     # Do your stuff
-    show_sql(main::f_str("Extents", "1"));
+    #orac_Base::show_sql(main::f_str("Extents", "1"));
+    # IT MAY not BE POSSIBLE TO DO THIS VIA THE SMI TABLES!!!
+    execute_and_display("$ENV{INFORMIXDIR}/bin/oncheck -pe ", 1);
 }
+# show physical & logical log status
 sub onstat_log_rep
 {
     # Do your stuff
-    show_sql(main::f_str("LogRpt", "1"));
+    orac_Base::show_sql(main::f_str("LogRpt", "1"));
+    # IT MAY not BE POSSIBLE TO DO THIS VIA THE SMI TABLES!!!
+    execute_and_display("$ENV{INFORMIXDIR}/bin/oninit -l ", 0);
 }
-sub onlog_log
-{
-    # Do your stuff
-    show_sql(main::f_str("ShowLog", "1"));
-}
+# display a logical log [postponed]
+#sub onlog_log
+#{
+#    # Do your stuff
+#    orac_Base::show_sql(main::f_str("ShowLog", "1"));
+#}
+# show synonyms
 sub dbschema_syns
 {
     # Do your stuff
-    show_sql(main::f_str("Synonyms", "1"));
+    orac_Base::show_sql(main::f_str("Synonyms", "1"));
 }
-sub dbschema_procs
-{
-    # Do your stuff
-}
-sub dbschema_proc_list
-{
-    # Do your stuff
-}
+#sub dbschema_procs
+#{
+#    # Do your stuff
+#    orac_Base::show_sql(main::f_str("Procedures", "1"));
+#}
+#sub dbschema_proc_list
+#{
+#    # Do your stuff
+#    orac_Base::show_sql(main::f_str("ProcedureBody", "1"));
+#}
+# show grants on this database (kevin: start here for getting sql)
 sub dbschema_grants
 {
     # Do your stuff
-    show_sql(main::f_str("Grants", "1"));
+    orac_Base::show_sql(main::f_str("Grants", "1"));
 }
 sub dbschema_indices
 {
     # Do your stuff
-    show_sql(main::f_str("Indicies", "1"));
+    orac_Base::show_sql(main::f_str("Indicies", "1"));
 }
 sub dbschema_schema
 {
     # Do your stuff
-    #show_sql(main::f_str("Schema", "1"));
+    #orac_Base::show_sql(main::f_str("Schema", "1"));
 
-    # hmm, IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
-
-    my $db = $main::v_db;
-    $db =~ s/@.*//o;
-    #$main::v_text->insert('end', "$ENV{INFORMIXDIR}/bin/dbschema -d $db 2>&1");
-    #my $x = `$ENV{INFORMIXDIR}/bin/dbschema -d $db 2>&1`;
-    #$main::v_text->insert('end', $x);
-
-    $main::v_text->insert('end', "at the command-line do:  dbschema -d $db");
+    # IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
+    execute_and_display("$ENV{INFORMIXDIR}/bin/dbschema -d ", 1);
 }
 sub onstat_threads
 {
     # Do your stuff
-    show_sql(main::f_str("Threads", "1"));
+    orac_Base::show_sql(main::f_str("Threads", "1"));
 }
 sub onstat_curr_sql
 {
     # Do your stuff
-    show_sql(main::f_str("CurrSQL", "1"));
+    #orac_Base::show_sql(main::f_str("CurrSQL", "1"));
+    # IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
+    execute_and_display("$ENV{INFORMIXDIR}/bin/onstat -u ", 0);
+}
+sub onstat_blobs
+{
+    # Do your stuff
+    orac_Base::show_sql(main::f_str("Blobs", "1"));
 }
 sub finderr_num
 {
     # Do your stuff
-    #show_sql(main::f_str("FindErr", "1"));
+    # IT IS not POSSIBLE TO DO THIS VIA THE SMI TABLES!!!
+    execute_and_display("$ENV{INFORMIXDIR}/bin/dbschema -d ", 1);
 }
 sub onstat_io_profile
 {
     # Do your stuff
-    #show_sql(main::f_str("IOProfile", "1"));
-    live_update(main::f_str("IOProfile", 1), $main::lg{oi_io_profile_title});
+    #orac_Base::show_sql(main::f_str("IOProfile", "1"));
+    main::live_update(main::f_str("IOProfile", 1), $main::lg{oi_io_profile_title});
 }
 sub onstat_locks_held
 {
     # Do your stuff
-    live_update(main::f_str("Locks", 1), $main::lg{locks_held});
+    main::live_update(main::f_str("Locks", 1), $main::lg{locks_held});
+}
+sub execute_and_display
+{
+    # Yes Andy, i know i'm cheating BIG TIME here, but i *REALLY* want
+    # every button to do something useful.  I'll pull these out as fast
+    # as i can!  but i just can't figure out how to do some of these!
+    #
+    # Late breaking news, i've found that a some of the informix info is
+    # only available via the utility programs, as they read directly from
+    # shared memory, or from binary encoded disk files. :-(  The ones
+    # that fall in this category are so marked.
+
+    my $db = $main::v_db;
+    $db =~ s/@.*//o;
+    my $cmd = $_[0];
+    $cmd .= $db if ($_[1]);
+    $cmd .= " 2>&1";
+    $main::v_text->insert('end', "$cmd\n");
+    open(IN, "$cmd|") or do { $main::v_text->insert('end', "FAILED!\n"); return; };
+    while (<IN>) { $main::v_text->insert('end', $_); }
+    close(IN);
 }
 ###############################################################################
-# Generic support functions &
-# Generic execute query & auto-format results & print...
+# Generic support functions
 ###############################################################################
-# Take an SQL statement, execute it, and show the results in a matrix-like format.
-# ARG1 = the SQL statement
-# ARG2 = a title (optional, if not sent, the first 40 chars of the SQL is used)
-# ARG3 = text widget to use (optional, if not sent it uses the main one)
-sub show_sql
+sub gn_hl
 {
-	my ($sql, $title) = @_;
-	my (@row, $id);
+   package main;
 
-	unless (defined($sql)) { return; }
+   # Main parent function for generic HLists for database objects.
 
-	# get patient id
-	my ($r_lines, $r_format, $r_tlen, $r_names, $header) = get_lines($sql);
-	my @lines = @{$r_lines};
+   ($g_typ,$g_hlst,$gen_sep) = @_;
 
-	#@list = $tar->[0]; $list[0][0] $list[0][1] $list[0][2]
-	#@names = @{$sth->{NAME}}
-	#@prec = @{$sth->{PRECISION}}
-	#@scal = @{$sth->{SCALE}}
+   $g_mw = $mw->DialogBox(-title=>"$g_hlst $v_db");
+   $hlist = $g_mw->Scrolled('HList', -drawbranch=>1,
+                                     -separator=>$gen_sep,
+                                     -indent=>50,
+                                     -width=>50,
+                                     -height=>20,
+                                     -foreground=>$fc,
+                                     -background=>$bc);
+   $hlist->configure(-command => sub { orac_Informix::show_or_hide_tab($_[0]) });
+   $hlist->pack(fill=>'both', expand=>'y');
+   
+   $open_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('openfolder.xbm'));
+   $closed_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('folder.xbm'));
+   $file_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('file.xbm'));
 
-    $title = substr($sql, 0, 40) if (!$title);
-    main::rep_tit($title);
-	if ($#lines == -1)
-    {
-		$main::v_text->insert('end', $main::lg{no_rows_found} . "\n");
-    }
-    else
-    {
-        print_lines($header, $r_lines, $r_tlen, $r_format);
-        main::see_plsql($sql);
-    }
+   my $no_txt;
+   my $yes_txt;
+   if ($g_hlst eq $lg{tabs}){
+      $no_txt = $lg{orig_exts};
+      $yes_txt = $lg{compr_extnts};
+   } else {
+      $no_txt = $lg{no_ln_nums};
+      $yes_txt = $lg{ln_nums};
+   }
+   $v_yes_no_txt = 'N';
+   $g_mw->Radiobutton(-variable=>\$v_yes_no_txt,-text=>$no_txt,-value=>'N')->pack (side=>'left');
+   $g_mw->Radiobutton(-variable=>\$v_yes_no_txt,-text=>$yes_txt,-value=>'Y')->pack (side=>'left');
+   
+   undef %all_the_owners;
+
+   my $cm = main::f_str( orac_Informix::hl_trans($g_hlst) ,'1');
+print STDERR "prepare1: $cm\n" if ($main::debug > 0);
+   my $sth = $dbh->prepare( $cm ) || die $dbh->errstr; 
+   $sth->execute;
+
+   while (@res = $sth->fetchrow) {
+      my $owner = $res[0];
+      $hlist->add($owner,-itemtype=>'imagetext',-image=>$closed_folder_bitmap,-text=>$owner);
+      $all_the_owners{"$owner"} = 'closed';
+   }
+   $sth->finish;
+   main::orac_Show($g_mw);
 }
 
-# support func for show_sql
-sub get_lines
+sub show_or_hide_tab
 {
-	my $sth;
-	my $tar = do_query_fetch_all($_[0], \$sth);
-	my @tlen;
-	my @names = @{$sth->{NAME}};
-#	my @scal = @{$sth->{SCALE}};
-#	my @prec = @{$sth->{PRECISION}};
+   package main;
 
-	my ($j, $i, $len);
-	my (@format, $header);
+   # Works out which level of the Hierarchical list we're on,
+   # and then displays the results accordingly.
 
-	for ($i=0 ; $i <= $#names ; $i++)
-	{
-# debugging, trying to something == to ix_ColLength, no luck yet...
-#print STDERR "tlen=$tlen[$i]  scal=$scal[$i]  prec=$prec[$i]\n";
-
-        # get the column name length
-		$len = length($names[$i]);
-        $tlen[$i] = $len; # comment this out if we do A. below
-
-        # A. is the length of the column definition bigger?
-		#$tlen[$i] = $len if ($len > $tlen[$i]);
-        # B. instead check find the longest value!
-        for ($j=0 ; $j < @{$tar} ; $j++)
-        {
-            # NOTE: unless you turned on ChopBlanks, you may not be totally happy
-            $len = defined($tar->[$j]->[$i]) ? length($tar->[$j]->[$i]) : 0;
-            $tlen[$i] = $len if ($len > $tlen[$i]);
-        }
-
-        # now build the format & header
-        # sigh, we always left justify, we really should look
-        #   at the type then do the right thing, maybe later...
-		$format[$i] = "%-$tlen[$i]s ";
-		$header .= sprintf($format[$i], $names[$i]);
-	}
-	return ($tar, \@format, \@tlen, \@names, $header);
+   my $hlist_thing = $_[0];
+   if(!$all_the_owners{"$hlist_thing"}){
+      orac_Informix::do_a_generic($hlist_thing, 'Normal', 'dum');
+      return;
+   } else {
+      if($all_the_owners{"$hlist_thing"} eq 'closed'){
+         $hlist->info('next', $hlist_thing);
+         $hlist->entryconfigure($hlist_thing,-image=>$open_folder_bitmap);
+         $all_the_owners{"$hlist_thing"} = 'open';
+         
+         orac_Informix::add_generics($hlist_thing);
+      } else {
+         $hlist->entryconfigure($hlist_thing,-image=>$closed_folder_bitmap);
+         $hlist->delete('offsprings', $hlist_thing);
+         $all_the_owners{"$hlist_thing"} = 'closed';
+      }
+   }
 }
+sub add_generics {
+   package main;
 
-# a support func for show_sql
-sub print_lines
-{
-	my ($header, $tar, $r_tlen, $r_format) = @_;
-	my ($i, $j, @row);
-	my @lines = @{$tar};
-	my @format = @{$r_format};
-	my @tlen = @{$r_tlen};
-    my $ubar = '---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------';
+   # Adds more boxes to the HList widgets.
+   # On the 2nd level of an HList
 
-    # print the column header
-	$main::v_text->insert('end', "\n$header\n");
+   $g_mw->Busy;
+   my $owner = $_[0];
+   if ($g_typ == 1){
+      my $s = main::f_str( orac_Informix::hl_trans($g_hlst) ,'2');
+print STDERR "prepare2: $s ($owner)\n" if ($main::debug > 0);
+      my $sth = $dbh->prepare( $s ) || die $dbh->errstr; 
+      $sth->bind_param(1,$owner);
+      $sth->execute;
+      while (@res = $sth->fetchrow) {
+         # if the result has multiple columns, assume there will only be 1 row,
+         # but we should display the columns as rows; but there there is only
+         # 1 column, assume we'll get multiple rows/fetchs
+         if ($#res > 0)
+         {
+             for (0 .. $#res)
+             {
+                 my $gen_thing = "$owner.$sth->{NAME}->[$_] = $res[$_]";
+                 $hlist->add($gen_thing,-itemtype=>'imagetext',-image=>$file_bitmap,-text=>$gen_thing);
+             }
+             last;
+         }
+         else
+         {
+             my $gen_thing = "$owner" . $gen_sep . "$res[0]";
+             $hlist->add($gen_thing,-itemtype=>'imagetext',-image=>$file_bitmap,-text=>$gen_thing);
+         }
+      }
+      $sth->finish;
+   } else {
+      my $gen_thing = "$owner" . $gen_sep . 'sql';
+      $hlist->add($gen_thing,-itemtype=>'imagetext',-image=>$file_bitmap,-text=>$gen_thing);
+   }
+   $g_mw->Unbusy;
+}
+sub do_a_generic {
+   package main;
 
-    # print the underbars to show column width
-    for ($i=0 ; $i <= $#tlen ; $i++)
-	{
-        $main::v_text->insert('end', substr($ubar, 0, $tlen[$i]) . ' ');
-    }
-    $main::v_text->insert('end', "\n");
+   # On the final (3rd) level of an HList, does the actual work required.
 
-    # print the data!
-	for ($j=0 ; $j <= $#lines ; $j++)
-	{
-		@row = @{$lines[$j]};
-		for ($i=0 ; $i <= $#tlen ; $i++)
-		{
-			$row[$i] = "" if (!defined($row[$i]));
-            $main::v_text->insert('end', sprintf($format[$i], $row[$i]));
-		}
-		$main::v_text->insert('end', "\n");
-	}
+   my ($input,$do_what_flag,$second_hlist) = @_;
+   $g_mw->Busy;
+   my $owner;
+   my $generic;
+   my $dum;
+   if ($gen_sep eq ":"){
+      ($owner, $generic, $dum) = split(/:/, $input);
+   } else {
+      ($owner, $generic, $dum) = split(/\./, $input);
+   }
+   my $loc_g_hlst;
+   if ($g_hlst eq $lg{rolegrnts}){
+      $loc_g_hlst = $lg{usergrant};
+   } else {
+      if($do_what_flag eq 'Normal'){
+         $loc_g_hlst = $g_hlst;
+      } else {
+         $loc_g_hlst = $second_hlist;
+      }
+   }
+   my $cm = main::f_str( orac_Informix::hl_trans($loc_g_hlst) ,'3');
+
+   #$dbh->func(1000000, 'dbms_output_enable');
+print STDERR "prepare3: $cm\n" if ($main::debug > 0);
+   my $second_sth = $dbh->prepare( $cm ) || die $dbh->errstr; 
+   if($g_typ == 1){
+      $second_sth->bind_param(1,$owner);
+      $second_sth->bind_param(2,$generic);
+      if (($loc_g_hlst eq $lg{tabs})){
+         $second_sth->bind_param(3,$v_yes_no_txt);
+      } 
+      elsif ($loc_g_hlst eq $lg{comments}){
+         $second_sth->bind_param(3,$owner);
+         $second_sth->bind_param(4,$generic);
+      }
+   } else {
+      unless ($loc_g_hlst eq $lg{usergrant}){
+         $second_sth->bind_param(1,$owner);
+      } else {
+         my $i;
+         for ($i = 1;$i <= 4;$i++){
+            $second_sth->bind_param($i,$owner);
+         }
+      }
+   }
+   $second_sth->execute;
+
+   my $d = $g_mw->DialogBox();
+
+   $d->add("Label",-text=>"$loc_g_hlst $lg{sql_for} $owner.$generic")->pack(side=>'top');
+   $l_txt = $d->Scrolled('Text',-height=>16,-wrap=>'none',-cursor=>undef,-foreground=>$fc,-background=>$bc);
+   $l_txt->pack(-expand=>1,-fil=>'both');
+   tie (*L_TEXT, 'Tk::Text', $l_txt);
+
+   my $j = 0;
+   my $full_list;
+   my $i = 1;
+
+   while($j < 10000){
+      #$full_list = scalar $dbh->func('dbms_output_get');
+      if(!defined($full_list)){
+         last;
+      }
+      if((length($full_list)) == 0){
+         last;
+      }
+      if (($v_yes_no_txt eq 'N') || ($g_hlst eq $lg{tabs})){
+         print L_TEXT "$full_list\n";
+      } else {
+         printf L_TEXT "%5d: %s\n", $i, $full_list;
+         $i++;
+      }
+      $j++;
+   }
+   print L_TEXT "\n\n  ";
+
+   my @b;
+   $b[0] = $l_txt->Button(-text=>$ssq,-command=>sub{main::see_sql($d,$cm)});
+   $l_txt->window('create', 'end',-window=>$b[0]);
+
+   if ($loc_g_hlst eq $lg{tabs}){
+      print L_TEXT "\n\n  ";
+      my(@tab_options) = qw/$lg{indexs} $lg{constrnts} $lg{trggrs} $lg{comments}/;
+      my $i = 1;
+      foreach ($lg{indexs},$lg{constrnts},$lg{trggrs},$lg{comments}){
+         my $this_txt = $_;
+         $b[$i] = $l_txt->Button(-text=>"$this_txt",-command=>sub{orac_Informix::do_a_generic($input,'Recursive',"$this_txt")});
+         $l_txt->window('create', 'end',-window=>$b[$i]);
+         print L_TEXT " ";
+         $i++;
+      }
+      print L_TEXT "\n\n  ";
+      $b[$i] = $l_txt->Button(-text=>$lg{form},
+               -command=>sub{$d->Busy;orac_Oracle::univ_form($d,$owner,$generic,'form');$d->Unbusy });
+      $l_txt->window('create', 'end',-window=>$b[$i]);
+      $i++;
+      print L_TEXT " ";
+      $b[$i] = $l_txt->Button(-text=>$lg{build_index},
+               -command=>sub{$d->Busy;orac_Oracle::univ_form($d,$owner,$generic,'index');$d->Unbusy });
+      $l_txt->window('create','end',-window=>$b[$i]);
+   } elsif ($loc_g_hlst eq $lg{views}){
+      print L_TEXT "\n\n  ";
+      $b[1] = $l_txt->Button(-text=>$lg{form},
+              -command=>sub{$d->Busy;orac_Oracle::univ_form($d,$owner,$generic,'form');$d->Unbusy });
+      $l_txt->window('create', 'end',-window=>$b[1]);
+   }
+   print L_TEXT "\n\n";
+   main::orac_Show($d);
+   $g_mw->Unbusy;
+}
+sub hl_trans {
+   package main;
+
+   # In case the users of Orac change the 
+   # txt/language.txt file, unfortunately Orac
+   # still needs to translate the new information
+   # in order to pick up the right PL/SQL files.
+   # This is where it does it.
+
+   my($inp) = @_;
+   my $out=$inp;
+   if ($inp eq $lg{tabs}){ $out = 'Tables'; }
+   elsif ($inp eq $lg{indexs}){ $out = 'Indexes'; }
+   elsif ($inp eq $lg{views}){ $out = 'Views'; }
+   elsif ($inp eq $lg{synyms}){ $out = 'Synonyms'; }
+   elsif ($inp eq $lg{seqs}){ $out = 'Sequences'; }
+   elsif ($inp eq $lg{usergrant}){ $out = 'UserGrants'; }
+   elsif ($inp eq $lg{rolegrnts}){ $out = 'RoleGrants'; }
+   elsif ($inp eq $lg{lnks}){ $out = 'Links'; }
+   elsif ($inp eq $lg{users}){ $out = 'Users'; }
+   elsif ($inp eq $lg{rols}){ $out = 'Roles'; }
+   elsif ($inp eq $lg{profiles}){ $out = 'Profiles'; }
+   elsif ($inp eq $lg{procs}){ $out = 'Procedures'; }
+   elsif ($inp eq $lg{funcs}){ $out = 'Functions'; }
+   elsif ($inp eq $lg{trggrs}){ $out = 'Triggers'; }
+   elsif ($inp eq $lg{pck_hds}){ $out = 'PackageHeads'; }
+   elsif ($inp eq $lg{pck_bods}){ $out = 'PackageBods'; }
+   elsif ($inp eq $lg{snaps}){ $out = 'Snapshots'; }
+   elsif ($inp eq $lg{snap_logs}){ $out = 'SnapshotLogs'; }
+   elsif ($inp eq $lg{constrnts}){ $out = 'Constraints'; }
+   elsif ($inp eq $lg{comments}){ $out = 'Comments'; }
+   return $out;
 }
 ###############################################################################
-# some DBI/DBD wrappers...
-###############################################################################
-# do a standard query, call $sth->fetch() to retrieve.
-sub do_query
-{
-    my ($stmt) = @_;
-    my $sth;
-
-    print STDERR $stmt, "\n" if ( $main::debug > 4 );
-
-    $sth = $main::dbh->prepare($stmt);
-    db_check_error($stmt, "Prepare");
-    $sth->execute();
-    db_check_error($stmt, "Execute");
-    return $sth;
-}
-# do a query, and fetch all rows into an array of arrays
-# be careful, this could consume a LOT of memory if called with a bad statement!
-sub do_query_fetch_all
-{
-    my($stmt, $asth) = @_;
-    my $tbl_ary_ref = undef;
-    my $sth;
-
-    # to do them all:
-    $sth = do_query($stmt);
-    $tbl_ary_ref = $sth->fetchall_arrayref();
-    db_check_error($stmt, "Fetch");
-    $$asth = $sth if (defined($asth));
-    $sth->finish();
-
-    return $tbl_ary_ref;
-}
-# generic check for errors while interacting with the DB
-sub db_check_error
-{
-    my ($stmt, $action) = @_;
-    if (defined($DBI::err) && $DBI::err  < 0)
-    {
-        print STDERR "-->>$action error for $stmt\n";
-        print STDERR "$DBI::errstr\n";
-        print_stack();
-        die "SQL Error";
-    }
-}
-# we're about to die, so print a stack dump to see how we got in trouble
-sub print_stack
-{
-    my($package, $filename, $line, $i);
-    $package="";
-    $i=0;
-    while (($package, $filename, $line) = caller($i++))
-    {
-        print STDERR "Package: $package   File: $filename   Line: $line\n";
-    }
-}
-###############################################################################
-my $live_update_flag; # our control flag
-sub live_update
-{
-    my ($sql, $title) = @_;
-
-    # give us a clean slate
-    main::must_f_clr();
-
-    # create the stop button and put it at the top
-    my $b = $main::v_text->Button(-text=>$main::lg{stop},
-                                 -command=>sub{stop_live_update()});
-    $main::v_text->window('create','end',-window=>$b);
-    $main::v_text->insert('end', "\n\n");
-
-    # set this to be true so we loop for awhile
-    $live_update_flag = 1;
-
-    # while we're live, keep updating
-    while ($live_update_flag)
-    {
-        # delete from after the stop button to EOS
-        $main::v_text->delete('1.1', 'end');
-        # put the new values on the screen
-        show_sql($sql, $title);
-        # cause the screen to show the new values
-        $main::v_text->update();
-        sleep(1);
-    }
-    # the user hit stop, so remove the stop button
-    $main::v_text->delete('1.0', '1.1');
-}
-sub stop_live_update
-{
-    # the user hit stop, so change the control flag
-    $live_update_flag = 0;
-}
 1;
 # vi: set sw=4 ts=4 et:

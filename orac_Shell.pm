@@ -71,6 +71,6 @@ sub execute_sql {
    # Using KevinB's stuff, go!
 
    main::f_clr();
-   orac_Informix::show_sql ( $dbish_txt->get("1.0", "end") );
+   orac_Base::show_sql ( $dbish_txt->get("1.0", "end") );
 }
 1;

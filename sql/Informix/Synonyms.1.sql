@@ -1,1 +1,1 @@
-SELECT 'Sorry, Not Implemented Yet' message FROM informix.systables WHERE tabname = 'systables'
+select * from informix.systables where tabtype in ('P','S')

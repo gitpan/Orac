@@ -7,6 +7,5 @@ select to_char((round((a.disk_reads / decode(a.executions,0,1,a.executions)),
        b.username,
        a.sql_text "SQL Text"
 from v$sqlarea a, dba_users b
-where (a.disk_reads / decode(a.executions,0,1,a.executions)) > 200
-and a.parsing_user_id = b.user_id
+where a.parsing_user_id = b.user_id
 order by 1 desc

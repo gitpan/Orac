@@ -111,7 +111,8 @@ ltchs^Latches^
 lw_ratio^Current Latch Wait Ratios^
 man_clear^Manual Clear^
 max_exts_free^Max Extents Free Space^
-mem_hogs^Memory Hoggers^
+mem_hogs1^Pool Statements, High Disk Reads^
+mem_hogs2^All Pool Statements^
 menu_config^Orac Configuration Guide^
 mts^Mts^
 mts_bzy^Mts Busy Time of the Dispatchers^
@@ -125,7 +126,6 @@ nls_prms^NLS Parameters^
 no^No^
 no_cascs^There are no appropriate records^
 no_cols_sel^No Columns Selected^
-no_hogs^no memory hoggers found^
 no_ln_nums^No Line Numbers^
 no_rows^No rows selected^
 no_rows_found^no rows found^
@@ -133,6 +133,7 @@ no_semi_colon^NB: No semi-colon required to terminate SQL^
 no_val_def^No Value Defined^
 not_conn^Not Connected^
 obj^Object^
+oi_blobs^Blobs^
 oi_chunks^Chunks^
 oi_col_attbs^Column attributes^
 oi_columns^Columns^
@@ -151,6 +152,7 @@ oi_proc_list^Procedure listing^
 oi_procedures^Procedures^
 oi_schema^Schema^
 oi_synonyms^Synonyms^
+oi_tabinfo^Table Info^
 oi_tables^Tables^
 oi_threads^Threads/Sessions^
 oi_trig_list^Trigger listing^
@@ -198,6 +200,7 @@ sess_uga_max^Total Session UGA Max^
 sess_wt_stats^Top ORACLE Wait events^
 sga_stats^SGA Stats Info^
 sh_prms^Show Parameters^
+shared_pool_sql^Shared Pool & SQL^
 snap_logs^SnapshotLogs^
 snaps^Snapshots^
 sort_mon^Sort Monitor^

@@ -29,7 +29,7 @@ Orac --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
 # The Orac-1.1.z series is an attempt to amalgamate the use of other databases 
 # in addition to Oracle.  
 #
-# Orac-1.1.0 is an EXTREMELY experimental attempt to give you Informix 
+# Orac-1.1.3 is an EXTREMELY experimental attempt to give you Informix 
 # functionality, and the ability to easily switch between these two different 
 # databases, if you have both on your system.  Current Oracle-only users 
 # should still have all their usual functionality, plus a bit more, such as 
@@ -97,7 +97,8 @@ WARNING:
 PREREQUISITES (For Oracle Users on Solaris):
 
    You'll need perl5.005_02 & 
-   modules DBD-Oracle-0.54, DBI-1.02 & Tk402.004
+   modules DBD-Oracle-1.03, DBI-1.13 & Tk800.013
+   (Older modules may be Ok, too, such as Tk402.004)
 
 LINUX USERS:
 
@@ -116,7 +117,7 @@ REALLY QUICK START GUIDE:
 
 SLIGHTLY LESS QUICK START GUIDE (based upon Oracle on Solaris):
 
-*). Load perl5.005_02, DBD-Oracle-0.54, DBI-1.02 & Tk402.004
+*). Load perl5.005_02, DBD-Oracle-1.03, DBI-1.13 & Tk800.013
 *). Unzip (gzip -d, gunzip) the Orac-x.y.z.tar.gz file
 *). Untar (tar xvf) the Orac-x.y.z.tar file
 *). cd Orac-x.y.z
@@ -168,6 +169,7 @@ Kevin Brannen  <kbrannen@physiciansdata.com>    Orac Informix Development
 Andy Duncan    <andy_j_duncan@yahoo.com>        Orac Solaris Development
 Sean Hull      <shull@panix.com>                Orac Oracle Development
 Kevin Kitts    <kkitts@his.com>                 Orac Linux Supremo + Webmaster
+Thomas Lowery  <tlowery@dsioj.dla.mil>          Orac Shell Development
 John Reid      <jreid@ocireland.com>            Orac Sybase Development
 Charles Wolfe  <cwolfe@ix.netcom.com>           Orac NT Guru
 
@@ -251,6 +253,8 @@ Orac-1.1.1  (Oracle) Neater 'Explain Plan' utility, On-the-fly SQL execution
 Orac-1.1.2  (Informix) More functionality added. (Oracle) More tidying, plus 
             better/quicker use of config files, and use of SQL Browser without 
             PLAN_TABLE in db.
+Orac-1.1.3  A lot of file tidying for Oracle, and further Informix additions.
+            May be a little flaky, and tidied up in the 1.1.4 release.
 
 
 EXTRA NOTES FOR LINUX USERS:
@@ -327,6 +331,10 @@ The ActiveState URLs are:
 You can download the latest Orac via:
 
 => http://www.kkitts.com/orac-dba/
+
+or you can download directly from the master CPAN site, here:
+
+=> ftp://ftp.funet.fi/pub/languages/perl/CPAN/authors/id/A/AN/ANDYDUNC/
 
 We have altered the DBI->connect routine to try a couple
 of different versions-on-a-theme, to allow non-unix
