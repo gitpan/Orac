@@ -1,7 +1,7 @@
 declare
    cursor view_cursor is
       select owner,view_name,text
-      from sys.dba_views
+      from dba_views
       where owner like ?
       and view_name like ?
       order by owner,view_name;

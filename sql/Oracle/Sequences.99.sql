@@ -5,7 +5,7 @@
 declare
 cursor seq_cursor is
 select sequence_owner,sequence_name,min_value,max_value,increment_by,cycle_flag,order_flag,cache_size
-from sys.dba_sequences
+from dba_sequences
 where sequence_owner = ?
 and sequence_name = ?
 order by 1,2;

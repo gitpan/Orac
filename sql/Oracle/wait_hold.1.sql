@@ -9,9 +9,9 @@ substr(s2.osuser,1,8) "OS User",
 s2.serial# "Ser#",
 substr(to_char(h.sid),1,5) "Sid",
 P2.spid "Pid"
-from sys.v_$process P1,sys.v_$process P2,
-sys.v_$session S1,sys.v_$session S2,
-sys.v_$lock w,sys.v_$lock h
+from v$process P1,v$process P2,
+v$session S1,v$session S2,
+v$lock w,v$lock h
 where h.lmode is not null
 and w.request is not null
 and h.lmode != 0

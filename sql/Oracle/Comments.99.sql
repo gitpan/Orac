@@ -5,7 +5,7 @@ declare
              table_name,
              table_type,
              comments
-      from sys.dba_tab_comments
+      from dba_tab_comments
       where owner = c_gen_owner
       and table_name = c_gen_table
       and comments is not null
@@ -17,7 +17,7 @@ declare
              table_name,
              column_name,
              comments 
-      from sys.dba_col_comments
+      from dba_col_comments
       where owner = c_gen_owner
       and table_name = c_gen_table
       and comments is not null

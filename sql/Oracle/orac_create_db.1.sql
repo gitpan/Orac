@@ -1,20 +1,20 @@
 declare
    cursor c_work_out_tabsp (my_tabsp in varchar2) is
       select file_name,bytes
-      from sys.dba_data_files
+      from dba_data_files
       where tablespace_name = my_tabsp
       order by file_id;
    cursor c_log_interrogate is
       select group#,members,bytes
-      from sys.v_$log
+      from v$log
       where thread# = 1 order by 1;
    cursor c_thread_curs is
       select thread#,group#,members,bytes
-      from sys.v_$log
+      from v$log
       where thread# > 1 order by 1,2;
    cursor lfile_c (my_group in number) is
       select member
-      from sys.v_$logfile
+      from v$logfile
       where group# = my_group;
    cursor tbsp_c is
       select ts.name,ts.blocksize * ts.dflinit,ts.blocksize * ts.dflincr,
@@ -27,17 +27,17 @@ declare
    cursor r_c is
       select owner,segment_name,tablespace_name,initial_extent,
              next_extent,min_extents,max_extents,pct_increase
-      from sys.dba_rollback_segs
+      from dba_rollback_segs
       where segment_name not in ('SYSTEM','R000')
       order by segment_name;
    cursor o_c (my_segment_name in varchar2) is
       select decode(c.optsize,NULL,a.initial_extent * a.min_extents,c.optsize)
-      from sys.dba_rollback_segs a,sys.v_$rollname b,sys.v_$rollstat c
+      from dba_rollback_segs a,v$rollname b,v$rollstat c
       where my_segment_name not in ('SYSTEM','R000')
       and a.segment_name = my_segment_name and a.segment_name = b.name and b.usn = c.usn;
    cursor c_alt_roll is
       select 'ALTER ROLLBACK SEGMENT '||segment_name||' '||status||';'
-      from   sys.dba_rollback_segs
+      from   dba_rollback_segs
       where  segment_name not in ('SYSTEM','R000')
       and    status = 'ONLINE'
       order by 1;
@@ -86,35 +86,35 @@ begin
    v_dum := orac_print('rem  ************************************************');
    select 'rem  Database name        :'||value
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'db_name';
    v_dum := orac_print(v_line);
    select 'rem  Database created     :'||created
    into   v_line
-   from sys.v_$database;
+   from v$database;
    v_dum := orac_print(v_line);
    select 'rem  Database log_mode    :'||log_mode
    into   v_line
-   from sys.v_$database;
+   from v$database;
    v_dum := orac_print(v_line);
    select 'rem  Database blocksize   :'||value||' bytes'
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'db_block_size';
    v_dum := orac_print(v_line);
    select 'rem  Database buffers     :'||value||' blocks'
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'db_block_buffers';
    v_dum := orac_print(v_line);
    select 'rem  Database log_buffers :'||value||' blocks'
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'log_buffer';
    v_dum := orac_print(v_line);
    select 'rem  Database ifile       :'||value
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'ifile';
    v_dum := orac_print(v_line);
    v_dum := orac_print('rem'||chr(10)||
@@ -130,23 +130,23 @@ begin
                chr(10));
    select 'CREATE DATABASE "'||value||'"'
    into   v_line
-   from sys.v_$parameter
+   from v$parameter
    where name = 'db_name';
    v_dum := orac_print(v_line);
    select '  '||log_mode
    into   v_line
-   from sys.v_$database;
+   from v$database;
    v_dum := orac_print(v_line);
    select max(length(member) + 2) maxmem1
    into l_maxmemlen
-   from sys.v_$logfile;
+   from v$logfile;
    v_dum := orac_print(chr(10)||'  REMOVE=>NB: Make sure NOARCHIVELOG/ARCHIVELOG sorted out'||
                chr(10));
    v_dum := orac_print('  /* You may wish to change the following  values,          */');
    v_dum := orac_print('  /* and use values found from a control file backed up     */');
    v_dum := orac_print('  /* to trace.  Alternatively, uncomment these defaults.    */');
    v_dum := orac_print('  /* (MAXLOGFILES and MAXLOGMEMBERS have been selected from   */');
-   v_dum := orac_print('  /* sys.v_$log, character set from NLS_DATABASE_PARAMETERS.*/'||
+   v_dum := orac_print('  /* v$log, character set from NLS_DATABASE_PARAMETERS.*/'||
                chr(10));
    v_dum := orac_print('  /* option start:use control file*/'||chr(10));
    select '  CHARACTER SET  '||value
@@ -155,11 +155,11 @@ begin
    v_dum := orac_print(v_line);
    select '  MAXLOGFILES    '||max(group#)*max(members)*4
    into   v_line
-   from sys.v_$log;
+   from v$log;
    v_dum := orac_print(v_line);
    select '  MAXLOGMEMBERS  '||max(members) * 2
    into   v_line
-   from sys.v_$log;
+   from v$log;
    v_dum := orac_print(v_line);
    v_dum := orac_print('  /* MAXDATAFILES   255 */');
    v_dum := orac_print('  /* MAXINSTANCES   1 */');
@@ -395,12 +395,12 @@ v_dum := orac_print('ALTER ROLLBACK SEGMENT dummy OFFLINE;'||chr(10));
 v_dum := orac_print('rem ----------------------------------------'||chr(10));
 select 'ALTER USER SYS TEMPORARY TABLESPACE '||temporary_tablespace||';'
 into   v_line
-from sys.dba_users where username = 'SYS';
+from dba_users where username = 'SYS';
 v_dum := orac_print(v_line);
 select 'ALTER USER SYSTEM TEMPORARY TABLESPACE '||temporary_tablespace||' DEFAULT TABLESPACE '||
 default_tablespace||';'
 into   v_line
-from sys.dba_users where username = 'SYSTEM';
+from dba_users where username = 'SYSTEM';
 v_dum := orac_print(v_line||chr(10));
 v_dum := orac_print('rem ----------------------------------------'||chr(10));
 v_dum := orac_print('rem  Run other @?/rdbms/admin required scripts'||chr(10));

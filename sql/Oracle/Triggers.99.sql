@@ -7,14 +7,14 @@ cursor trig_cursor is select
 owner,trigger_name,trigger_type,triggering_event,
 table_owner,table_name,referencing_names,when_clause,
 status,description,trigger_body
-from sys.dba_triggers
+from dba_triggers
 where table_owner = ?
 and table_name = ?
 order by 1,2;
 cursor tcol_c (ownr in varchar2,trigname in varchar2,
 tabown in varchar2,tabnam in varchar2) is select
 column_name
-from sys.dba_trigger_cols
+from dba_trigger_cols
 where trigger_owner = ownr and trigger_name = trigname and
 table_owner = tabown and table_name = tabnam;
 l_on sys.dba_triggers.owner%TYPE;

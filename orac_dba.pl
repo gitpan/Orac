@@ -77,7 +77,7 @@ main::read_language();
 
 # Some hard-coded defaults
 
-$main::orac_version = '1.1.33';
+$main::orac_version = '1.1.35';
 
 $main::ssq = $main::lg{see_sql};
 $main::ec = $main::lg{def_fill_fld_col};

@@ -4,7 +4,7 @@ round((f.blocks * ? )/(1024*1024),2) bytes,
 round(sum(s.length * ? )/(1024*1024),2) used,
 round(((f.blocks * ? )/(1024*1024)) - nvl(sum (s.length * ? )/(1024*1024),0),2) free,
 round(sum(s.length * ?)/(1024*1024)/((f.blocks * ? )/(1024*1024)) * 100,2) pct_used
-from sys.dba_data_files A,sys.uet$ s,sys.file$ f,sys.ts$ X
+from dba_data_files A,sys.uet$ s,sys.file$ f,sys.ts$ X
 where x.ts# = f.ts#
 and x.online$ in (1,2)
 and f.status$ = 2

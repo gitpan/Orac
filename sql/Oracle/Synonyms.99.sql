@@ -5,7 +5,7 @@
 declare
 cursor syn_cursor is
 select owner,synonym_name,table_owner,table_name,db_link
-from sys.dba_synonyms
+from dba_synonyms
 where owner like ?
 and synonym_name like ?
 order by owner,synonym_name;

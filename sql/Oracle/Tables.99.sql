@@ -9,14 +9,14 @@ declare
              decode(ini_trans,0,1) initrans,decode(max_trans,0,1) maxtrans,
              tablespace_name,initial_extent,next_extent,min_extents,
              max_extents,freelists,freelist_groups,pct_increase
-      from sys.dba_tables
+      from dba_tables
       where owner = ?
       and table_name = ?
       order by owner,table_name;
    ctr ctc%ROWTYPE;
    cursor csc (s_own VARCHAR2,s_tab VARCHAR2) is
       select bytes
-      from sys.dba_segments
+      from dba_segments
       where segment_name = s_tab and
             owner = s_own and
             segment_type = 'TABLE';
@@ -25,7 +25,7 @@ declare
       select upper(column_name) colname,upper(data_type) datatype,
              data_length,data_precision,data_scale,
              nullable,default_length,data_default,column_id
-      from sys.dba_tab_columns
+      from dba_tab_columns
       where table_name = c_tab and
             owner = c_own
       order by column_id;

@@ -1,12 +1,3 @@
-/* Thanks to Alex Shnir for fixing original script */
-/* first_time is a varchar in Oracle7 and a date in Oracle8 */
-/* which gives us this fantastic piece of SQL */
-/* Returns the number of seconds between the last two */
-/* Redolog switches */
-/* Anything less than 900 secs (15 mins) gives a red */
-/* alert, anything else less than 1800 secs (30 mins) */
-/* gives a yellow alert.  Greater than 1800 secs (30 mins) */
-/* is Ok, and stays at green */
 SELECT greatest (
 ((TO_CHAR(sysdate,'J') * (60 * 60 * 24)) +
          TO_CHAR (sysdate, 'SSSSS')) -

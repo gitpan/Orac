@@ -303,6 +303,9 @@ Orac-1.1.32 -
 Orac-1.1.33 Tidying, fixing etc,etc - thanks to Sean Kamath - and
             attempts at code reduction.  Thanks to Edmund Mergl for
             initial 8i fix.  More to be found I'm sure.
+Orac-1.1.34 Cleaning up newly introduced bugs.
+Orac-1.1.35 Horrible bug fix for ActiveState not requiring ORACLE_HOME,
+            where unixlike does.
 
 EXTRA NOTES FOR LINUX USERS:
 

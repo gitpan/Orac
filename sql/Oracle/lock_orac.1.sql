@@ -61,7 +61,7 @@ decode(lmode,1,NULL,2,'Row Share',3,'Row Excl',4,'Share',
 5,'Sh Row Ex',6,'Exclusive',NULL) held,
 decode(request,1,NULL,2,'Row Share',3,'Row Excl',4,'Share',
 5,'Sh Row Ex',6,'Exclusive',NULL) request
-from v$lock l,v$session s,v$process p,sys.dba_objects o
+from v$lock l,v$session s,v$process p,dba_objects o
 where s.sid = l.sid and
 o.object_id = l.id1 and
 l.type = 'TM' and

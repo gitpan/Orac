@@ -3,14 +3,14 @@ declare
       select username,password,
              default_tablespace,temporary_tablespace,
              profile
-      from sys.dba_users
+      from dba_users
       where username = c_gen_owner
       order by username;
    user_r user_c%ROWTYPE;
    --
    cursor quota_c (l_in_user varchar2) is
       select tablespace_name, max_bytes
-      from sys.dba_ts_quotas
+      from dba_ts_quotas
       where username = l_in_user;
    quota_r quota_c%ROWTYPE;
    --

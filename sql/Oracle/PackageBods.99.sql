@@ -1,7 +1,7 @@
 declare
    cursor packb_c is
       select owner,name, rtrim(text, chr(10)) text
-      from sys.dba_source
+      from dba_source
       where type = 'PACKAGE BODY'
       and owner = ?
       and name = ?

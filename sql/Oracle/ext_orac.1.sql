@@ -6,7 +6,7 @@ decode(max_extents,'2147483645','ULTD',to_char(round(max_extents,2))) "Maxt",
 extents "Exts",
 round((extents/max_extents*100),2) "Pct",
 decode(sign(75 - (extents/max_extents*100)),-1,' * ',decode(sign(20 - extents) ,-1,' * ','')) "Fix"
-from sys.dba_segments
+from dba_segments
 where extents > 1
 and segment_type != 'ROLLBACK'
 and segment_type != 'CACHE'

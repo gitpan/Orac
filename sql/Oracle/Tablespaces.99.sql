@@ -2,7 +2,7 @@ declare
    cursor dataf_c (c_tabsp in varchar2) is
       select file_name,
              bytes
-      from sys.dba_data_files
+      from dba_data_files
       where tablespace_name = c_tabsp
       order by file_id;
    --

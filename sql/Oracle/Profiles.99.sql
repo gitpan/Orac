@@ -5,7 +5,7 @@
 declare
 cursor prof_cursor (c_gen_profile varchar2) is
 select profile,resource_name,limit
-from sys.dba_profiles
+from dba_profiles
 where profile = c_gen_profile
 order by 1,2;
 l_profile sys.dba_profiles.profile%TYPE;

@@ -8,6 +8,6 @@ round(100 * (nvl(block_gets,0) +
 nvl(consistent_gets,0) - nvl(physical_reads,0) )
 / ( nvl(block_gets,0) + nvl(consistent_gets,0) ),2)) Ratio,
 block_changes Phy_Writes
-from sys.v_$sess_io S,sys.v_$session V
+from v$sess_io S,v$session V
 where s.sid = v.sid (+)
 order by s.sid

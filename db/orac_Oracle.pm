@@ -82,12 +82,21 @@ sub init1 {
    $main::ENV{ORACLE_SID} = $l_instance;
 
    # Fix idea by Sean Kamath, positioned by Bruce Albrecht :)
+   # If Sean didn't set ORACLE_HOME under unix-u-like, then a core
+   # dump occured at this point.  So we put the fix in.
+   # However, Duncan Lawie found that the ActiveState
+   # runs fine without ORACLE_HOME, and that this 'fix'
+   # now dumped Orac out.  Therefore had to add the 'unless'
+   # line to cope with both situations.  What fun! :-)
 
-   if ((!defined($main::ENV{ORACLE_HOME})) ||
-       (length($main::ENV{ORACLE_HOME}) < 1))
+   unless ($^O =~ /MSWin/)
    {
-      die "You must make sure the environment variable ORACLE_HOME is set " .
-          "properly\n";
+      if ((!defined($main::ENV{ORACLE_HOME})) ||
+          (length($main::ENV{ORACLE_HOME}) < 1))
+      {
+         die "You must make sure the environment variable ORACLE_HOME is set " .
+             "properly\n";
+      }
    }
 }
 
@@ -2972,7 +2981,7 @@ sub do_a_generic {
 
       if ($l_hlst eq 'Tables') {
 
-         @tablist = ('Tab_Inedexes',
+         @tablist = ('Tab_Indexes',
                      'Tab_FreeSpace',
                      'Tab_Constraints',
                      'Triggers',

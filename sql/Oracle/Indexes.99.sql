@@ -7,14 +7,14 @@ declare
 cursor dba_indexes_csr
     (cp_owner varchar2,cp_index varchar2) is
     select *
-      from sys.dba_indexes
+      from dba_indexes
      where table_owner=cp_owner
        and index_name=cp_index
       order by uniqueness desc , index_name;
  cursor dba_tab_ind_cols_csr
     (cp_owner varchar2,cp_table varchar2,cp_index varchar2) is
     select *
-      from sys.dba_ind_columns
+      from dba_ind_columns
      where table_owner=cp_owner
        and table_name=cp_table
        and index_name=cp_index

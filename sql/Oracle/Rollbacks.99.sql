@@ -8,7 +8,7 @@ declare
              min_extents,
              max_extents,
              pct_increase
-      from sys.dba_rollback_segs
+      from dba_rollback_segs
       where segment_name = c_segment
       order by segment_name;
    --
@@ -18,9 +18,9 @@ declare
       select decode(c.optsize,
                     NULL,a.initial_extent * a.min_extents,
                     c.optsize) optimal_size
-      from sys.dba_rollback_segs a,
-           sys.v_$rollname b,
-           sys.v_$rollstat c
+      from dba_rollback_segs a,
+           v$rollname b,
+           v$rollstat c
       where a.segment_name = c_segment_name
       and   a.segment_name = b.name
       and   b.usn = c.usn;

@@ -6,33 +6,33 @@ Declare
 --
    cursor p_c (c_user varchar2) is
       select password 
-      from sys.dba_users 
+      from dba_users 
       where username = c_user;
 --
    cursor o_c (c_gen_role varchar2) is
       select grantee,owner,table_name,privilege,decode(grantable,'YES',' WITH GRANT OPTION;',';')
-      from sys.dba_tab_privs
+      from dba_tab_privs
       where grantee like c_gen_role
       order by 2,3,1,4;
 --
    cursor c_c (c_gen_role varchar2) is
       select grantee,owner,table_name,column_name,privilege,
       decode(grantable,'YES',' WITH GRANT OPTION;',';')
-      from sys.dba_col_privs
+      from dba_col_privs
       where grantee like c_gen_role
       order by 2,3,4,5,1;
 --
    cursor s_c (c_gen_role varchar2) is
       select grantee,privilege,
              decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
-      from sys.dba_sys_privs
+      from dba_sys_privs
       where grantee like c_gen_role
       order by 1,2;
 --
    cursor r_c (c_gen_role varchar2) is
       select grantee,granted_role,
              decode(admin_option,'YES',' WITH ADMIN OPTION;',';')
-      from sys.dba_role_privs
+      from dba_role_privs
       where grantee like c_gen_role
       order by 1,2;
 --

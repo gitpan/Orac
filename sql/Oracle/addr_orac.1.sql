@@ -1,2 +1,2 @@
 select addr
-from sys.v_$process
+from v$process

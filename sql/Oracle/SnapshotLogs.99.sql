@@ -5,7 +5,7 @@
 declare
 cursor snap_log_cursor is
 select s.log_owner,s.master,t.pct_free,t.pct_used,t.ini_trans,t.max_trans,t.tablespace_name,t.initial_extent,t.next_extent,t.min_extents,t.max_extents,t.pct_increase
-from sys.dba_snapshot_logs s,sys.dba_tables t
+from dba_snapshot_logs s,dba_tables t
 where s.log_owner = ?
 and s.master = ?
 and s.log_owner = t.owner and s.log_table = t.table_name

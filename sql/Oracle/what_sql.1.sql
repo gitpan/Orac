@@ -3,9 +3,9 @@ s.sid "Sid",s.osuser "OS User",s.username "Username",
 nvl(s.machine,' ? ') "Machine",
 nvl(s.program,' ? ') "Program",
 s.process "Foreground",p.spid "Background",X.sql_text "SQL Text"
-from sys.v_$session S,
-sys.v_$process P,
-sys.v_$sqlarea X
+from v$session S,
+v$process P,
+v$sqlarea X
 where s.paddr = p.addr
 and s.type != 'BACKGROUND'
 and s.sql_address = x.address
