@@ -1,5 +1,6 @@
 package orac_Base;
 use Exporter;
+use Tk::Balloon;
 
 =head1 NAME
 
@@ -19,11 +20,15 @@ inherited and used as is.
  &Dump()
  &about_orac()
  &add_contents()
+ &balloon_bar()
+ &create_button_bar()
+ &create_balloon_bars()
  &do_a_generic()
  &db_check_error()
  &do_query()
  &do_query_fetch1()
  &do_query_fetch_all()
+ &double_click_message()
  &f_clr()
  &f_str()
  &generic_hlist()
@@ -37,6 +42,7 @@ inherited and used as is.
  &need_ps()
  &need_sys()
  &new()
+ &orac_image_label()
  &post_process_sql()
  &print_lines()
  &print_stack()
@@ -45,6 +51,9 @@ inherited and used as is.
  &show_or_hide()
  &show_sql()
  &stop_live_update()
+ &top_left_message()
+ &top_right_ball_message()
+ &window_exit_button()
 
 =cut
 
@@ -54,8 +63,10 @@ inherited and used as is.
               stop_live_update f_str get_frm f_clr must_f_clr see_plsql
               see_sql about_orac gf_str need_sys need_ps generic_hlist
               show_or_hide add_contents post_process_sql do_a_generic
-              do_query_fetch1 );
-
+              do_query_fetch1 create_button_bar window_exit_button
+              double_click_message create_balloon_bars top_left_message
+              balloon_bar orac_image_label
+            );
 use strict;
 
 my $g_typ;
@@ -70,7 +81,7 @@ Start documenting here next time...
 
 sub new
 {
-   print STDERR "orac_Base::new\n" if ( $main::debug > 0 );
+   #print STDERR "orac_Base::new\n" if ( $main::debug > 0 );
    my $proto = shift;
    my $class = ref($proto) || $proto;
    my $self  = {};
@@ -100,11 +111,11 @@ sub Dump
 
    if ( $main::debug > 0 ) {
 
-      print STDERR "Dump()\n";
+      #print STDERR "Dump()\n";
 
       foreach $f (keys(%{$self}))
       {
-         print STDERR ("\t $f \t $self->{$f} \n");
+         #print STDERR ("\t $f \t $self->{$f} \n");
       }
    }
 }
@@ -346,8 +357,8 @@ sub do_query
    my ($stmt, @bindees) = @_;
    my $sth;
 
-   print STDERR "do_query: " . $stmt, "\n" if ( $main::debug > 0 );
-   print STDERR "do_query: self_dbconn" . $self->{Database_conn} . "\n" if ( $main::debug > 0 );
+   #print STDERR "do_query: " . $stmt, "\n" if ( $main::debug > 0 );
+   #print STDERR "do_query: self_dbconn" . $self->{Database_conn} . "\n" if ( $main::debug > 0 );
 
    $sth = $self->{Database_conn}->prepare( $stmt );
    db_check_error($stmt, "Prepare");
@@ -424,9 +435,9 @@ sub db_check_error
    my ($stmt, $action) = @_;
    if (defined($DBI::err) && $DBI::err  < 0)
    {
-      print STDERR "-->>$action error for $stmt\n";
-      print STDERR "$DBI::errstr\n";
-      print_stack();
+      #print STDERR "-->>$action error for $stmt\n";
+      #print STDERR "$DBI::errstr\n";
+      #print_stack();
       die "SQL Error";
    }
 }
@@ -440,7 +451,7 @@ sub print_stack
    $i=0;
    while (($package, $filename, $line) = caller($i++))
    {
-      print STDERR "Package: $package   File: $filename   Line: $line\n";
+      #print STDERR "Package: $package   File: $filename   Line: $line\n";
    }
 }
 ###############################################################################
@@ -544,7 +555,7 @@ sub f_str {
                  '/' . 
                  sprintf("%s.%s.sql",$sub,$number);
 
-      print STDERR "f_str: file >$file<\n" if ($main::debug > 0);
+      #print STDERR "f_str: file >$file<\n" if ($main::debug > 0);
 
 	  local ($/) = (undef); # make the line delimiter empty to read in file in one call
       open(SQL,$file);
@@ -562,7 +573,7 @@ sub get_frm {
    # If this is required, this is where we do it...
 
    my($l_dbh,$cm,$min_len) = @_;
-   print STDERR "get_frm:prepare($cm)\n" if ($main::debug > 0);
+   #print STDERR "get_frm:prepare($cm)\n" if ($main::debug > 0);
 
    my $sth = $l_dbh->prepare($cm) || die $l_dbh->errstr; 
    $sth->execute;
@@ -642,23 +653,30 @@ sub see_sql {
 
    # Produce the box that contains the viewable SQL
 
-   $_[0]->Busy;
-   my $d = $_[0]->DialogBox(-title=>$main::ssq);
+   my $window = $self->{Main_window}->Toplevel();
+   $window->title($main::ssq);
 
-   my $t = $d->Scrolled( 'Text',
-                         -height=>16,
-                         -width=>60,
-                         -wrap=>'none',
-                         -cursor=>undef,
-						 -setgrid=>1,
-                         -foreground=>$main::fc,
-                         -background=>$main::bc);
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$window );
+   $self->window_exit_button(\$loc_menu, \$window );
 
-   $t->pack(-expand=>1,-fill=>'both');
-   tie (*THIS_TEXT,'Tk::Text',$t);
+   $window->{text} = $window->Scrolled(   'Text',
+                                          -height=>16,
+                                          -width=>60,
+                                          -wrap=>'none',
+                                          -cursor=>undef,
+                                          -setgrid=>1,
+                                          -font=>$main::font{name},
+                                          -foreground=>$main::fc,
+                                          -background=>$main::bc
+                                      );
+
+   $window->{text}->pack(-expand=>1,-fill=>'both');
+   tie (*THIS_TEXT,'Tk::Text',$window->{text});
    print THIS_TEXT "$_[1]\n";
-   $d->Show;
-   $_[0]->Unbusy;
+
+   main::iconize( $window );
+
 }
 sub about_orac {
 
@@ -722,7 +740,7 @@ Andy, you can move this if you want. (i.e. feel brave :-)
 # variable to make generic_hlist() & friends work.
 # they must be outside all functions!
 
-my ($g_hlst, $g_hlvl, $gen_sep, $g_mw, $hlist);
+my ($g_hlst, $g_hlvl, $gen_sep, );
 my ($open_folder_bitmap,$closed_folder_bitmap,$file_bitmap);
 
 =head2 generic_hlist
@@ -768,27 +786,48 @@ sub generic_hlist
    $g_hlvl = 1;
 
    my $save_cb = $self->{Database_conn}->{ChopBlanks};
-   $g_mw = $self->{Main_window}->DialogBox( -title=>"$g_hlst", 
-                                            -buttons => ["OK"]
-                                          );
-   $hlist = $g_mw->Scrolled('HList', 
-                            '-drawbranch'     => 1, 
-                            '-separator'      => $gen_sep,
-                            '-indent'         => 50,
-                            '-width'          => 80,
-                            '-height'         => 20,
-                            '-foreground'     => $main::fc,
-                            '-background'     => $main::bc,
-                            '-command'        => [ \&show_or_hide, $self ],
-                           )->pack('-fill'   => 'both',
-                                   '-expand' => 'both');
+                                          
+   my $window = $self->{Main_window}->Toplevel();
+   $window->title("$g_hlst");
 
-   $open_folder_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/folder.open.gif");
-   $closed_folder_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/folder.gif");
-   $file_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/clipbrd.gif");
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$window );
+   $self->window_exit_button(\$loc_menu, \$window );
+
+   $window->{text} = 
+      $window->Scrolled('HList', 
+                      -drawbranch=> 1, 
+                      -separator=> $gen_sep,
+                      -indent=> 50,
+                      -width=> 80,
+                      -height=> 20,
+                      -font=>$main::font{name},
+                      -foreground=> $main::fc,
+                      -background=> $main::bc,
+                      -command=> sub {
+
+                            $self->show_or_hide( $_[0],
+                                                 $window,
+                                                 $window->{text},
+                                               );
+
+                                               },
+
+                     )->pack(-fill=>'both',
+                             -expand=>'both'
+                            );
+
+   $open_folder_bitmap = 
+      $window->Photo(-file=>"$FindBin::RealBin/img/folder.open.gif");
+
+   $closed_folder_bitmap = 
+      $window->Photo(-file=>"$FindBin::RealBin/img/folder.gif");
+
+   $file_bitmap = 
+      $window->Photo(-file=>"$FindBin::RealBin/img/text.gif");
 
    my $cm = $self->f_str( $g_hlst ,'1');
-   print STDERR "prepare1: $cm\n" if ($main::debug > 0);
+   #print STDERR "prepare1: $cm\n" if ($main::debug > 0);
    my $sth = $self->{Database_conn}->prepare( $cm )
              or die $self->{Database_conn}->errstr; 
    $sth->execute;
@@ -800,13 +839,16 @@ sub generic_hlist
    while (@res = $sth->fetchrow)
    {
       my $owner = $res[0];
-      $hlist->add($owner,
-                  -itemtype=>'imagetext',
-                  -image=>$bitmap,
-                  -text=>$owner);
+      $window->{text}->add(  $owner,
+                             -itemtype=>'imagetext',
+                             -image=>$bitmap,
+                             -text=>$owner
+                          );
    }
    $sth->finish;
-   $g_mw->Show();
+
+   main::iconize( $window );
+
    $self->{Database_conn}->{ChopBlanks} = $save_cb;
 }
 
@@ -822,16 +864,22 @@ Basically ripped off from the "Adv. Perl Prog." book. :-)
 sub show_or_hide
 {
    my $self = shift;
-   my ($path) = @_;
-   my $next_entry = $hlist->info('next', $path);
-   print STDERR "path=>$path<   next_entry=$next_entry\n" if ($main::debug > 0);
+
+   my (  $path,
+         $win,
+         $text,
+ 
+      ) = @_;
+
+   my $next_entry = $text->info('next', $path);
+   #print STDERR "path=>$path<   next_entry=$next_entry\n" if ($main::debug > 0);
 
    # Is there another level?
    my $x = $path;
 
-   print STDERR "before x=>$x<\n" if ($main::debug > 0);
+   #print STDERR "before x=>$x<\n" if ($main::debug > 0);
    $x =~ s/[^.$gen_sep]//g;
-   print STDERR "after  x=>$x<\n" if ($main::debug > 0);
+   #print STDERR "after  x=>$x<\n" if ($main::debug > 0);
 
    $g_hlvl = length($x) + 1;
    my $another_level = sql_file_exists($self->{Database_type},$g_hlst, $g_hlvl + 1);
@@ -839,7 +887,7 @@ sub show_or_hide
    {
       #print STDERR "no more levels!\n";
       # change this next line if we desire
-      $self->do_a_generic($g_mw, $gen_sep, $g_hlst, $path);
+      $self->do_a_generic($win, $gen_sep, $g_hlst, $path);
       return;
    }
 
@@ -848,18 +896,27 @@ sub show_or_hide
    {
       # No. open it
       #print "NO!\n";
-      $hlist->entryconfigure($path, '-image' => $open_folder_bitmap);
 
-      print STDERR "show_or_hid:  path>$path<\n" if ($main::debug > 0);
+      $text->entryconfigure( $path, 
+                                         '-image' => $open_folder_bitmap
+                                       );
 
-      $self->add_contents($path);
+      #print STDERR "show_or_hid:  path>$path<\n" if ($main::debug > 0);
+
+      $self->add_contents( $path, 
+                           $text,
+                         );
    }
    else
    {
       # Yes. Close it by changing the icon, and deleting its subnode.
       #print "YES!\n";
-      $hlist->entryconfigure($path, '-image' => $closed_folder_bitmap);
-      $hlist->delete('offsprings', $path);
+
+      $text->entryconfigure( $path, 
+                                         '-image' => $closed_folder_bitmap
+                                       );
+
+      $text->delete('offsprings', $path);
    }
 }
 
@@ -875,7 +932,11 @@ Here is where the SQL is called.
 sub add_contents
 {
    my $self = shift;
-   my ($path) = @_;
+
+   my ( $path,
+        $text,
+
+      ) = @_;
 
    #print STDERR "path=$path\n" if ($main::debug > 0);
 
@@ -889,7 +950,7 @@ sub add_contents
 
    # get the SQL & execute!
    my $s = $self->f_str( $g_hlst, $g_hlvl);
-   print STDERR "prepare2: SQL>\n$s\n<\n ($path)\n" if ($main::debug > 0);
+   #print STDERR "prepare2: SQL>\n$s\n<\n ($path)\n" if ($main::debug > 0);
    my $sth = $self->{Database_conn}->prepare( $s )
       or die $self->{Database_conn}->errstr; 
 
@@ -898,9 +959,9 @@ sub add_contents
 
    my @params = split("\\$gen_sep", $path);
 
-   print STDERR "add_contents: gen_sep >$gen_sep<\n" if ($main::debug > 0);
-   print STDERR "add_contents: params0 >$params[0]<\n" if ($main::debug > 0);
-   print STDERR "add_contents: params1 >$params[1]<\n" if ($main::debug > 0);
+   #print STDERR "add_contents: gen_sep >$gen_sep<\n" if ($main::debug > 0);
+   #print STDERR "add_contents: params0 >$params[0]<\n" if ($main::debug > 0);
+   #print STDERR "add_contents: params1 >$params[1]<\n" if ($main::debug > 0);
 
    # should we search $s for number of placeholders, 
    # and restrict @params to that number?
@@ -925,20 +986,24 @@ sub add_contents
          for (0 .. $#res)
          {
             my $gen_thing = "$path.$sth->{NAME}->[$_] = $res[$_]";
-            $hlist->add($gen_thing,
-                        -itemtype => 'imagetext',
-                        -image    => $bitmap,
-                        -text     => $gen_thing);
+
+            $text->add(  $gen_thing,
+                                     -itemtype => 'imagetext',
+                                     -image    => $bitmap,
+                                     -text     => $gen_thing,
+                                  );
          }
          last;
       }
       else
       {
          my $gen_thing = "$path" . $gen_sep . "$res[0]";
-         $hlist->add($gen_thing,
-                     -itemtype => 'imagetext',
-                     -image    => $bitmap,
-                     -text     => $gen_thing);
+
+         $text->add(  $gen_thing,
+                                  -itemtype => 'imagetext',
+                                  -image    => $bitmap,
+                                  -text     => $gen_thing
+                               );
       }
    }
    $sth->finish;
@@ -974,11 +1039,17 @@ It returns TRUE (non-zero) if the file exists and is readable, FALSE otherwise.
 sub sql_file_exists
 {
    my ($type, $sub, $number) = @_;
-   my $file = sprintf("sql/%s/%s.%d.sql",$type,$sub,$number);
+
+   # FindBin::RealBin patch below supplied by Bruce Albrecht,
+   # 9/9/99
+
+   my $file =
+      sprintf("$FindBin::RealBin/sql/%s/%s.%d.sql",$type,$sub,$number);
 
    #print STDERR "sql_file_exists: $file\n" if ($main::debug > 0);
    return (-r $file);
 }
+
 ###############################################################################
 
 =head2 post_process_sql
@@ -995,6 +1066,235 @@ This generic one does NOTHING!
 sub post_process_sql
 {
    my $self = shift;
+   return;
+}
+
+=head2 create_button_bar 
+
+This creates a generic bar for placing active screen buttons upon.
+
+=cut
+
+sub create_button_bar {
+ 
+   my $self = shift;
+
+   my ($button_bar_ref,
+       $win_ref,
+  
+      ) = @_;
+
+   my(@lay) = qw/-side bottom -expand no -fill both/;
+   $$button_bar_ref = $$win_ref->Frame(-relief=>'ridge',
+                                       -bd=>2,
+                                      )->pack(@lay);
+
+   return;
+}
+
+=head2 create_balloon_bars 
+
+This creates the necessary basic requirements for setting up
+message balloons within a status bar.
+
+=cut
+
+sub create_balloon_bars {
+ 
+   my $self = shift;
+
+   my ($button_bar_ref,
+       $balloon_ref,
+       $win_ref,
+  
+      ) = @_;
+
+   $self->balloon_bar($balloon_ref, $win_ref, undef, );
+
+   $$button_bar_ref = $$win_ref->Frame(-relief=>'ridge',
+                                       -bd=>2,
+                                      )->pack( -side => 'bottom', 
+                                               -fill => 'both',
+                                               -expand => 'no',
+                                             );
+
+   return;
+}
+
+=head2 window_exit_button
+
+This creates a basic 'Exit' button for leaving a window.
+It destroys the window it is set upon.
+
+=cut
+
+sub window_exit_button {
+
+   my $self = shift;
+
+   my ($button_bar_ref,
+       $win_ref,
+  
+      ) = @_;
+
+   my $b = $$button_bar_ref->Button(
+                          -text=>$main::lg{exit},
+                          -command=> 
+                             sub{  
+                                $$win_ref->destroy();
+                                }
+              
+                                 )->pack(-side=>'right');
+
+   return $b;
+
+}
+
+=head2 double_click_message
+
+For helpful "Double-click" messages, at the tops of screens,
+use this function.
+
+=cut
+
+sub double_click_message {
+
+   my $self = shift;
+
+   my ($win_ref) = @_;
+
+   my $doub_frame = $$win_ref->Frame(-relief=>'ridge',
+                                     -bd=>2,
+                                    )->pack(-side=>'top',
+                                            -expand=>'no',
+                                            -fill=>'both'
+                                           );
+
+   $doub_frame->Label(  -text=>$main::lg{doub_click},
+                        -relief=>'flat'
+                     )->pack();
+
+   return;
+
+}
+
+=head2 top_left_message
+
+For 'top of the screen' left hand basic messages, this function
+is used.
+
+=cut
+
+sub top_left_message {
+
+   my $self = shift;
+
+   my ($frame_r, $message) = @_;
+
+   $$frame_r->Label(-text=>$message,
+                    -anchor=>'w',
+                    -relief=>'flat',
+                    -justify=>'left',
+                   )->pack(-expand=>'no',
+                           -side=>'left',
+                          );
+   return;
+}
+
+=head2 top_right_ball_message
+
+For 'top of the screen' right hand 'green-ball' type messages,
+use this basic function.
+
+=cut
+
+sub top_right_ball_message {
+
+   my $self = shift;
+
+   my ($frame_r, $message_r, $win_ref , $gif_file) = @_;
+
+   if (!defined($gif_file) || (length($gif_file) < 1) )
+   {
+      $gif_file = 'grn_ball.gif';
+   }
+   my $ball = 
+      $$win_ref->Photo(-file=>"$FindBin::RealBin/img/${gif_file}");
+
+   $$frame_r->Label(-textvariable => $message_r,  # Remember, use the Ref.
+                    -padx=>2,
+                    -pady=>2,
+                   )->pack(-side=>'right',
+                           -anchor=>'e');
+
+   $$frame_r->Label( -image => $ball,
+                     -padx=>2,
+                     -pady=>2,
+                   )->pack(-side=>'right',
+                           -anchor=>'e');
+   return;
+
+}
+
+=head2 balloon_bar
+
+Create the basic balloon bar for attaching balloon messages to.
+
+=cut
+
+sub balloon_bar {
+
+   my $self = shift;
+
+   my ($balloon_r, $win_r, $width, ) = @_;
+
+   my $status_bar = $$win_r->Frame( -relief => 'groove',
+                                    -bd => 2 
+                                  )->pack( -side => 'bottom', 
+                                           -fill => 'both',
+                                           -expand => 'no',
+                                         );
+   
+   my $balloon_status = $status_bar->Label(-relief => 'flat',
+                                           -justify => 'left',
+                                           -anchor=>'w',
+                                          )->pack(-side=>'left',
+                                                 );
+
+   if (defined($width) && (length($width) > 0))
+   {
+      $balloon_status->configure(-width=>$width);
+   }
+   
+   $$balloon_r = $$win_r->Balloon(-statusbar => $balloon_status, 
+                                  -state => 'status',
+                                 );
+
+   return;
+
+}
+
+=head2 orac_image_label
+
+Create a label with the basic Orac image on it, and packs it 
+to the right of a frame.
+
+=cut
+
+sub orac_image_label {
+
+   my $self = shift;
+
+   my ( $frame_r, $win_r, ) = @_;
+
+   my $orac_li = 
+      $$win_r->Photo( -file=>"$FindBin::RealBin/img/orac.gif"
+                    );
+
+   $$frame_r->Label(-image=>$orac_li,
+                    -borderwidth=>2,
+                    -relief=>'flat'
+                   )->pack(-side=>'right',-anchor=>'e');
    return;
 }
 

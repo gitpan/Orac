@@ -24,6 +24,9 @@ my $min_row;
 my $uf_type;
 
 my $ind_name;
+my $ind_seg_name;
+my $ind_clust;
+my $ind_uniq;
 my $t_n;
 my $tot_i_cnt;
 my $ind_bd_cnt;
@@ -68,7 +71,7 @@ sub init2 {
    my $self = shift;
    $self->{Database_conn} = $_[0];
    $self->Dump;
-
+   @dbs= ();
    my $cm = $self->f_str('get_db','1');
    my $sth = $self->{Database_conn}->prepare($cm) || 
                  die $self->{Database_conn}->errstr;
@@ -81,7 +84,6 @@ sub init2 {
 }
 
 sub add_cascade_button {
-
     my $self = shift;
 
     local ($_);
@@ -171,21 +173,21 @@ sub syb_reverse_tbl {
     my($db) = @_;
 
     $self->{Database_conn}->do("use $db");
-    my $cm = 'select name from sysobjects where type =\'U\' order by name';
+    my $cm = 'select name, user_name(uid) from sysobjects where type =\'U\' order by name';
     my $sth = $self->{Database_conn}->prepare($cm) || 
 	        die $self->{Database_conn}->errstr; 
     $sth->execute;
-    my @tables = ();
-    my $row;
-    while($row = $sth->fetchrow){
-	push @tables, $row;
+    my %tables;
+    my @row = ();
+    while(@row = $sth->fetchrow){
+	$tables{$row[0]} = $row[1];
     }
     $sth->finish;
     
     $self->{Text_var}->insert('end', "/* Script for recreation of user objects in $db database */\n\n");
     my $another_row;
-    for (@tables) {
-	$sth = $self->{Database_conn}->prepare("exec sp_table $_") || 
+    for (keys %tables) {
+	$sth = $self->{Database_conn}->prepare("exec sp_table \"$tables{$_}.$_\"") || 
 	        die $self->{Database_conn}->errstr; 
 	$sth->execute;
 	do {
@@ -197,20 +199,21 @@ sub syb_reverse_tbl {
     }
     $sth->finish;
 
-    $cm = 'select name from sysobjects where type in ("P", "TR", "V") order by name';
+    $cm = 'select name, user_name(uid) from sysobjects where type in ("P", "TR", "V") order by name';
     $sth = $self->{Database_conn}->prepare($cm) || die $self->{Database_conn}->errstr; 
     $sth->execute;
-    my @procs = ();
-    while($row = $sth->fetchrow){
-	push @procs, $row;
+    my %procs;
+    @row = ();
+    while(@row = $sth->fetchrow){
+	$procs{$row[0]} = $row[1];
     }
     $sth->finish;
 
     $main::conn_comm_flag = 999;
-    for (@procs) {
+    for (keys %procs) {
 	undef $main::store_msgs;
 	$self->{Database_conn}->do("use $db");
-	$sth = $self->{Database_conn}->prepare("exec sp__helptext $_"); 
+	$sth = $self->{Database_conn}->prepare("exec sp__helptext \"$procs{$_}.$_\""); 
 	$sth->execute;
 	$main::store_msgs =~ s/^\s//g;
 	$self->{Text_var}->insert('end', $main::store_msgs."\n");
@@ -231,11 +234,6 @@ sub do_a_generic {
    # required.
 
    my ($l_mw, $l_gen_sep, $l_hlst, $input) = @_;
-
-   print STDERR "do_a_generic: l_mw      >$l_mw<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: l_gen_sep >$l_gen_sep<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: l_hlst    >$l_hlst<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: input     >$input<\n" if ($main::debug > 0);
 
    $l_mw->Busy;
    my $owner;
@@ -265,22 +263,53 @@ sub do_a_generic {
    $main::conn_comm_flag = 999;
    $second_sth->execute;
    $main::conn_comm_flag = 0;
-   my $d = $l_mw->DialogBox();
 
-   $d->add("Label",
-	   -text=>"$l_hlst $main::lg{sql_for} $owner.$generic"
-	   )->pack(side=>'top');
+   my $menu_bar;
+   my $balloon;
+   my %b_images;
 
-   my $l_txt = $d->Scrolled('Text',
-			    -width=>95,
-			    -height=>24,
-			    -wrap=>'none',
-			    -cursor=>undef,
-			    -foreground=>$main::fc,
-			    -background=>$main::bc
-			    )->pack(-expand=>1,-fil=>'both');
+   my $window = $self->{Main_window}->Toplevel();
 
-   tie (*L_TEXT, 'Tk::Text', $l_txt);
+   $window->bind('<Destroy>' => sub {
+                                 $window = undef;
+                                                    }
+                                );
+   $window->title ("$l_hlst $main::lg{sql_for} $owner.$generic");
+
+   if ( ($l_hlst eq 'Tables') || 
+        ($l_hlst eq 'System Tables') ||
+        ($l_hlst eq 'Views') )
+   {
+      $self->create_balloon_bars(\$menu_bar, \$balloon, \$window );
+
+      foreach my $bit ('sizeindex', 
+                      'form', 
+                      'freespace',
+                      'index',
+                      'constraint',
+                      'trig',
+                      'comment',
+                     )
+      {
+         $b_images{$bit} = $window->Photo( 
+            -file => "$FindBin::RealBin/img/${bit}.gif" );
+      }
+   }
+   else
+   {
+      $self->create_button_bar(\$menu_bar, \$window );
+   }
+   
+   $window->{text} = $window->Scrolled('Text',
+				       -width=>95,
+				       -height=>24,
+				       -wrap=>'none',
+				       -cursor=>undef,
+				       -foreground=>$main::fc,
+				       -background=>$main::bc
+				       )->pack(-expand=>1,-fil=>'both');
+
+   tie (*L_TEXT, 'Tk::Text', $window->{text});
 
    my $j = 0;
    my $full_list;
@@ -296,58 +325,76 @@ sub do_a_generic {
    my $another_row;
    do {
        while($another_row = $second_sth->fetchrow){
-	   print L_TEXT $another_row, "\n";
+	   next if ($another_row == 1);
+           print L_TEXT $another_row, "\n";
        }       
    } while($second_sth->{syb_more_results});
 
    $second_sth->finish;
-   my @b;
-   $l_txt->window('create', 'end',-window=>$b[0]);
+   my $b;
 
    if ($l_hlst eq 'Tables' || $l_hlst eq 'System Tables'){
        print L_TEXT "\n\n  ";
-       my(@tab_options) = qw/$main::lg{indexs} $main::lg{constrnts} $main::lg{trggrs_dep} $main::lg{procs_dep} $main::lg{oi_grants}/;
-       my $i = 1;
+       my $i = 0;
+       my @tab_options = ('index', 'constraint', 'trig', 'freespace', 'comment');
+ 
        foreach ($main::lg{indexs},$main::lg{constrnts},$main::lg{trggrs_dep}, $main::lg{procs_dep}, $main::lg{oi_grants}){
 	   my $this_txt = $_;
-	   $b[$i] = $l_txt->Button(-text=>"$this_txt",
-				   -command=>sub {$self->do_a_generic($d, '.', $this_txt, $input);});
-	   $l_txt->window('create', 'end',-window=>$b[$i]);
 
+	   $b = $menu_bar->Button(-image=>$b_images{$tab_options[$i]},
+				  -text=>$this_txt,
+				  -command=>sub {$self->do_a_generic($window, '.', $this_txt, $input);}
+				  )->pack(-side=>'left');
+	   $balloon->attach($b, -msg => $_);
+	   
 	   print L_TEXT " ";
 	   $i++;
        }
        print L_TEXT "\n\n  ";
-
-       $b[$i] = $l_txt->Button(-text=>$main::lg{form},
-			       -command=>
-			              sub{$d->Busy;
-					  $self->univ_form($d,$owner,$generic,'form');$d->Unbusy });
-       $l_txt->window('create', 'end',-window=>$b[$i]);
+       
+       $b = $menu_bar->Button(-image=>$b_images{form},
+			      -command=>
+			      sub{$window->Busy;
+				  $self->univ_form($window,$owner,$generic,'form');
+				  $window->Unbusy }
+			      )->pack(-side=>'left');
+       $balloon->attach($b, -msg => $main::lg{form});
+       
        $i++;
+       
+       $b =  $menu_bar->Button(-image=>$b_images{sizeindex},
+			       -command=> sub{$window->Busy;
+					      $self->univ_form($window,$owner,$generic,'index');
+					      $window->Unbusy }
+			       )->pack(-side=>'left');
+       
+       $balloon->attach($b, -msg => $main::lg{build_index});
        print L_TEXT " ";
-       $l_txt->window('create','end',-window=>$b[$i]);
    } elsif ($l_hlst eq 'Views'){
       print L_TEXT "\n\n  ";
-      $b[1] = $l_txt->Button(-text=>$main::lg{form},
-			     -command=>sub{$d->Busy; $self->univ_form($d,$owner,$generic,'form');$d->Unbusy });
-      $l_txt->window('create', 'end',-window=>$b[1]);
-   }
+      $b = menu_bar->Button(-text=>$main::lg{form},
+			    -command=>sub{$window->Busy; 
+					  $self->univ_form($window,$owner,$generic,'form');
+					  $window->Unbusy }
+			    )->pack(-side=>'left');
+      $balloon->attach($b, -msg => $main::lg{form});
+  }
+   
    print L_TEXT "\n\n";
-   $d->Show($d);
+   $self->window_exit_button(\$menu_bar, \$window );
+   main::iconize( $window );
    $l_mw->Unbusy;
 }
 
 sub explain_plan {
    my $self = shift;
 
-
-   $main::swc{explain_plan} = MainWindow->new();
-   $main::swc{explain_plan}->title($main::lg{explain_plan});
+   my $window = $self->{Main_window}->Toplevel();
+   $window->title($main::lg{explain_plan});
 
    my(@exp_lay) = qw/-side top -padx 5 -expand no -fill both/;
-   my $dmb = $main::swc{explain_plan}->Frame->pack(@exp_lay);
-   my $orac_li = $main::swc{explain_plan}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+   my $dmb = $window->Frame->pack(@exp_lay);
+   my $orac_li = $window->Photo(-file=>'img/orac.gif');
 
    $dmb->Label(-image=>$orac_li,
 	       -borderwidth=>2,
@@ -364,24 +411,23 @@ sub explain_plan {
 
    $dmb->Button(-text=>$main::lg{clear},
 		-command=>sub{
-                      $main::swc{explain_plan}->Busy;
+                      $window->Busy;
                       $sql_txt->delete('1.0','end');
                       my $w_user_name = $main::v_sys;
                       $expl_butt->configure(-state=>'normal');
-                      $main::swc{explain_plan}->Unbusy;
+                      $window->Unbusy;
 		  }
                )->pack(side=>'left');
 
    $dmb->Button(-text=>$main::lg{exit},
 		-command=> sub{
-                      $main::swc{explain_plan}->withdraw();
-                      $main::swc{explain_plan}->Busy;
+                      $window->destroy();
+                      $window->Busy;
  		      my $cm = $self->f_str('explain_plan','3');
 		      $self->{Database_conn}->do($cm);
 		      $cm = $self->f_str('explain_plan','4');
 		      $self->{Database_conn}->do($cm);
-                      $main::swc{explain_plan}->Unbusy;
-		      $main::sub_win_but_hand{explain_plan}->configure(-state=>'active');
+                      $window->Unbusy;
 		      undef $main::conn_comm_flag;
 		  } 
                )->pack(-side=>'left');
@@ -425,41 +471,41 @@ sub explain_plan {
                )->pack(-side=>'left');
 
    @exp_lay = qw/-side top -padx 5 -expand yes -fill both/;
-   my $top_slice = $main::swc{explain_plan}->Frame->pack(@exp_lay);
+   my $top_slice = $window->Frame->pack(@exp_lay);
 
    my $sql_txt_width = 50;
    my $sql_txt_height = 15;
-   $main::swc{explain_plan}->{text} = $top_slice->Scrolled('Text',
-						   -wrap=>'none',
-						   -cursor=>undef,
-						   -height=>($sql_txt_height + 4),
-						   -width=>($sql_txt_width + 10),
-						   -foreground=>$main::fc,
-						   -background=>$main::bc);
+   $window->{text} = $top_slice->Scrolled('Text',
+					   -wrap=>'none',
+					   -cursor=>undef,
+					   -height=>($sql_txt_height + 4),
+					   -width=>($sql_txt_width + 10),
+					   -foreground=>$main::fc,
+					   -background=>$main::bc);
    # Set the holding variables
 
    my $w_user_name = '';
    my $w_orig_sql_string = '';
 
-   $sql_txt = $main::swc{explain_plan}->{text}->Scrolled('Text',
-							 -wrap=>'none',
-							 -cursor=>undef,
-							 -height=>$sql_txt_height,
-							 -width=>$sql_txt_width+5,
-							 -foreground=>$main::fc,
-							 -background=>$main::ec);
+   $sql_txt = $window->{text}->Scrolled('Text',
+					 -wrap=>'none',
+					 -cursor=>undef,
+					 -height=>$sql_txt_height,
+					 -width=>$sql_txt_width+5,
+					 -foreground=>$main::fc,
+					 -background=>$main::ec);
    tie (*SQL_TXT, 'Tk::Text', $sql_txt);
 
-   $main::swc{explain_plan}->{text}->windowCreate('end',-window=>$sql_txt);
-   $main::swc{explain_plan}->{text}->insert('end', "\n");
-   $main::swc{explain_plan}->{text}->pack(-expand=>1,-fil=>'both');
+   $window->{text}->windowCreate('end',-window=>$sql_txt);
+   $window->{text}->insert('end', "\n");
+   $window->{text}->pack(-expand=>1,-fil=>'both');
    $main::conn_comm_flag = 999;
    $cm = $self->f_str('explain_plan','1');
    $self->{Database_conn}->do($cm);
    $cm = $self->f_str('explain_plan','2');
    $self->{Database_conn}->do($cm);
-   $main::swc{explain_plan}->{text}->configure(-state=>'disabled');
-   $self->iconize($main::swc{explain_plan});
+   $window->{text}->configure(-state=>'disabled');
+   $self->iconize($window);
    return;
 }
 
@@ -966,6 +1012,74 @@ sub create_database {
     }
 }
 
+sub create_index {
+    my $self = shift;
+    my ($dbname, $tbname, $tbownerGl, $tbsegmentGl, @colDataGl) = @_;
+    
+    $self->f_clr( $main::v_clr );
+    my ($row, $size, $type, $i);
+    my ($colName,$dttype, $colLength,$tbsegment, $tbowner, $colPrec, $colScale, $colNull);
+    my ($ps_tbname);
+    my @row = ();
+    my @colData = ();
+    my @db = ();
+
+    my $cm = $self->f_str('Tables' ,'1');
+    my $sth = $self->{Database_conn}->prepare( $cm ) ||
+	         die $self->{Database_conn}->errstr; 
+    $sth->execute;
+    
+    while($row = $sth->fetchrow){
+	push @db, $row
+    }       
+    $sth->finish;
+
+
+    my $d = $main::mw->DialogBox(-title => $main::lg{ind_crt},
+				 -buttons => ["Next", "Cancel"]);
+    my $l1 = $d->Label(-text=>"Database:", justify=>"right");
+
+    $dbname= 'Select Database' unless ($dbname ne '');
+    my $ps_dbname = $d->Optionmenu(-options=> [@db],
+				   -command=>sub {  
+				       # Will throw that into a separate function later
+				       $self->{Database_conn}->do("use $dbname");
+				       $cm = $self->f_str('Tables', 2);
+				       $sth = $self->{Database_conn}->prepare($cm) || 
+					         die $self->{Database_conn}->errstr; 
+				       $sth->execute;
+				       $ps_tbname->options([]);
+				       while($row = $sth->fetchrow){
+					   $ps_tbname->addOptions([$row]);
+				       }       
+				       $tbname = 'Select Table';
+				       $sth->finish;
+				   },
+				   -textvariable=>\$dbname)->pack();
+    my $l2 = $d->Label(-text=>"Table:", justify=>"right");
+
+    $tbname= 'Select Table' unless ($tbname ne '');
+    $ps_tbname = $d->Optionmenu(-options=> [],
+				-command=>sub { },
+				-textvariable=>\$tbname)->pack();
+
+    Tk::grid($l1,-row=>0,-column=>0,-sticky=>'e');
+    Tk::grid($ps_dbname,-row=>0,-column=>1,-sticky=>'ew');
+    Tk::grid($l2,-row=>1,-column=>0,-sticky=>'e');
+    Tk::grid($ps_tbname,-row=>1,-column=>1,-sticky=>'ew');
+ 
+    $d->gridRowconfigure(1,-weight=>1);
+    my $button = $d->Show;
+
+    if ($tbname eq 'Select Table' && $button ne 'Cancel') {
+	$self->create_index ;
+    } elsif ($button eq 'Cancel') {
+	return;
+    } else {
+	$self->univ_form ($d, $dbname, $tbname, "index");
+    }
+}
+
 sub create_table {
     my $self = shift;
     my ($dbname, $tbname, $tbownerGl, $tbsegmentGl, @colDataGl) = @_;
@@ -1195,7 +1309,7 @@ sub create_table {
 
     my $button = $d->Show;
 
-    my($cmd) = sprintf "CREATE TABLE %s (", $tbname;
+    my($cmd) = sprintf "CREATE TABLE %s.%s (", $tbowner,$tbname;
     @colDataGl = ();
 
     for $i (0..$ps_ls->size - 1) {
@@ -1771,6 +1885,7 @@ sub selector {
          $where_bit = "\nand ";
       }
    }
+   
    $self->build_ord($sel_d,$uf_type);
    $self->and_finally($sel_d,$l_sel_str);
 }
@@ -1906,9 +2021,80 @@ sub build_ord {
 		  $l_sel_str = $l_sel_str . ", ";
 	      }
 	  }
+      } else {
+	  $self->really_build_index($bl_d,$own,$obj);
       }
   }
 }
+
+sub really_build_index {
+   my $self = shift;
+
+   # Picks up everything finally reqd. to build
+   # up the DDL for index creation
+
+   my($rbi_d,$own,$obj) = @_;
+
+   my $d = $rbi_d->DialogBox();
+
+   $d->add( "Label",
+            -text=>"$main::lg{ind_crt_for} $own.$obj"
+          )->pack(side=>'top');
+
+   my $l_text = $d->Scrolled( 'Text',
+                              -wrap=>'none',
+                              -cursor=>undef,
+                              -foreground=>$main::fc,
+                              -background=>$main::bc
+                            );
+
+   $l_text->pack(-expand=>1,-fil=>'both');
+
+   tie (*L_TXT, 'Tk::Text', $l_text);
+   my $cmd = sprintf("CREATE %s %s INDEX %s \nON %s..%s (", $ind_uniq,
+		                                              $ind_clust, 
+                                                              $ind_name, 
+                                                              $own, 
+                                                              $obj);
+
+   for my $cl (1..$tot_i_cnt){
+       $cmd .= "\n";
+       my $bs = $tot_ind_ar[$ih[$cl]].",";
+       $cmd .= $bs;
+   }
+   $cmd =~ s/\,$//g;
+   $cmd .= ")\n";
+   $cmd .= "ON \"$ind_seg_name\"\n" if ($ind_seg_name ne '' && $ind_seg_name ne 'Select Segment');
+
+   print L_TXT "/*  Index Script for new index ${ind_name} on ${own}..${obj} */\n\n";
+   print L_TXT $cmd,"\n";
+ 
+   $d->Show;
+}
+
+sub ind_prep {
+
+   my $self = shift;
+
+   # Helper function for working out Index DDL
+
+   my $cm = shift;
+   my @bindees = @_;
+   my $sth = $self->{Database_conn}->prepare($cm) || 
+                die $self->{Database_conn}->errstr; 
+   my $num_bindees = @bindees;
+   if ($num_bindees > 0){
+      my $i;
+      for ($i = 1;$i <= $num_bindees;$i++){
+         $sth->bind_param($i,$bindees[($i - 1)]);
+      }
+   }
+   $sth->execute;
+   my @res = $sth->fetchrow;
+   $sth->finish;
+   return @res;
+}
+
 sub now_build_ord {
    my $self = shift;
 
@@ -1937,6 +2123,122 @@ sub now_build_ord {
                           -cursor=>undef,
                           -foreground=>$main::fc,
                           -background=>$main::bc);
+
+
+   if ($uf_type eq 'index'){
+
+      # User may be wanting to generate DDL to create new Index.
+      # If so, this picks up the other information required.
+
+      my $id_name = $main::lg{ind_name} . ':';
+
+      $w = $t->Entry(-textvariable=>\$id_name,
+                     -background=>$main::fc,
+                     -foreground=>$main::ec);
+
+      $t->windowCreate('end',-window=>$w);
+
+      $ind_name = 'INDEX_NAME';
+      $w = $t->Entry(-textvariable=>\$ind_name,
+                     -cursor=>undef,
+                     -foreground=>$main::fc,
+                     -background=>$main::ec);
+      $t->windowCreate('end',-window=>$w);
+      $t->insert('end', "\n");
+
+      my $seg_name = $main::lg{segm} . ':';
+
+      $w = $t->Entry(-textvariable=>\$seg_name,
+                     -background=>$main::fc,
+                     -foreground=>$main::ec);
+
+      $t->windowCreate('end',-window=>$w);
+
+      $ind_seg_name = "Select Segment";
+      my $t_l = $t->BrowseEntry(-cursor=>undef,
+                             -variable=>\$ind_seg_name,
+                             -foreground=>$main::fc,
+                             -background=>$main::ec);
+
+      $t->windowCreate('end',-window=>$t_l);
+      $t->insert('end', "\n");
+
+      my $uniq = $main::lg{uniq} . ':';
+      $w = $t->Entry(-textvariable=>\$uniq,
+                     -background=>$main::fc,
+                     -foreground=>$main::ec);
+
+      $t->windowCreate('end',-window=>$w);
+
+      $ind_uniq = '';
+      $ind_clust = '';
+
+      my $t_u = $t->Checkbutton(-variable=>\$ind_uniq,
+				-onvalue=>'UNIQUE',
+				-offvalue=>'',
+				-relief=>'flat',
+				-foreground=>$main::fc,
+				-background=>$main::ec);
+ 
+      $t->windowCreate('end',-window=>$t_u);
+      $t->insert('end', "\n");
+
+      my $ind_type = $main::lg{ind_type} . ':';
+      $w = $t->Entry(-textvariable=>\$ind_type,
+                     -background=>$main::fc,
+                     -foreground=>$main::ec);
+
+      $t->windowCreate('end',-window=>$w);
+
+      my $t_t = $t->Radiobutton(-variable=>\$ind_clust,
+				-text=>'Clustered',
+				-value=>'CLUSTERED',
+				-relief=>'flat',
+				-foreground=>$main::fc,
+				-background=>$main::ec);
+
+      $t->windowCreate('end',-window=>$t_t);
+      $t->insert('end', "\n"); 
+
+      $w = $t->Entry(-textvariable=>'',
+                     -background=>$main::fc,
+                     -foreground=>$main::ec);
+
+      $t->windowCreate('end',-window=>$w);
+
+
+      $t_t = $t->Radiobutton(-variable=>\$ind_clust,
+			     -text=>'Non Clustered',
+			     -value=>'NONCLUSTERED',
+			     -relief=>'flat',
+			     -foreground=>$main::fc,
+			     -background=>$main::ec);
+ 
+      $t->windowCreate('end',-window=>$t_t);
+      $t->insert('end', "\n"); 
+     
+      my $sth = 
+         $self->{Database_conn}->prepare($self->f_str('Segments','2'))||
+                die $self->{Database_conn}->errstr; 
+      $sth->execute;
+
+      my $i = 0;
+      my @tot_obj;
+
+      my @res;
+
+      while (@res = $sth->fetchrow) {
+         $tot_obj[$i] = $res[0];
+         $i++;
+      }
+      $sth->finish;
+
+      my @h_ar = sort @tot_obj;
+      foreach(@h_ar){
+         $t_l->insert('end', $_);
+      }
+      $t->insert('end', "\n");
+   }
 
    my @pos_txt;
    for $i (1..($tot_i_cnt + 2)){
@@ -2082,15 +2384,15 @@ sub get_lines
          # find the type to set the justification; get these from DBI.pm
          SWITCH: {
             $_ = $types[$i];
-#            ($_ == DBI::SQL_CHAR) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_VARCHAR) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_DATE) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_TIME) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_TIMESTAMP) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_LONGVARCHAR) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_BINARY) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_VARBINARY) && do { $just = '-'; last SWITCH; };
-#            ($_ == DBI::SQL_LONGVARBINARY) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_CHAR) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_VARCHAR) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_DATE) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_TIME) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_TIMESTAMP) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_LONGVARCHAR) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_BINARY) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_VARBINARY) && do { $just = '-'; last SWITCH; };
+            ($_ == DBI::SQL_LONGVARBINARY) && do { $just = '-'; last SWITCH; };
             ($_ == DBI::SQL_NUMERIC) && do { $just = ''; last SWITCH; };
             ($_ == DBI::SQL_DECIMAL) && do { $just = ''; last SWITCH; };
             ($_ == DBI::SQL_INTEGER) && do { $just = ''; last SWITCH; };
@@ -2155,7 +2457,9 @@ sub print_lines
    for ($j=0 ; $j <= $#lines ; $j++)
    {
       @row = @{$lines[$j]};
-      next if (@row == 1 && $row[0] == 0);
+      # Hack to prevent the return status of stored proc
+      # from printing
+      next if (@row == 1 && ($row[0] == 0 || $row[0] == 1));
       for ($i=0 ; $i <= $#tlen; $i++)
       {
 	  $row[$i] = "" if (!defined($row[$i]));

@@ -1,4 +1,3 @@
-
 #
 # vim:ts=2:sw=2
 # Package: Orac::Shell::Do
@@ -8,47 +7,66 @@
 package Shell::Do;
 
 sub do_prepare {
-	my $self = shift;
-	my $statement = shift;
+	my ($self, $statement) = @_;
 	my $sth;
-	return undef unless $statement;
+
+	unless($statement) {
+		$self->{c}->{status} = -1;
+		$self->{c}->{msg} =  "Preparing a blank statement ... ? (doesn't work)";
+		return undef;
+	}
+
+	local $SIG{__WARN__} = 'DEFAULT';
+
 	eval {
 		$sth = $self->{dbh}->prepare($statement);
-		# $sh->sth_go($sth, 1);
 	};
-	if ($@) {
+	if ($@ or $DBI::err) {
 		my $err = $@;
-		$err =~ s: at \S*Shell/Do.pm line \d+(,.*?chunk \d+)?::
-			if !$self->{debug} && $err =~ /^DBD::\w+::\w+ \w+/;
-				print STDERR "$err";
+			$self->{c}->{status}  = $DBI::err;
+			# Use an error status, if eval error.
+			$self->{c}->{status}  = -1 unless $DBI::err;
+			$self->{c}->{msg} =  $err . $DBI::errstr;
+			return $self->{c}->{status};
 	}
-	# $self->{dbh}->prepare( $statement );
-	$sth;
+	return $sth;
 }
 
 sub sth_go {
 	my ($self, $sth, $execute) = @_;
 	my $rv;
-	if ($execute || !$sth->{Active}) {
+
+	local $SIG{__WARN__} = 'DEFAULT';
+
+	if ($execute or !$sth->{Active}) {
 		my @params;
 		my $params = $sth->{NUM_OF_PARAMS} || 0;
 		print "Statement has $params parameters:\n" if $params;
-		foreach(1..$params) {
-	    	#my $val = $sh->readline("Parameter $_ value: ");
-	    	push @params, $val;
-		}
-			$rv = $sth->execute(@params);
-			#print STDERR "Value returned: $rv\n";
+	  @params = $self->get_params($params) if $params;
+			eval {
+				$rv = $sth->execute(@params);
+			};
+			if ($@ or $DBI::err) {
+				local $^W=0;
+				my $err = $@;
+				# Pick up the DBI error first.
+				$self->{c}->{status}  = $DBI::err;
+				# Use an error status, if eval error.
+				$self->{c}->{status}  = -1 unless $DBI::err;
+				$self->{c}->{msg} = "$err" . $DBI::errstr;
+				return $self->{c}->{status};
+			}
 			return $rv if !defined($rv); 
-			$self->{display_rows} = 1;
+			$self->{c}->{display} = 1;
 	}
 	
 	if (!$sth->{'NUM_OF_FIELDS'}) { # not a select statement
 		local $^W=0;
 		$rv = "undefined number of" unless defined $rv;
 		$rv = "unknown number of"   if $rv == -1;
-		$self->{status} = "[$rv row" . ($rv==1 ? "" : "s") . " affected]"; #"
-		$self->{display_rows} = 0;
+		$self->{c}->{msg} = "[$rv row" . ($rv==1 ? "" : "s") . " affected]"; #"
+		$self->{c}->{display} = 0;
+		$self->{c}->{status} = 0;
 	}
 
 	$rv;
@@ -57,6 +75,9 @@ sub sth_go {
 sub do_execute {
 	my $self = shift;
 	my $sth  = shift;
+
+	local ($SIG{__WARN__}) = 'IGNORE';
+
 $sth->execute(@_);
 }
 sub do_finish {
@@ -76,8 +97,27 @@ sub do_do {
 $self->{dbh}->do( @_ );
 }
 
+sub get_params {
+	my ($self, $num ) = @_;
 
+	my @val;
+	my $d = $self->{dbiwd}->Dialog( -title => 'Enter Parameters',
+	);
 
+	for my $x ( 1 .. $num ) {
+		my $f = $d->Frame()->pack( -side => 'top' );
+		my $l = $f->Label( -text => "Param: $x", 
+			-relief => 'groove',
+			-width => 20 );
+		my $e = $f->Entry( -width => 20, -textvariable => \$val[$x - 1] );
+		$l->pack( -side => 'left' );
+		$e->pack( -side => 'right' );
+	}
+
+	$d->Show;
+
+	return @val;
+}
 
 1;
 __END__

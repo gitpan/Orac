@@ -1,2 +1,0 @@
-English,English.txt
-Pig Latin,PigLatin.txt

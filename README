@@ -5,7 +5,9 @@ Orac --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
    email:         andy_j_duncan@yahoo.com
    CPAN id:       CPAN/authors/id/A/AN/ANDYDUNC
 
-NB: Please read about the new Orac Users mailing list below :)
+NB: This README file does not contain all of the information within
+the Orac distribution.  For more specialised information, please go
+to our "docs" directory.
 
 ################################################################################
 # The next stable version of Orac will be Orac-1.2.0, which we hope to release 
@@ -49,9 +51,19 @@ PLEASE NOTE:
 
 WARNING:
 
-   THIS SOFTWARE IS PROVIDED "AS IS" IN THE HOPE THAT IT WILL BE USEFUL, 
-   BUT WITHOUT ANY WARRANTY; WITHOUT EVEN THE IMPLIED WARRANTY OF 
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
+FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
+DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
+IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
+NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
+MODIFICATIONS.
+
 
 PREREQUISITES (For Everybody)
 
@@ -138,16 +150,28 @@ our 'Explain Plan' functionality for Oracle users.
 
 Orac MONGERS (in alphabetical surname order):
 
-Name           Email                            Patch of Interest
-----           -----                            -----------------
+Name           Email/Webpage                    Patch of Interest
+----           -------------                    -----------------
+
 Bruce Albrecht <bruce@zuhause.mn.org>           Multi-User Functionality
+
 Kevin Brannen  <kbrannen@physiciansdata.com>    Informix/RulesMeister
+
 Andy Duncan    <andy_j_duncan@yahoo.com>        Oracle
+
 Sean Hull      <shull@panix.com>                Linux/Oracle
+               http://www.iheavy.com/
+
 Kevin Kitts    <kkitts@his.com>                 Linux/Webmaster
+               http://www.kkitts.com/
+
 Thomas Lowery  <stlassociates@usa.net>          Shell/OO Development
+               http://tlowery.hypermart.net/
+
 Charles Wolfe  <cwolfe@ix.netcom.com>           NT Guru
+
 Alex Shnir     <alex@getmessage.com>            Sybase
+
 
 FUTURE OF Orac:
 
@@ -261,6 +285,8 @@ Orac-1.1.15 Gradual Addition of Alex's Sybase functionality.
             + multi-user functionality added by Bruce Albrecht
 Orac-1.1.16 Private releases of 1.1.15 tidied up, and put together
             for this public release.
+Orac-1.1.17 private: Further changes to orac_Shell, new orac_Sybase,
+            brand new orac_FileSelect module.
        
 EXTRA NOTES FOR LINUX USERS:
 
@@ -369,41 +395,18 @@ remote database connection.
 
 Orac Users Mailing List
 -----------------------
+Please use the following mailing list resources to find out more about Orac: 
 
-Original mail message from Kevin Kitts detailing Orac Users Mailing List:
+For information on the installation, configuration and use of Orac you can
+subscribe to the Orac User's mailing list by sending an empty e-mail (with the
+word subscribe on the subject line) to: 
 
-----------
-Hello All,
-   I've created a new list for the purpose of helping users of the Orac
- program. Please refer all questions about installation, configuration,
- setup, feature requests, feedback and other Orac usage related items to the
- users list and not the developers list!
+manage-orac-dba-users-subscribe@listserv.kkitts.com 
 
- To subscribe to the user's list send an e-mail to the following address
- with the word
+For those interested in following the developer discussion (or perhaps even
+developing for Orac!) a developers list is available. Please send an empty 
+e-mail (with the word subscribe on the subject line) to: 
 
- subscribe
-
- in the Subject field
-
- manage-orac-dba-users-subscribe@listserv.kkitts.com
-
-
- Thanks,
-
- Kevin
-
-
-Addendum 1
-
-To send e-mail to the Orac Users list (after you have successfully
-suscribed) send it to the address:
-
-manage-orac-dba-users@listserv.kkitts.com
-
-Thanks again,
-
-Kevin
-----------
+manage-orac-dba-developers-subscribe@listserv.kkitts.com 
 
 EOF

@@ -1,3 +1,5 @@
+HelpTools
+
 Intro
 =====
 This is a new Orac feature which can enable you to add your own

@@ -9,6 +9,7 @@ command^0^1^srv_prop^$main::current_db->show_server_info^$main::lg{srv_prop}+'sr
 command^0^1^srv_stat^$main::current_db->show_server_stat^$main::lg{srv_stat}+'srv_stat'^
 separator^
 command^0^1^tbl_crt^$main::current_db->create_table^
+command^0^1^ind_crt^$main::current_db->create_index^
 Menubutton^obj^
 command^0^0^defaults^$main::current_db->generic_hlist^'Defaults'+'.'^
 command^0^0^groups^$main::current_db->generic_hlist^'Groups'+'.'^

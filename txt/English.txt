@@ -1,15 +1,21 @@
 about_orac^About Orac & Terms of Use^
+apply^Apply^
+auto_clear^Automatic Clearance of Screen, Press Switch for Manual^
+ind_crt^Create Index^
+ind_type^Index Type^
+segm^Segment^
+uniq^Unique^
 add^Add^
 add_butt_mess^Please pick the cascade you wish to attach button to^
 add_button^Add Button^
 add_cascade^Add Cascade^
 are_you_sure^Please Confirm^
-auto_clear^Automatic Clear^
 back_col_menu^Background Colour Menu^
+back_dir^Go Back a Directory^
 back_procs^Background Processes^
 bar_col^red^
 blk_siz^Block Size^
-build_index^Build Index^
+build_index^Work out potential Index Creation SQL^
 butt_text^Button Text (Report Title)^
 button^Button^
 cancel^Cancel^
@@ -18,8 +24,9 @@ cascade^Cascade^
 change_dbtyp^Change DB^
 choose_butt^Choose Button^
 choose_casc^Choose Cascade^
-clear^Clear^
+clear^Clear Screen^
 comments^Comments^
+comment^Possible Comments on Data Object^
 comp_errs_for^Compilation Errors for^
 compr_extnts^Compressed Extents^
 config_add_butt^Add a Button to a Cascade^
@@ -34,6 +41,7 @@ conn_times^Connection Times^
 connect^Connect^
 connecting^Connecting...^
 constrnts^Constraints^
+constraint^Constraints of Data Object^
 cont^Continue^
 curr_procs^Current Processes^
 data_obj^Data Objects^
@@ -74,6 +82,7 @@ diag_ind^Find Bad Indexes^
 disconn^Disconnected...^
 disk^Disk^
 dispatch_mts^Dispatcher Mts Related Info^
+docs^Orac Documents^
 doub_click^Double-Click Selection^
 ed_sql_mess2^Please pick a Button^
 ed_sql_mess^Please pick a Cascade^
@@ -87,12 +96,19 @@ explain_plan^SQL Browser/Explain Plan^
 ext_rep^Extents Report^
 file^File^
 file_io^File I/O^
+file_viewer^Main File Viewer^
+font_message^Please Create a New Font^
+font_sel^Font Selector^
+font_warning^If New Font doesn't display, change Parameters & Re-Apply^
+form_short^Form^
 form^Interactive Form^
 form_for^Form for^
+freespace^Free Space within Data Object^
 full^Full^
 funcs^Functions^
 gh_summ_sess^Summary of Session Waits & CPU^
 groups^Groups^
+help^Help^
 help_with_tools^Help with My Tools^
 hits^Hit Ratios^
 hold_sql^Holding SQL^
@@ -106,6 +122,7 @@ id_srt_usrs^Identifying Sort Users^
 ind_crt_for^Index Creation for^
 ind_name^Index Name^
 ind_ord_arrng^Please Arrange Index Order, then continue^
+index^Indexes of Data Object^
 indexs^Indexes^
 info^Information^
 inval_obj^Invalid Object SQL^
@@ -126,11 +143,10 @@ ls_all^List All Objects in Current Database^
 lt_wtrs^Latch Waiters^
 ltchs^Latches^
 lw_ratio^Current Latch Wait Ratios^
-man_clear^Manual Clear^
+man_clear^Manual Clearance of Screen, Press Switch for Automatic^
 max_exts_free^Max Extents Free Space^
 mem_hogs1^Pool Statements, High Disk Reads^
 mem_hogs2^All Pool Statements^
-menu_config^Orac Configuration Guide^
 mts^Mts^
 mts_bzy^Mts Busy Time of the Dispatchers^
 mts_mem^Mts User Session Current and Max Memory^
@@ -144,10 +160,12 @@ no^No^
 no_cascs^There are no appropriate records^
 no_cols_sel^No Columns Selected^
 no_ln_nums^No Line Numbers^
+no_pod^No Pod yet defined.^
 no_rows^No rows selected^
 no_rows_found^no rows found^
 no_semi_colon^NB: No semi-colon required to terminate SQL^
 no_val_def^No Value Defined^
+normal^Normal^
 not_conn^Not Connected^
 obj^Object^
 oi_blobs^Blobs^
@@ -178,6 +196,7 @@ oi_trig_list^Trigger listing^
 oi_triggers^Triggers^
 oi_view_dets^View details^
 oi_views^Views^
+orac_home^Orac Home Documentation & Files^
 orac_pan^Orac Control Panel^
 oracle_sess_io^ORACLE Session IO^
 orig_exts^Original Extents^
@@ -187,7 +206,9 @@ pck_hds^PackageHeads^
 physical^Physical^
 pl_sql^PL/SQL^
 please_pick_db^Please choose your default database^
+pod^POD Perl File Viewer, Press Switch for normal Text Viewer^
 pool_frag^Pool Fragmentation?^
+print_sel^Print Selection^
 procs^Procedures^
 procs_dep^RelatedProcedures^
 procss_wts^Processes Experiencing Waits^
@@ -231,6 +252,8 @@ sga_stat^Main SGA Stats^
 sga_stats^Fuller SGA Stats Info^
 sh_prms^Show Parameters^
 shared_pool_sql^Shared Pool & SQL^
+shell^Shell^
+sizeindex^Work out the Size of any Required Index^
 snap_logs^SnapshotLogs^
 snaps^Snapshots^
 sort_mon^Sort Monitor^
@@ -265,7 +288,9 @@ tbl_rev^Reverse Engineer All Objects in the Database^
 tot_sess_uga^Total Session UGA^
 trggrs^Triggers^
 trggrs_dep^RelatedTriggers^
+trig^Possible Triggers relating to Data Object^
 tune^Tune^
+txt_normal^Text File Viewer, Press Switch for Pod Perl File Viewer^
 upd^Update^
 upd_butt_text^Button for Update^
 upd_button^Update Button^

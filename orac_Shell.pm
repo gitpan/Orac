@@ -1,10 +1,11 @@
-# vim:ts=2:sw=2
+#
+# vim:set ts=2:sw=2:ai:aw:
 ################################################################################
 #
 # Orac DBI Visual Shell.
-# Versions 1.0.3a
+# Versions 1.0.9a
 #
-# Copyright (c) 1998,1999 Andy Duncan
+# Copyright (c) 1998,1999 Andy Duncan, Thomas A. Lowery
 #
 # You may distribute under the terms of either the GNU General Public License
 # or the Artistic License,as specified in the Perl README file,with the
@@ -15,28 +16,42 @@
 # your own risk. This code was written by the author as a private individual,
 # and is in no way endorsed or warrantied.
 #
-# Support questions and suggestions can be directed to andy_j_duncan@yahoo.com
+# Support questions and suggestions can be directed to 
 # Download from CPAN/authors/id/A/AN/ANDYDUNC
 ################################################################################
 #
 
 
 package orac_Shell;
-@ISA = qw{Shell::Do Shell::Format orac_Shell::mark};
+@ISA = qw{
+	Shell::Do
+	Shell::File
+	Shell::Format
+	Shell::Mark
+	Shell::Menu
+	Shell::Meta
+	Shell::Properties
+	};
 
 use Exporter;
 
-use Tk;
-use Tk::Table;
+use Tk '800.014';
 use Tk::Pretty;
+use Tk::Dialog;
+use Tk::Adjuster;
+
+use FindBin;
+use lib $FindBin::RealBin;
+
 use Shell::Do;
 use Shell::Format;
+
 use Data::Dumper;
 
 use strict;
 
 my $VERSION;
-$VERSION = $VERSION = qq{1.0.4a};
+$VERSION = $VERSION = qq{1.0.9a};
 
 my ($sql_txt, $sql_entry_txt);
 my ($rslt_txt, $rslt_entry_txt);
@@ -48,28 +63,64 @@ my ($opt_row_dis_c, $opt_dis_grid);
 my ($entry_txt, $entry_tbl, $entry_frm);
 my (@entry_txt);
 my %color_ball;
-
-my ($dbiwd, $dbistatus, $auto_ball, $chng_ball, $button_exe);
+my ($dbiwd, $dbistatus, $auto_ball, $chng_ball, $button_exe, $autoexec);
 my ($idxMark, $begLn);
+my $exeStatement;
+my %rmarkers;
+
+my $c;  # $c is the reference to the "current" SQL statement.
+my $prop; # properties for the current user session.
+my $menu_file_prop; # Store the menu file property.
+my $meta; # Meta data from DBI and current database.
+my %buttons; # Maintain a list of buttons.  Only those requiring state changes.
+my $auto_commit; # Track the current state of auto commit.
 
 sub new
 {
    print STDERR "orac_Shell::new\n" if ( $main::debug > 0 );
 
-   my $proto = shift; my $class = ref($proto) || $proto;
-   my $marks = new orac_Shell::mark;
-   my $self  = {
-       current => undef,
-      rv         => undef,
-      status  => \$dbistatus,
-      display_rows => 1,
-      marks => $marks,
-    };
+	my $proto = shift; 
+	my $class = ref($proto) || $proto;
+	my $marks = Shell::Mark->new;
+	my $current = {
+		current   => undef,
+		status    => $dbistatus,
+		beg       => $begLn,
+		end       => undef,
+		cmark     => undef,
+		display   => undef,
+		stat_num  => undef,
+		is_marked => undef,
+		msg       => undef,
+	};
+
+	my $self  = {
+		c => $current,
+		debug => $main::debug,
+		display_rows => 1,
+		marks => $marks,
+		menus => {
+			file => undef,
+			edit => undef,
+			meta => undef,
+			options => undef,
+			help => undef,
+			order => [qw/Help File Edit Meta Options/],
+		},
+		n =>  undef,
+		options => {
+			debug => $main::debug,
+			autoexec => 1,
+			display => q{neat},
+			font => undef,
+		},
+		rv         => undef,
+		status  => $dbistatus,
+	};
 
    bless($self, $class);
 
-   print Dumper($self)
-      if ( $main::debug > 0 );
+   print Dumper($self) if ( $self->debug > 0 );
 
    # save off args...
    # or other encapsulated values, these do NOT inherit!
@@ -78,17 +129,47 @@ sub new
    $self->{dbh} = $_[1];
 
    print STDERR "orac_Shell,   new mw  >$self->{mw}<\n" 
-      if ( $main::debug > 0 );
+      if ( $self->debug > 0 );
 
    print STDERR "orac_Shell,   new dbh >$self->{dbh}<\n" 
-     if ( $main::debug > 0 );
+     if ( $self->debug > 0 );
 
-   $color_ball{green} = $self->{mw}->Photo( -file => "$FindBin::RealBin/img/grn_ball.gif" );
-   $color_ball{red}   = $self->{mw}->Photo( -file => "$FindBin::RealBin/img/red_ball.gif" );
-   $color_ball{yellow}= $self->{mw}->Photo( -file => "$FindBin::RealBin/img/yel_ball.gif" );
-   $color_ball{checkmark}= $self->{mw}->Photo( -file => "$FindBin::RealBin/img/smChekmark.gif");
+   $color_ball{green} = $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/grn_ball.gif" );
+   $color_ball{red}   = $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/red_ball.gif" );
+   $color_ball{yellow}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/yel_ball.gif" );
 
-   return $self;
+	 # Checkmark for results window
+	 $color_ball{checkmark}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/tick.gif");
+	 	#-file => "$FindBin::RealBin/img/smChekmark.gif");
+
+   $color_ball{exec}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/exec_tick.gif");
+	 	#-file => "$FindBin::RealBin/img/exec.gif");
+   $color_ball{execall}= $self->{mw}->Photo( 
+	 	#-file => "$FindBin::RealBin/img/execall.gif");
+	 	-file => "$FindBin::RealBin/img/exec_all.gif");
+   $color_ball{clear}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/eraser.gif");
+	 	#-file => "$FindBin::RealBin/img/clear.gif");
+
+   $color_ball{commit}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/th_up.gif");
+
+   $color_ball{rollback}= $self->{mw}->Photo( 
+	 	-file => "$FindBin::RealBin/img/th_dn.gif");
+
+	$c = $self->{c};
+
+	#
+	# Define the methods to handle the properties.
+	#
+	$prop = Shell::Properties->new( $self );
+	$meta = Shell::Meta->new( $self );
+	return $self;
 }
 
 # Create the top level for Orac DBI Shell.
@@ -113,19 +194,16 @@ sub dbish_open {
 
    } else { 
       
-      # Create a Toplevel window under the curren main.
+      # Create a Toplevel window under the current main.
 
       $dbiwd = $self->{mw}->Toplevel();
 
-      $dbiwd->title( "Orac DBI Shell SQL" );
-
-      $main::swc{dbish} = $dbiwd;
+      $dbiwd->title( "Orac-DBA SQL Shell" );
 
       # Create status label
 
       my $sf = $dbiwd->Frame( -relief => 'groove',
                               -bd => 2 
-
                             )->pack( -side => 'bottom', -fill => 'x' );
 
       # This is the status bar.
@@ -133,25 +211,33 @@ sub dbish_open {
       $auto_ball = $sf->Label(-image=> $color_ball{green}, 
                               -borderwidth=> 2,
                               -relief=> 'flat'
-
                              )->pack(  -side=> 'right', -anchor=>'w');
 
-      $self->bind_message( $auto_ball, "Auto commit" );
+			$auto_ball->bind( q{<Enter>}, 
+				sub {
+					my $msg = qq{Auto Commit is };
+					$msg .= qq{OFF} unless $auto_commit;
+					$msg .= qq{ON}  if $auto_commit;
+					$msg .= qq{.  Click to change.};
+					$dbistatus = $msg;
+			} );
+			$auto_ball->bind('<Leave>', sub { $dbistatus = ""; } );
+			$auto_ball->bind(q{<Button-1>},
+				sub { $self->auto_commit(); } );
 
-      $chng_ball = $sf->Label(-image=> $color_ball{red}, 
-                              -borderwidth=> 2,
-                              -relief=> 'flat'
+      #$chng_ball = $sf->Label(-image=> $color_ball{green}}, 
+                              #-borderwidth=> 2,
+                              #-relief=> q{flat}
+                             #)->pack(  -side=> q{right}, -anchor=>'w');
 
-                             )->pack(  -side=> 'right', -anchor=>'w');
-
-      $self->bind_message( $chng_ball, "Any changed since last save" );
+      #$self->bind_message( $chng_ball, q{Changes committed to database?} );
 
       $sf->Label( -textvariable => \$dbistatus )->pack(-side => 'left');
 
       my @menus;
 
       # Create the menu bar with entries.
-      $self->menu_bar(\@menus);
+      $self->menu_bar();
 
       # Create the menu button with entries.
       $self->menu_button();
@@ -159,45 +245,15 @@ sub dbish_open {
       # Create Text widget for results display.
       $dbistatus = "Creating Text results widget";
 
-      $rslt_txt = $dbiwd->Scrolled( "Text", 
-                                    -relief => 'groove',
-                                    -width => 78, 
-                                    -height => 20,
-                                    -cursor=>undef,
-                                    -foreground=>$main::fc,
-                                    -background=>$main::bc,
-                                    -wrap => "none",
-                                    -takefocus => 0,
-                                    -setgrid => 1,
-
-                                  )->pack( -side => 'top',
-										   -expand => 1,
-										   -fill => "both");
-
-      $dbiwd->Label(-text => ' ',
-                    -relief => 'groove' 
-
-                   )->pack( -side => 'top', -fill => 'x' );
-
-      $entry_frm = $dbiwd->Frame( -relief => 'groove',
-                                )->pack( -side => 'top',
-										 -expand => 1,
-										 -fill => "both");
-
-
-      # Create Text widget for command entry
-      $dbistatus = "Creating Text entry widget";
-
       $self->new_entry( $_ );
 
-
-      $main::swc{dbish}->{text} = $rslt_txt;
+      $dbiwd->{text} = $rslt_txt;
 
       # Tie the windows to the file types:
       tie (*ENTRY_TXT, 'Tk::Text', $entry_txt);
       tie (*RSLT_TXT,  'Tk::Text', $rslt_txt);
 
-      $self->{dbishwindow} = \$dbiwd;
+      $self->{dbiwd} = $dbiwd;
 
       # Finallly, iconize window
 
@@ -207,7 +263,7 @@ sub dbish_open {
    # If the auto commit is on, set the ball to green, else red.
    # This is adjusted each time the window is entered. 
 
-   if($self->{dbh}->{AutoCommit}) {
+   if($auto_commit = $self->{dbh}->{AutoCommit}) {
       $auto_ball->configure( -image => $color_ball{green} );
    } else {
       $auto_ball->configure( -image => $color_ball{red} );
@@ -217,15 +273,14 @@ sub dbish_open {
         # Disable button, calling orac_Shell
 
    $self->{mw}->iconify();
-        $main::sub_win_but_hand{dbish}->configure(-state=>'disabled');
 
    $dbistatus = "Window for Tk created.";
 
    # Last thing is focus on the entry box.
    $entry_txt->focusForce();
    $rslt_txt->configure( -state => 'disabled' );
+	$c = $self->{c};
 
-   #$entry_tbl->packPropagate(0);
 }
 
 my ($curx);
@@ -235,46 +290,61 @@ sub where_am_i {
    $entry_txt->focus();
 
    print STDERR "Move to : $x\n"
-      if ( $main::debug > 0 );
-
-   print Dumper($entry_tbl->packSlaves())
-      if ( $main::debug > 0 );
-
-   print $entry_tbl->name()
-      if ( $main::debug > 0 );
+      if ( $self->debug > 0 );
 };
 
 sub new_entry {
-   my ($self, $x) = @_;
+	my ($self, $x) = @_;
+	my $main_frame = $dbiwd->Frame( -relief => 'groove',
+                                    )->pack(-fill=>'both', 
+                                            -expand => 1,
+                                            -side => 'top' 
+                                           );
+
+	$rslt_txt = $main_frame->Scrolled( "Text", 
+                                         -relief => 'groove',
+                                         -width => 78, 
+                                         -height => 10,
+                                         -cursor=>undef,
+                                         -foreground=>$main::fc,
+                                         -background=>$main::bc,
+                                         -font=>$main::font{name},
+                                         -wrap => "none",
+                                         -takefocus => 0,
+                                         -setgrid => 1,
+     
+                                       );
 
 
-   my $s = $entry_frm->Scrolled( 'Text', -scrollbars => 'wo')->pack();
+      $entry_frm = $main_frame->Frame( -relief => 'groove',
+                                     )->pack(-fill=>'both', 
+                                             -expand => 1,
+                                             -side => 'top' 
+                                            );
+
+
+      # Create Text widget for command entry
+      $dbistatus = "Creating Text entry widget";
+
+      my $adjuster = $main_frame->Adjuster();
+
+      $adjuster->packAfter(  $entry_frm, 
+                             -side => 'top',
+                          );
+
+	my $s = $entry_frm->Scrolled( 'Text',
+		-scrollbars => 'wo',
+		-height => 12,
+        -setgrid => 1,
+	)->pack(-expand =>1, -fill=> "both");
 
    my $ysb = $s->Subwidget( "yscrollbar" );
 
-   $ind_tbl = $s->Table( -columns => 1, 
-      -rows => 10,
-      -scrollbars => '',
-   );
-
-   my @bt;
-   for (my  $x = 1; $x <= 6; $x++ ) {
-     $bt[$x] = $ind_tbl->Button( # -text => '',
-         -image => $color_ball{checkmark},
-         -background=>$main::ec,
-         -justify => 'center',
-         -height => 8,
-         -width => 8,
-         -highlightthickness => 1,
-         -relief => 'raised',
-      );
-      $ind_tbl->put( $x,1, $bt[$x] );
-
-      print STDERR "\tbutton $x\n"
-         if ( $main::debug > 0 );
-   }
-
-   $ind_txt = $s->Text( -width => 3, -state => 'normal',); 
+   $ind_txt = $s->Text( 
+	 	-width => 0,
+		-state => 'normal',
+		-borderwidth => 0,
+		); 
    my ($this,$last);
    $this = $last = 0;
    my $ss = sub {
@@ -287,13 +357,13 @@ sub new_entry {
       }
 
       print STDERR "This $this Last $last\n"
-         if ( $main::debug > 0 );
+         if ( $self->debug > 0 );
 
       $last = $this;
 
       print STDERR "entry index current: " , 
                    $entry_txt->index( 'current' ), "\n"
-         if ( $main::debug > 0 );
+         if ( $self->debug > 0 );
    };
 
 
@@ -305,55 +375,86 @@ sub new_entry {
       -foreground=>$main::fc,
       -background=>$main::ec,
       -yscrollcommand => $ss,
+			-borderwidth => 0,
+			-setgrid => 1,
    );
 
 
-my $sc = sub {
+	my $sc = sub {
       $entry_txt->yview(@_);
-      $ind_txt->yview(@_);
-};
+      #$ind_txt->yview(@_);
+	};
 
-$ysb->configure( -command => $sc );
-
-#for ( my $x = 1; $x < 150; $x++ ) { $ind_txt->insert( "end", "$x\n" ) };
-
-$ind_txt->configure( -state => 'disabled', );
-
-$ind_tbl->pack( 
-   -side => 'left',
-   -anchor => 'n',
-   #-ipadx => 2,
-   -ipady => 2,
-   -pady => 2,
-);
-$ind_txt->pack( -side => 'left' );
-$entry_txt->pack( -side => 'left' );
+	$ysb->configure( -command => $sc );
 
 
-   print Pretty $entry_txt->configure, "\n"
-      if ( $main::debug > 0 );
+	#$ind_txt->pack( 
+		#-side => 'left',
+		#-pady => 1,
+		#-expand => 0,
+		#-fill => 'both',
+	#);
+	$entry_txt->pack(
+		-side => 'left',
+		-pady => 1,
+		-expand => 1,
+		-fill => 'both',
+	);
+	$rslt_txt->pack( -expand=>1, -fill=>'both', -side => 'top' );
+	$ind_txt->configure( -state => 'disabled', );
 
-   my $fnt = $entry_txt->cget( -font );
+	# Pick up the Return key ... see return_press.
+	$entry_txt->bind( "<Return>", sub { $self->return_press() } );
+	$entry_txt->tagConfigure( "Exec",  -foreground => "green" );
+	$entry_txt->tagConfigure( "Error",  -foreground => "red" );
 
-   print $entry_txt->fontActual( $fnt, -size ), "\n"
-      if ( $main::debug > 0 );
-
-
-   # Pick up the Return key ... see return_press.
-   $entry_txt->bind( "<Return>", sub { $self->return_press() } );
-   $entry_txt->tagConfigure( "Exec",  -foreground => "green" );
-
-   $entry_txt->insert( "1.0", " ");
-
-   print Dumper( $entry_txt->bbox( "1.0" ))
-      if ( $main::debug > 0 );
-
-   $entry_txt->delete( "1.0", "end" );
+	# Tags for the results window.
+	$rslt_txt->tagConfigure( "Bold", -background => "white" );
 
 }
 
+#
 #  Allows the user to change auto commit.
+#
 sub auto_commit {
+	my ($self) = @_;
+	if($self->{dbh}->{AutoCommit}) {
+		# AutoCommit is on, turn off, enable buttons.
+		$self->{dbh}->{AutoCommit} = 0;
+		$auto_ball->configure( -image => $color_ball{red} );
+		$buttons{commit}->configure( -state => q{normal} );
+		$buttons{rollback}->configure( -state => q{normal} );
+		$auto_commit = 0;
+	} else {
+		# AutoCommit is off, turn on, disable buttons.
+		$auto_ball->configure( -image => $color_ball{green} );
+		$buttons{commit}->configure( -state => q{disabled} );
+		$buttons{rollback}->configure( -state => q{disabled} );
+		$self->{dbh}->{AutoCommit} = 1;
+		$auto_commit = 1;
+	}
+}
+
+#
+# Commit: Only works if auto commit is off.
+#
+sub commit {
+	my $self = shift;
+	$self->{dbh}->commit;
+	$rslt_txt->configure( -state => q{normal} );
+	print RSLT_TXT qq{\nCommitted!\n};
+	$rslt_txt->configure( -state => q{disabled} );
+}
+
+#
+# Rollback: Only works if auto commit is off.
+#
+sub rollback {
+	my $self = shift;
+	$self->{dbh}->rollback;
+	$rslt_txt->configure( -state => q{normal} );
+	print RSLT_TXT qq{\nRolled Back!\n};
+	$rslt_txt->configure( -state => q{disabled} );
 }
 
 #
@@ -361,80 +462,93 @@ sub auto_commit {
 # button, if the only character on a line is /, execute the above
 # statement.
 #
-my $exeStatement;
 sub return_press {
    my $self = shift;
 
-   #$ind_txt->configure( -state => 'normal' );
-   #$ind_txt->insert( 'end', "\n" );
-   #$ind_txt->configure( -state => 'disabled' );
-
    # Determine where the cursor is.
-   my $ind = $entry_txt->index( 'insert - 1 lines' );
+   my $ind = $entry_txt->index( 'insert - 1 lines lineend' );
 
    # Grab the last line of text.
-   my $txt = $entry_txt->get( $ind, 'insert' );
+   my $txt = $entry_txt->get( "$ind - 1 chars" , "$ind" );
    chomp $txt;
 
+	# The previously entered line is only a /, exeucte.
+	if ($txt =~ m:[/;]$: and $autoexec) {
 
-   # The previously entered line is only a /, exeucte.
-   if ($txt =~ m:[/;]$:) {
+		print STDERR "An execute command ...\n" if ( $self->debug > 0 );
+		$self->doit( $ind );
 
-      print STDERR "An execute command ...\n"
-         if ( $main::debug > 0 );
-
-      # get current buffer finds the sql statement.
-      $self->{statement_number} = $self->get_current_buffer( $ind );
-      # now execute it;
-      $button_exe->invoke();
-
-
-   $self->set_results_btn( $self->{statement_number}, $begLn);
-
-      # So, the statement is executed, results display, if any, now
-      # the house keeping.
-
-      #my $s = $entry_txt->get( "1.0", "end" );
-
-      # Delete all blank lines between the last statement and [/;]
-
-      #$s =~ s:[\s\t\n]+/::;
-      #$entry_txt->delete( "1.0", "end" );
-
-      #$entry_txt->insert( "end", $s );
-
-      # determine the actual height of the box that is needed.
-
-      # size height of text box.
-      
-      # Move to the next row in the table.
-   } #else {
-   #}
-
+	} 
 }
+
 sub check_ind_txt {
    my ($self, $pl) = @_;
 
    print $ind_txt->index('end'), "\n"
-      if ( $main::debug > 0 );
+      if ( $self->debug > 0 );
 
    if ($ind_txt->compare( 'end', "<=", "$pl.0" ) ) {
       $ind_txt->insert( 'end', "\n" );
    }
 }
 
+#
+# Tag Statement Errored: The statement failed to execute.
+#
+
+sub tag_statement_errored {
+	my ($self, $beg, $end) = @_;
+
+	$beg = $c->{beg} unless $beg;
+	$end = $c->{end} unless $end;
+
+	$entry_txt->tagAdd( 'Error', $beg, $end );
+	$self->{marks}->remove($c->{stat_num});
+}
+
+sub untag_statement_errored {
+	my ($self, $beg, $end) = @_;
+
+	$beg = $c->{beg} unless $beg;
+	$end = $c->{end} unless $end;
+
+	$entry_txt->tagRemove( 'Error', $beg, $end );
+}
+
+#
+# Create the results button next to the statement
+# executed.  The results button is only created, if
+# one does not currently exist.
+#
+
+sub create_results_btn {
+	my ($self, $bl) = @_;
+	$bl = $c->{stat_num} unless $bl;
+	if (!$c->{is_marked}) {
+		return $self->set_results_btn($bl);
+	}
+	return 0;
+}
 # 
 # Determine where the markers go
 #
 
-my %rmarkers;
+
 sub set_results_btn {
-   my ($self, $c, $inx ) = @_;
+	my ($self, $c, $inx ) = @_;
 
-   my $pl = int( $entry_txt->index( $self->{marks}->get_mark_beg($c)) + .99 );
+	$c = $c->{stat_num} unless $c;
+	print STDERR "Statement number: $c\n"
+         if ( $self->debug > 0 );
 
-   print STDERR "Index $inx Statement $pl \n"
-      if ( $main::debug > 0 );
+	# Enable the ind widget to accept the line number.
+	$ind_txt->configure( -state => 'normal' );
+
+	 # Round off the current
+   my $pl = int( 
+	 	$entry_txt->index( $self->{marks}->get_mark_beg($c)) + .99 );
+
+   print STDERR "Statement num: $c Begin: $pl\n" if ( $self->debug > 0 );
 
    $self->check_ind_txt($pl);
 
@@ -445,77 +559,69 @@ sub set_results_btn {
       $self->move_to_results( $c )
    };
 
-   print STDERR "Placing mark at $pl\n"
-      if ( $main::debug > 0 );
 
-  $rmarkers{ $pl } = $mv_ind_rslt = $ind_txt->Button( # -text => '',
-         -command =>  $mv_to_res,
+	$rmarkers{$c} = $entry_txt->Button( # -text => '',
          -image => $color_ball{checkmark},
-         -background=>$main::ec,
+         #-background=>$main::bc,
          -justify => 'center',
-         -height => 5,
-         -width => 6,
-   );
+         -height => 8,
+         -width => 8,
+         -highlightthickness => 1,
+         -relief => 'raised',
+				 -command => $mv_to_res,
+      );
 
-   #
-   # Create the new  window.
-   #
+	$self->bind_message( $rmarkers{$c}, q{Scroll results window to statement results.} );
+	print STDERR "Number $c Mark @ $pl\n" if ( $main::debug > 0 );
 
-   $ind_txt->configure( -state => 'normal' );
-
-   my $eend = int($entry_txt->index( 'end' ));
-
-   # Check the rows in the current table.
-   if ($eend > $ind_tbl->totalRows) {
-
-      print STDERR "Add more rows to the table.\n"
+	$entry_txt->windowCreate( "$pl.0", -window => $rmarkers{$c} );
+	$entry_txt->insert( "$pl.1", " " );
+	print STDERR "\n"
          if ( $main::debug > 0 );
 
-      $ind_tbl->configure( -rows => $eend );
-   }
+	$ind_txt->configure( -state => 'disabled' );
+}
 
-   $ind_txt->delete( "1.0", 'end' );
-   for (my $x = 1; $x <= $eend; $x++ ) {
+#
+# Set the current buffer to null (undefined)
+#
+sub clear_current_buffer {
+	my $self = shift;
+	foreach (keys %{$self->{c}}) {
+		$self->{c}->{$_} = undef;
+	}
 
-      $ind_txt->insert( "$pl.0", "\n" );
-
-      if (exists $rmarkers{ $x }) {
-         #$ind_tbl->put( $x, 1, $rmarkers{ $x });
-         #$ind_tbl->put( $x, 1, "." );
-         $ind_txt->windowCreate( "$pl.0", 
-            -align => 'center',
-            -stretch => 1,
-            -window => $rmarkers{ $x },
-         );
-      }  else {
-      #         $ind_tbl->put( $x, 1, "." );
-      }
-   }
-
-   $ind_txt->configure( -state => 'disabled' );
+	undef($c);
+	$c = $self->{c};
 }
 
 #
 # Get the current buffer text.
 #
 
-
-sub get_current_buffer() {
-
-   my $self = shift;
-   $idxMark = $entry_txt->index( 'insert' );
+sub get_current_buffer {
+   my ($self, $cinx) = @_;
    my $stinx;
 
-   print STDERR "Search entry start: $idxMark "
-      if ( $main::debug > 0 );
+	 # First, clear the current buffer.
+	 $self->clear_current_buffer();
 
+	 $cinx = 'insert' unless $cinx;
+	 # Determine where we are.
+   $idxMark = $entry_txt->index( $cinx );
+
+   print STDERR "Search entry txt start: $idxMark "
+      if ( $self->debug > 0 );
+
+	 # Search the statement.
    my $inx = $entry_txt->search( 
       -backwards, 
       -regexp, 
-      '[;/]$',  #',
-      $stinx = $entry_txt->index( 'insert - 1 lines'),
+      '[;/]$', #',
+      $stinx = $entry_txt->index( "$cinx - 2 chars"),
       "1.0",
    );
+
    # The buffer could have more than one statement in it.
    # Find the last statement. Look for the new statement on
    # the next line.
@@ -523,53 +629,56 @@ sub get_current_buffer() {
    if (defined $inx and length($inx) > 0) {
       # Convert the index to something more usable.
       $begLn = $entry_txt->index("$inx + 1 chars"); 
-
-      print STDERR " found at: $inx "
-         if ( $main::debug > 0 );
+      print STDERR " found at: $inx " if ( $self->debug > 0 );
    } 
+
+	 # Get the current statement.
    $exeStatement = $entry_txt->get( $begLn, $idxMark );
    $entry_txt->tagAdd( 'Exec', $begLn, $idxMark );
 
+	 $c->{beg} = $begLn;
+	 $c->{end} = $idxMark;
+
    print STDERR " getting text from $begLn to $idxMark: $exeStatement\n"
-      if ( $main::debug > 0 );
+      if ( $self->debug > 0 );
 
    #
    # The statement determined, now set the begin and end marks.
    #
 
    my $marks = $self->{marks};
-   my $c = $marks->is_marked($begLn);
+   my $cc = $marks->is_marked($begLn);
 
-   print Dumper($marks)
-      if ( $main::debug > 0 );
+   #print Dumper($marks) if ( $self->debug > 0 );
 
-   if (not defined($c)) {
-
+   if (not defined($cc)) {
       print STDERR "C is not defined, creating new mark\n"
-         if ( $main::debug > 0 );
+         if ( $self->debug > 0 );
 
-      $c = $marks->mark( $begLn, $idxMark );
+      $cc = $marks->mark( $begLn, $idxMark );
+			$c->{stat_num} = $cc;
+			$c->{beg} = $begLn;
+			$self->{n} = $cc;
 
-      print STDERR "Mark created, index $c\n"
-         if ( $main::debug > 0 );
+      print STDERR "Mark created, index $cc\n"
+         if ( $self->debug > 0 );
 
-      $entry_txt->markSet( $marks->get_mark_beg($c),
-         $marks->get_beg($c) );
-      $entry_txt->markGravity( $marks->get_mark_beg($c), "left" );
-
+      $entry_txt->markSet( $marks->get_mark_beg($cc),
+			$marks->get_beg($cc) );
+      $entry_txt->markGravity( $marks->get_mark_beg($cc), "left" );
+			$c->{is_marked} = 0;
    } else {
       # Statement is marked already, update the index information.
-      $marks->set_mark_beg($c,$begLn);
-      $marks->set_mark_end($c,$idxMark);
+      $marks->set_mark_beg($cc,$begLn);
+      $marks->set_mark_end($cc,$idxMark);
+			$c->{stat_num} = $cc;
+			$c->{is_marked} = 1;
    }
 
    print STDERR join( "\n", $entry_txt->markNames(), "" )
-      if ( $main::debug > 0 );
+      if ( $self->debug > 0 );
 
-   #foreach ($entry_txt->markNames()) {
-      #print STDERR "MARK: $_ at ", $entry_txt->index($_), "\n";
-   #}
-   $c;
+   $cc;
 }
 
 
@@ -583,17 +692,32 @@ sub bind_message {
 sub dbish_clear {
    my $self = shift;
 
-   $rslt_txt->delete( "1.0", 'end' );
-   $entry_txt->delete( "1.0", 'end' );
-   $ind_txt->delete( "1.0", 'end' );
-   # $self->release;
+	# Clear the results window.  I may have to release the
+	# current marks.
+	$rslt_txt->configure( -state => 'normal' );
+	$rslt_txt->delete( "1.0", 'end' );
+	$rslt_txt->configure( -state => 'disabled' );
+
+	# Clear the entry window.
+	$entry_txt->delete( "1.0", 'end' );
+
+	# Clear the indicator window.
+	$ind_txt->configure( -state => 'normal' );
+	$ind_txt->delete( "1.0", 'end' );
+	$ind_txt->configure( -state => 'disabled' );
+
+	# Release the marks structure and rebuild the object.
+	$self->{marks} = undef;
+	my $marks = Shell::Mark->new;
+	$self->{marks} = $marks;
+
+	# Clear the current statement buffer.
+	undef($c);
+	$c = $self->{c};
+
+	return;
 }
    
-
-sub dbish {
-   my $self = shift;
-   return;
-}
 
 sub opt_dis_grid {
    my $self = shift;
@@ -601,17 +725,6 @@ sub opt_dis_grid {
       $self->release();
    }
 }
-
-# Get a file from the operating system.
-sub load_query {
-
-}
-
-# Save a file to an operating system.
-sub save_query {
-
-}
-
 
 sub red {
    $auto_ball->configure( -image => $color_ball{red} );
@@ -626,102 +739,380 @@ sub tba {
    0;
 }
 
-sub menu_bar {
+#
+# Move to the results of the statement executed.  Currently
+# no limit on results stored, but this may change.
+#
+sub move_to_results {
+   my ($self, $c) = @_;
+   # Lots of debug information here.
+   # print STDERR "Move to Results event for results $c\n";
+   # print STDERR join( "\n", $rslt_txt->markNames(), "" );
+   # foreach ($rslt_txt->markNames()) {
+      # print STDERR "MARK: $_ at ", $rslt_txt->index($_), "\n";
+   # }
 
-   print STDERR "menu_bar: in, dbiwd>$dbiwd<\n"
-      if ( $main::debug > 0 );
+	if( $rslt_txt->tagRanges( "Bold" ) ) {
+		$rslt_txt->tagRemove( 'Bold', $rslt_txt->tagRanges( "Bold" ) );
+	}
+	 my $rslt_inx =$rslt_txt->index( $self->{marks}->get_results($c));
+   $rslt_txt->see( $rslt_inx );
+	 $rslt_txt->tagAdd( 'Bold', $rslt_inx, "$rslt_inx lineend" );
+}
+
+#
+# doit:  Executes either from the execute button or using [/;]
+#
+sub doit {
+	my ($self, $inx) = @_;
+
+
+	$inx = $entry_txt->index( 'insert lineend' ) unless $inx;
+
+	#print STDERR "doit: $inx\n";
+
+	# get current buffer finds the sql statement.
+	$self->get_current_buffer( $inx );
+
+	# now execute it;
+	$self->execute_sql();
+
+	{
+		local $^W = 0;
+		print STDERR "\tStatement executed: ",
+		$exeStatement,
+		"\n\t\tindex: $inx \n\t\tstatus: ",
+		$c->{status}, "\n\t\tmessage: ", $c->{msg},
+		"\n"
+		if ( $self->debug > 0 );
+	}
+
+	# If the execution happened, do a number of things.
+	# Mark the results or tag as errored.
+	if (!$c->{status}) {
+		#my ($start, $end) = $entry_txt->tagNextrange( 'Error', $begLn );
+		# Untag the statement if error tagged.
+		$self->untag_statement_errored($begLn);
+		$self->create_results_btn();
+	} else {
+		# Change the text to a error.
+		$self->tag_statement_errored($begLn);
+		# Put up a dialog box with the error message.
+		$self->message_dialog("Error Message",
+			$c->{msg} . "\n\n$exeStatement\n" ); #"
+	}
+
+}
+
+#
+# Display a dialog box to the user.  Using this method until
+# we create a dialog handler in the core function.
+#
+sub message_dialog {
+	my ($self, $title, $msg) = @_;
+
+	$title = "Message Dialog Box" unless $title;
+	$msg = "Well, you called for a message dialog, but didn't give a message"
+		unless $msg;
+	
+	my $d = $dbiwd->Dialog( 
+		-title => $title,
+		-text => $msg
+	);
+	return $d->Show;
+}
+
+#
+#
+#
+sub search_forward {
+	my ($self, $inx) = @_;
+
+	$inx = $entry_txt->index( 'current' ) unless $inx;
+
+	return $entry_txt->search( 
+      -regexp, 
+      '[;/]$', #',
+      $inx,
+      "end",
+   );
+}
+
+#
+# As the names implies, this button executes all the statements in the
+# current entry buffer.
+#
+sub execute_all_buffer {
+	my ($self) = @_;
+
+	#
+	# Start at the top of the buffer and execute each statement.
+	#
+	my $cinx = '1.0';
+	my $done = 0;
+	my $i = "";
+	while( !$done ) {
+		$entry_txt->see( $cinx );
+		$i = $self->search_forward( $cinx );
+		if ( !defined($i) or length($i) == 0 ) {
+			$done = 1;
+			last;
+		}
+		$i = $entry_txt->index( "$i lineend" );
+
+		{
+			local $^W = 0;
+			print STDERR "\tstart $cinx end $i\n",
+				"\tstatement: ",
+				$entry_txt->get( $cinx, $i ),
+				"\n"
+				if ($self->debug > 0);
+		}
+
+		$self->doit( $i );
+		$cinx = $i;
+	};
+
+}
+
+# Execute the most currently statement in the entry buffer.
+sub execute_sql {
 
    my $self = shift;
 
-   my($menus_ref) = @_;
+    $dbiwd->Busy;
+    my $statement = $exeStatement;
+    chomp $statement;
+    $statement =~ s:[/;]$::;  # Replace the last / with nothing.
+    
+   print STDERR "\nexecuting statement: $statement\n"
+      if ( $self->debug > 0 );
 
+   my $sth = $self->do_prepare( $statement );
+   $self->no_go("Failed to prepare statement!" ), return undef
+	 	if ($c->{status});
+
+   # Statement is prepared, now execute or do.
+   my $rv = $self->sth_go( $sth, 1 );
+
+   $self->no_go("Statement execute failed!" ), return undef 
+	 	if ($c->{status});
+
+		# OK, at this point mark the results window.
+		$self->results_mark();
+
+		$self->display_results($sth);
+
+		#
+		# Does the statement require row displayed? If doesn't then
+		# show the status from the executed statement.
+		#
+		$self->no_go( "completed" );
+		return $c->{status} = 0 unless $c->{status};
+}
+
+sub display_results {
+	my ($self, $sth) = @_;
+
+	$self->{dbiwd}->Busy;
+
+	my $sav_state = $rslt_txt->cget( -state );
+	$rslt_txt->configure( -state => q{normal} );
+
+	if ($c->{display}) {
+		$self->{dbh}->{neat_maxlen} = 40004;
+		my $class = $self->formatter($opt_dis_grid);
+		my $r = $class->new($self);
+		$r->header($sth, \*RSLT_TXT, ",");
+
+		my $row;
+		while( $row = $sth->fetchrow_arrayref() ) {
+			$r->row($row, \*RSLT_TXT, "," );
+		}
+		$r->trailer(\*RSLT_TXT);
+
+		$sth->finish;
+	} else {
+		print RSLT_TXT $c->{msg}, "\n" unless $c->{status};
+	}
+
+	$rslt_txt->see( q{end linestart});
+	$rslt_txt->configure( -state => $sav_state );
+	$self->{dbiwd}->Unbusy;
+}
+
+sub no_go {
+   my $self = shift;
+   $dbistatus = shift;
+   $entry_txt->tagRemove( 'Exec', $begLn, $idxMark );
+   $rslt_txt->configure( -state => 'disabled' );
+   $dbiwd->Unbusy;
+   return;
+}
+sub results_mark {
+	my ($self, $stn) = @_;
+	my $marks = $self->{marks};
+	$stn = $c->{stat_num} unless $stn;
+	$marks->set_results($stn);
+	$rslt_txt->configure( -state => 'normal' );
+	$rslt_txt->markSet( 
+		$marks->get_results($stn),
+		$rslt_txt->index("insert" )); 
+	$rslt_txt->markGravity( 
+		$marks->get_results($stn), "left" );
+}
+
+
+# This method is used to track the X text widgets with the scroll bar.
+sub sync_txt {
+   my $self = shift;
+   my ($sb, $scrolled, $lbs, @args) = @_;
+   $sb->set(@args);
+   my ($top, $bottom) = $scrolled->yview();
+   foreach my $list (@$lbs) {
+      $list->yviewMoveto($top);
+   }
+}
+
+sub debug {
+	my ($self, $value) = @_;
+	$self->{debug} = $value if($value);
+$self->{debug};
+}
+
+#
+# Package Meta:  Meta Data.  It's the data about the data.
+#
+
+package Shell::Meta;
+
+sub new {
+   my ($proto , $parent) = @_;
+   my $class = ref($proto) || $proto;
+   my $self  = { };
+
+   bless($self, $class);
+
+   return $self;
+}
+
+# DBI does all the hard work on this one.
+sub all_tables {
+	my ($self, $parent) = @_;
+
+	$parent->{dbiwd}->Busy;
+	my $sth = $parent->{dbh}->table_info;
+	if ($parent->{dbh}->err) {
+		warn qq{Table information is not available: } . 
+			$parent->{dbh}->errstr;
+	} else {
+   $parent->sth_go( $sth, 1 );
+	 $parent->display_results( $sth );
+	}
+	$parent->{dbiwd}->Unbusy;
+}
+
+# Handles the creation of the menus.
+package Shell::Menu;
+use Tk::Pretty;
+use Data::Dumper;
+
+sub menu_bar {
+   my ($self, $menus_ref) = @_;
+
+	 $menus_ref = $self->{menus} unless $menus_ref;
    $dbistatus = "Creating menu bar";
 
    my $f = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
 
-   $f->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
-   
-   # Put the logo on the menu bar.
-
-   my $orac_logo = $dbiwd->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
-
-   $f->Label(-image=> $orac_logo, 
-             -borderwidth=> 2,
-             -relief=> 'flat'
-
-            )->pack(  -side=> 'left', -anchor=>'w');
+   $f->pack( -side => 'top', -anchor => 'n', -expand => 0, -fill => 'x' );
    
    # Create a menu bar.
 
-   print STDERR "BEFORE menu bar options: $_\n"
-      if ( $main::debug > 0 );
+   print STDERR "BEFORE menu bar options:\n"
+      if ( $self->debug > 0 );
 
-   foreach (qw/File Edit Options Help/) {
-
+   foreach (@{$menus_ref->{order}}) {
       print STDERR "menu bar options: $_\n"
-         if ( $main::debug > 0 );
-
-      push( @$menus_ref, $f->Menubutton( -text => $_ , -tearoff => 0 ) );
-
+         if ( $self->debug > 0 );
+      $menus_ref->{lc $_ } = $f->Menubutton( -text => $_ , -tearoff => 0 );
+			if (m/help/i) {
+   			$menus_ref->{lc $_}->pack(-side => 'right' ); # Help
+			} else {
+   			$menus_ref->{lc $_}->pack(-side => 'left' );  # File
+			}
+			my $m = qq{menu_} . lc $_;
+   		eval {$self->$m($menus_ref->{lc $_}->menu)};
+			#warn qq{$@} if $@;
    }
-   print STDERR "AFTER menu bar options, menus-3 >" . $menus_ref->[3] . "<\n"
-      if ( $main::debug > 0 );
    
-   $menus_ref->[3]->pack(-side => 'right' ); # Help
-   $menus_ref->[0]->pack(-side => 'left' );  # File
-   $menus_ref->[1]->pack(-side => 'left' );  # Edit
-   $menus_ref->[2]->pack(-side => 'left' );  # Options
    
    print STDERR "menus_ref: >" . $menus_ref . "<\n"
-      if ( $main::debug > 0 );
-
-   $self->menu_file($menus_ref);
-   $self->menu_edit();
-   $self->menu_options($menus_ref);
-   $self->menu_help($menus_ref);
+      if ( $self->debug > 0 );
 
 }
 
 
 sub menu_file {
-   my $self = shift;
+   my ($self, $menus_ref) = @_;
 
-   my($menus_ref) = @_;
-
-   print STDERR "menu_file: menusf_ref :>" . $menus_ref . "<\n"
-      if ( $main::debug > 0 );
+	 $menus_ref = $self->{menus}->{file}->menu unless $menus_ref;
+   print STDERR "menu_file: menus_ref :>" . $menus_ref . "<\n"
+      if ( $self->debug > 0 );
 
    #
    # Add some options to the menus.
    #
    # File menu
 
-   print STDERR "menus-0 (additem) >" . $menus_ref->[0] . "<\n"
-      if ( $main::debug > 0 );
+   print STDERR "menus-0 (additem) >" . $menus_ref->{file} . "<\n"
+      if ( $self->debug > 0 );
 
-   $menus_ref->[0]->AddItems(
-         [ "command" => "Load", -command => sub { $self->tba } ],
-         [ "command" => "Save", -command => sub { $self->tba } ],
+   $menus_ref->AddItems(
+         [ "command" => "Load", -command => sub { $self->load } ],
+         [ "command" => "Save", -command => sub { $self->save } ],
          "-",
-         [ "command" => "Properties", -command => sub { $self->tba } ],
+         [ "command" => "Properties", -command => sub { $prop->edit } ],
          "-",
-         [ "command" => "Exit", -command => sub { $self->tba } ],
+         [ "command" => "Exit", -command => sub { $self->exit } ],
 
                       );
+	 #
+	 # If Properties state (able to load Storable) is false (0),
+	 # disable this menu option.
+	 #
+	 $menus_ref->entryconfigure( qq{Properties}, 
+	 	-state => q{disabled} ) unless $prop->state;
 }
 
 sub menu_edit {
-   my $self = shift;
+   my ($self, $menus_ref) = @_;
+}
+
+sub menu_meta {
+   my ($self, $menus_ref) = @_;
+   $menus_ref->AddItems(
+         [ "command" => "All Tables", -command => sub { $meta->all_tables($self) } ],
+		);
 }
 
 sub menu_options {
-   my $self = shift;
-
-   my($menus_ref) = @_;
+   my ($self, $menus_ref) = @_;
 
    # Options menu
 
-   my $opt_disp = $menus_ref->[2]->menu->Menu;
+	 my $menu_ref =$self->{menus}->{options}->menu unless $menus_ref;
+
+	 # Autoexecute:  When autoexec is on, statements ending in [;/] will
+	 # execute when the enter/return is pressed.
+
+	 $autoexec = 1; # default value is on.
+	 $menus_ref->AddItems(
+         [ "checkbutton" => "Autoexec", -variable => \$autoexec ],
+         [ "checkbutton" => "Debug",    -variable => \$self->{debug} ],
+				 "-",
+	);
+   my $opt_disp = $menus_ref->Menu;
    my @formats = $self->load_formats;
       
    foreach (@formats) {
@@ -731,13 +1122,15 @@ sub menu_options {
          );
    }
 
-   $menus_ref->[2]->cascade( -label => "Display format..."); 
-   $menus_ref->[2]->entryconfigure( "Display format...", -menu => $opt_disp);
+   $menus_ref->cascade( -label => "Display format..."); 
+   $menus_ref->entryconfigure( 
+	 	"Display format...", -menu => $opt_disp,
+	 	-state => q{normal});
    $opt_dis_grid = 'neat';
 
    # Create the entries for rows returned.
 
-   my $opt_row = $menus_ref->[2]->menu->Menu;
+   my $opt_row = $menus_ref->Menu;
 
    foreach (qw/1 10 25 50 100 all/) {
 
@@ -745,19 +1138,21 @@ sub menu_options {
          -value => $_ );
    }
 
-   $menus_ref->[2]->cascade( -label => "Rows return..." );
-   $menus_ref->[2]->entryconfigure( "Rows return...", -menu => $opt_row);
+   $menus_ref->cascade( -label => "Rows return..." );
+   $menus_ref->entryconfigure( "Rows return...", 
+	 	-menu => $opt_row,
+		-state => q{disabled});
    $opt_row_dis_c = 'all';
 
 }
 
 sub menu_help {
-   my $self = shift;
+   my ($self, $menus_ref) = @_;
 
-   my($menus_ref) = @_;
+	 my $menu_ref =$self->{menus}->{help}->menu unless $menus_ref;
 
    # Help menu
-   $menus_ref->[3]->AddItems(
+   $menus_ref->AddItems(
       [ "command" => "Index", -command => sub { $self->tba } ],
       "-",
       [ "command" => "About", -command => sub { $self->tba } ],
@@ -772,174 +1167,258 @@ sub menu_button {
    $dbistatus = "Creating menu button bar";
 
    my $bf = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
-   $bf->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
+   $bf->pack( -side => 'top', -anchor => 'n', -expand => 0, -fill => 'x' );
 
    # need to invoke the execute in other parts of the application.
 
    $button_exe = $bf->Button( -text=> 'Execute',
-                              -command=> sub{ $self->execute_sql() }
+			-image => $color_ball{exec},
+			-command=> sub{ $self->doit() }
+		)->pack(side=>'left');
+
+	$buttons{exec} = $button_exe;
+	$self->bind_message( $buttons{exec}, q{Execute the current statement.} );
+
+   $buttons{execall} = $bf->Button( -text=> 'Execute All',
+			-image => $color_ball{execall},
+                              -command=> sub{ $self->execute_all_buffer() }
                             )->pack(side=>'left');
 
-   $bf->Button( -text=> 'Clear',
+	$self->bind_message( $buttons{execall}, q{Execute all the statements in the current entry window.} );
+
+   $buttons{clear} = $bf->Button( -text=> q{Clear},
+			-image => $color_ball{clear},
                 -command=>sub{ $self->dbish_clear(); }
+              )->pack(side=>q{left});
 
-              )->pack(side=>'left');
+	$self->bind_message( $buttons{clear}, q{Clear entry and results windows.} );
 
-   $bf->Button( -text=> 'Tables',
-                -command=> sub{ $self->tba() }
+   #$buttons{tables} = $bf->Button( -text=> q{Tables},
+                #-command=> sub{ $meta->all_tables($self) }
+              #)->pack(side=>q{left});
 
-              )->pack(side=>'left');
+	#$self->bind_message( $buttons{tables}, q{Display a list of current tables.} );
 
-   $bf->Button( -text=> 'Copy Results',
-                -command=> sub{ $self->tba() }
+   #$buttons{copyresults} = $bf->Button( -text=> q{Copy Results},
+                #-command=> sub{ $self->tba() },
+								#-state => q{disabled}
+              #)->pack(side=>'left');
 
-              )->pack(side=>'left');
+	#$self->bind_message( $buttons{copyresults}, q{Copy the selection results to the clipboard.} );
 
-   $bf->Button( -text=> 'Commit',
-                -command=> sub{ $self->tba() }
+   $buttons{commit} = $bf->Button( -text=> q{Commit},
+			-image => $color_ball{commit},
+                -command=> sub{ $self->commit() },
+								-state => q{disabled}
+              )->pack(side=> q{left});
 
-              )->pack(side=>'left');
+	$self->bind_message( $buttons{commit}, q{Commit results to the database.} );
 
-   $bf->Button( -text=> 'Rollback',
-                -command=> sub{ $self->tba() }
+   $buttons{rollback} = $bf->Button( -text=> q{Rollback},
+			-image => $color_ball{rollback},
+                -command=> sub{ $self->rollback() },
+								-state => q{disabled}
+              )->pack(side=> q{left});
 
-              )->pack(side=>'left');
+	$self->bind_message( $buttons{rollback}, q{Rollback results from database.} );
 
+   # Put the logo on this bar.
+
+   my $orac_logo = $dbiwd->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+
+   $bf->Label(-image=> $orac_logo, 
+              -borderwidth=> 2,
+              -relief=> 'flat'
+
+             )->pack(  -side=> 'right', 
+                       -anchor=>'e', 
+                       -expand => 0, 
+                       -fill => 'x'
+                    );
+   
    $dbistatus = "Creating Close button";
    
-   $bf->Button( -text => "Close",
+   $buttons{close} = $bf->Button( -text => "Close",
                -command => sub { 
  
                  $dbiwd->withdraw;
                  $self->{mw}->deiconify();
-                 $main::sub_win_but_hand{dbish}->configure(-state=>'active');
 
                                } 
-              )->pack( -side => "right" ); #'
+              )->pack( -side => qq{right} );
+
+
+   $self->bind_message( $buttons{close}, q{As my children like to say "See you;Wouldn't want to be ya"});
 
 }
 
 #
-# Move to the results of the statement executed.  Currently
-# no limit on results stored, but this may change.
+# Properties allow the user to store setting.
 #
-sub move_to_results {
-   my $self = shift;
-   my $c = shift;
-   # Lots of debug information here.
-   # print STDERR "Move to Results event for results $c\n";
-   # print STDERR join( "\n", $rslt_txt->markNames(), "" );
-   # foreach ($rslt_txt->markNames()) {
-      # print STDERR "MARK: $_ at ", $rslt_txt->index($_), "\n";
-   # }
-   $rslt_txt->see( $rslt_txt->index( $self->{marks}->get_results($c) ));
+package Shell::Properties;
+
+my $state = 1;
+eval qq{ use Storable };
+$state = 0 if $@;
+
+sub state {
+	$state;
 }
 
-#
-# As the names implies, this button executes all the statements in the
-# current entry buffer.
-#
-sub execute_all_buffer {
+# Disable menu pick, if $state is 0
+sub new {
+   my ($proto , $parent) = @_;
+   my $class = ref($proto) || $proto;
+	 my $options = $parent->{options};
+   my $self  = {
+       options => \$options,
+    };
+
+   bless($self, $class);
+
+   return $self;
+}
+
+sub display {
 
 }
 
-# Execute the most currently statement in the entry buffer.
-sub execute_sql {
+sub save {
 
-   my $self = shift;
-
-    $dbiwd->Busy;
-    my $statement = $exeStatement;
-    chomp $statement;
-    $statement =~ s:[/;]$::;  # Replace the last / with nothing.
-    
-    # Are we connected to the database?
-    my $dbh = $self->{dbh};
-    $self->no_go( "Database handle not openned!"), return unless($dbh);
-
-   print STDERR "\nexecuting statement: $statement\n"
-      if ( $main::debug > 0 );
-
-   my $sth = $self->do_prepare( $statement );
-   $self->no_go("Failed to prepare statement!" ), return unless ($sth);
-
-   # Statement is prepared, now execute or do.
-   my $rv = $self->sth_go( $sth, 1 );
-
-   # 
-
-   $self->no_go("Statement execute failed!" ), return unless ($rv);
-
-   # OK, at this point mark the results window.
-
-   $self->{marks}->set_results($self->{statement_number});
-   $rslt_txt->configure( -state => 'normal' );
-   $rslt_txt->markSet( $self->{marks}->get_results($self->{statement_number}),
-      $rslt_txt->index("insert" )); #"
-   $rslt_txt->markGravity( $self->{marks}->get_results($self->{statement_number}), "left" );
-
-   # Does the statement require row displayed? If doesn't then
-   # show the status from the executed statement.
-
-   unless ($self->{display_rows}) {
-      $self->no_go("");
-      $rslt_txt->configure( -state => 'normal' );
-
-      print RSLT_TXT $self->{status}, "\n" if $self->{status};
-
-      $rslt_txt->configure( -state => 'disabled' );
-      return;
-   }
-
-
-   # print RSLT_TXT "Number of fields: " . $sth->{NUM_OF_FIELDS} . "\n";
-   #
-   # Dump return set to a grid.
-   #   
-   $dbh->{neat_maxlen} = 40004;
-   my $class = $self->formatter($opt_dis_grid);
-   my $r = $class->new($self);
-
-   # Move the results windows to the end, before starting the output.
-   $rslt_txt->see( 'end linestart '); #'
-
-   $rslt_txt->configure( -state => 'normal' );
-   $r->header($sth, \*RSLT_TXT, ",");
-
-   my $row;
-   while( $row = $sth->fetchrow_arrayref() ) {
-      $r->row($row, \*RSLT_TXT, "," );
-   }
-   $rslt_txt->see( 'end linestart '); #'
-   $r->trailer(\*RSLT_TXT);
-
-   $sth->finish;
-   $self->no_go( "completed" );
 }
 
-sub no_go {
-   my $self = shift;
-   $dbistatus = shift;
-   $entry_txt->tagRemove( 'Exec', $begLn, $idxMark );
-   $rslt_txt->configure( -state => 'disabled' );
-   $dbiwd->Unbusy;
-   return;
+sub load {
+
 }
 
-# This method is used to track the X text widgets with the scroll bar.
-sub sync_txt {
-   my $self = shift;
-   my ($sb, $scrolled, $lbs, @args) = @_;
-   $sb->set(@args);
-   my ($top, $bottom) = $scrolled->yview();
-   foreach my $list (@$lbs) {
-      $list->yviewMoveto($top);
-   }
+sub edit {
+
 }
 
-package orac_Shell::mark;
+package Shell::File;
+use Tk::FileSelect;
+
+#$FSref = $top->FileSelect(-directory => $start_dir);
+              #$top            - a window reference, e.g. MainWindow->new
+              #$start_dir      - the starting point for the FileSelect
+#$file = $FSref->Show;
+              #Executes the fileselector until either a filename is
+              #accepted or the user hits Cancel. Returns the filename
+              #or the empty string, respectively, and unmaps the
+              #FileSelect.
+#$FSref->configure(option => value[, ...])
+              #Please see the Populate subroutine as the configuration
+              #list changes rapidly.
+
+sub get_file {
+	my $self = shift;
+	my $fs = $dbiwd->FileSelect( -directory => "$main::orac_home/sql" );
+	return $fs->Show;
+}
+
+sub save {
+	my $self = shift;
+
+	my $dialog = $dbiwd->Dialog(
+		-text => 'Save Current Statement or Current Entry Buffer?',
+		-bitmap => 'question',
+		-title => 'Save File Dialog',
+		-default_button => 'Statement',
+		-buttons => [qw/Statement Buffer Cancel/]
+	);
+
+	my $ans = $dialog->Show();
+
+	return if ($ans =~ m/Cancel/i);
+
+	my $statement = $exeStatement;
+	$statement = $entry_txt->get( '1.0', 'end' ) if ($ans =~ m/Buffer/i);
+
+	my $file = $self->get_file();
+
+	# User presses the cancel button.
+	return undef unless ( length($file) > 0 );
+
+	my $confirm;
+	if (-f $file) {
+		$confirm = $dbiwd->Dialog(
+			-text => "File exists!  Overwrite current file\n${file}?",
+			-bitmap => 'warning',
+			-title => "Confirm overwrite",
+			-default_button => 'No',
+			-buttons => [ qw/Yes No Cancel/ ]
+		);
+
+		my $ans = $confirm->Show();
+
+		return undef if ($ans =~ m/Cancel/i);
+	}
+
+	open( SAVE_FILE, "> ${file}" ) || do {
+		warn "Unable to save to ${file}: $!\n";
+		return undef;
+	};
+
+	print SAVE_FILE "${statement}\n";
+
+	return close( SAVE_FILE );
+}
+
+sub load {
+	my $self = shift;
+
+	my $file = $self->get_file;
+	# User presses the cancel button.
+	return undef unless ( defined($file) and length($file) > 0 );
+
+	print STDERR "Loading buffer with $file\n"
+      if ( $self->debug > 0 );
+
+	print STDERR "buffer: 1.0 -> ", $entry_txt->index( 'end' ), "\n"
+      if ( $self->debug > 0 );
+	my $ans = 'Replace';
+	if ($self->is_empty) {
+	my $dialog = $dbiwd->Dialog(
+		-text => 'Append or Replace current entry buffer?',
+		-bitmap => 'question',
+		-title => 'Load File Dialog',
+		-default_button => 'Append',
+		-buttons => [qw/Append Replace Cancel/]);
+
+		$ans = $dialog->Show;
+
+		return if $ans =~ m/Cancel/i;
+	}
+
+	$self->dbish_clear if $ans =~ m/Replace/i;
+
+	open( LOAD_FILE, "<$file" ) || do {
+		warn "Unable to open $file: $!\n";
+		return undef;
+	};
+
+	while( <LOAD_FILE> ) {
+		$entry_txt->insert( 'end', $_ );
+	}
+
+	return close( LOAD_FILE );
+}
+
+sub is_empty {
+	my $self = shift;
+
+	my $txt = $entry_txt->get( '1.0', 'end' );
+	chomp $txt;
+	return length( $txt );
+}
+sub view {
+	my $self = shift;
+
+}
+
+package Shell::Mark;
 use strict;
-my $statement_count = 0;
+my $statement_count = 1;
 
 my %marks;
 
@@ -976,10 +1455,6 @@ sub remove {
 sub is_marked {
    my ($self, $index) = @_;
    foreach (keys %marks) {
-
-      print STDERR "Checking key: " . $_  . " index: " .  $index . "\n"
-         if ( $main::debug > 0 );
-
       return $_ 
          if ($marks{$_}->{begin} eq $index);
    }
@@ -1041,9 +1516,6 @@ sub get_results {
 
 sub new {
 
-   print STDERR "orac_Shell::mark::new\n" 
-      if ( $main::debug > 0 );
-
    my $proto = shift;
    my $class = ref($proto) || $proto;
    my $self  = {
@@ -1052,6 +1524,9 @@ sub new {
     };
 
    bless($self, $class);
+
+	 $statement_count = 1;
+	 undef(%marks);
 
    return $self;
 }

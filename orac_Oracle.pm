@@ -10,39 +10,46 @@ my $sql_row_count;
 my $sql_browse_arr;
 my $w_orig_sql_string;
 my $keep_tablespace;
-my $l_sel_str;
 
 my $expl_butt;
-my $gen_sc;
-my $gc;
-my $max_row;
-my $min_row;
-my $uf_type;
 
-my @o_ih;
-my @sql_entry;
-my @i_uc;
-my @i_ac;
-my @lrg_t;
-my @ih;
 my @dsc_n;
-my @tot_ind_ar;
 
 my $ind_name;
 my $t_n;
-my $tot_i_cnt;
-my $ind_bd_cnt;
 
 my $ary_ref;
 my $w;
-my $m_t;
-
-my $own;
-my $obj;
 
 my @w_holders;
 my @w_titles;
 my @w_explain;
+
+=head1 NAME
+
+orac_Oracle.pm - the Oracle module to the Orac tool
+
+=head1 DESCRIPTION
+
+This code is a database object that can be created by the Orac tool.
+It inherits from orac_Base, which has all the basic data and methods.
+Some of those are called from here, some are overridden, most are
+inherited and used as is.
+
+=head1 PUBLIC METHODS
+
+&new()
+&init1()
+&init2()
+
+=cut
+
+=head2 new
+
+This constructor method basically sucks up the orac_Base functions
+to create the orac_Oracle object.
+
+=cut
 
 sub new
 {
@@ -57,6 +64,13 @@ sub new
    return $self;
 }
 
+=head2 init1
+
+This sets some environmental variables that DBD::Oracle requires
+to get to the right database.
+
+=cut
+
 sub init1 {
    my $self = shift;
 
@@ -67,6 +81,13 @@ sub init1 {
    $main::ENV{TWO_TASK} = $l_instance;
    $main::ENV{ORACLE_SID} = $l_instance;
 }
+
+=head2 init1
+
+Picks up a few values used again and again by the rest
+of the orac_Oracle object (eg: block size).
+
+=cut
 
 sub init2 {
 
@@ -80,7 +101,6 @@ sub init2 {
    # continually find it out again, and again.
 
    my $cm = $self->f_str('get_db','1');
-   print STDERR "init2: cm >$cm<\n" if ($main::debug > 0);
 
    my $sth = $self->{Database_conn}->prepare( $cm ) || 
                 die $self->{Database_connector}->errstr; 
@@ -96,6 +116,13 @@ sub init2 {
 
 ################ Database dependent code functions below here ##################
 
+=head2 tune_wait 
+
+Works out if anything is waiting in the database and then
+produces the relevant report.
+
+=cut
+
 sub tune_wait {
    my $self = shift;
 
@@ -105,6 +132,13 @@ sub tune_wait {
    $self->about_orac("$FindBin::RealBin/txt/Oracle/tune_wait.1.txt");
 
 }
+
+=head2 tune_pigs
+
+This function gives you two differing reports which measure the 
+Shared Pool disk reads for various SQL statements in the library.
+
+=cut
 
 sub tune_pigs {
    my $self = shift;
@@ -133,6 +167,14 @@ sub tune_pigs {
 
 }
 
+=head2 who_what 
+
+Works out who is holding whom, so we can unblock needless locking.
+Gives you various options for trying to view the blocking SQL.
+Gives a schematic report to try and pinpoint the offending program.
+
+=cut
+
 sub who_what {
 
    my $self = shift;
@@ -142,10 +184,6 @@ sub who_what {
 
    my ($flag,$param1,$param2,$param3) = @_;
 
-   print STDERR "who_what: param1 >$param1<\n" if ($main::debug > 0);
-   print STDERR "who_what: param2 >$param2<\n" if ($main::debug > 0);
-   print STDERR "who_what: param3 >$param3<\n" if ($main::debug > 0);
-
    my $title;
 
    if($flag == 1){
@@ -153,25 +191,6 @@ sub who_what {
    } elsif ($flag == 2){
       $title = "$param2";
    }
-   my $d = $self->{Main_window}->DialogBox(  -title=>$title  );
-
-   my $loc_text = $d->Scrolled('Text',
-                               -wrap=>'none',
-                               -cursor=>undef,
-                               -foreground=>$main::fc,
-                               -background=>$main::bc
-                              );
-
-   $loc_text->pack(-expand=>1,-fil=>'both');
-
-   # For just a short while,
-   # set the default output text window to this one
-
-   tie (*main::TEXT, 'Tk::Text', $loc_text);
-   my $old_self_text = $self->{Text_var};
-   $self->{Text_var} = $loc_text;
-
-   my $cm;
 
    if( $flag == 1 ){
 
@@ -185,10 +204,6 @@ sub who_what {
 
    } elsif ( $flag == 2 ){
 
-      print STDERR "who_what: cm     >\n$cm\n<\n" if ($main::debug > 0);
-      print STDERR "who_what: title  >$title<\n" if ($main::debug > 0);
-      print STDERR "who_what: param1 >$param1<\n" if ($main::debug > 0);
-
       $self->show_sql(   'statter',
                          '1',
                          $title,
@@ -196,18 +211,14 @@ sub who_what {
                         );
 
    }
-   my $b = $loc_text->Button(  -text=>$main::ssq,
-                               -command=>sub{  $self->see_sql($d,$cm)  }
-                            );
-
-   # Now tie the main screen back again
-
-   $self->{Text_var} = $old_self_text;
-   tie (*main::TEXT, 'Tk::Text', $self->{Text_var});
-
-   $d->Show;
-
 }
+
+=head2 all_stf
+
+Takes particular PL/SQL statements, and generates DDL to recreate ALL of a 
+particular object in the database.
+
+=cut
 
 sub all_stf {
    my $self = shift;
@@ -218,13 +229,7 @@ sub all_stf {
 
    my($module, $mod_number, $mod_binds) = @_;
 
-   print STDERR "all_stf: module     >$module<\n" if ($main::debug > 0);
-   print STDERR "all_stf: mod_number >$mod_number<\n" if ($main::debug > 0);
-   print STDERR "all_stf: mod_binds  >$mod_binds<\n" if ($main::debug > 0);
-
    my $cm = $self->f_str($module, $mod_number);
-
-   print STDERR "all_stf: cm         >\n$cm\n<\n" if ($main::debug > 0);
 
    my $sth = $self->{Database_conn}->prepare($cm) || 
                 die $self->{Database_conn}->errstr; 
@@ -248,6 +253,14 @@ sub all_stf {
    $self->see_plsql($cm);
 
 }
+
+=head2 orac_create_db
+
+Generates a script with which you can completely regenerate the skeleton 
+of your database (files, users, etc).
+
+=cut
+
 sub orac_create_db {
    my $self = shift;
 
@@ -275,6 +288,15 @@ sub orac_create_db {
    }
    $self->see_plsql($cm);
 }
+
+=head2 selected_error
+
+Pumps out information on a particular error.  This error comes from
+the pick-list error screen, which detects invalid objects in
+the database.
+
+=cut
+
 sub selected_error {
 
    my $self = shift;
@@ -293,149 +315,253 @@ sub selected_error {
                   );
 }
 
+=head2 univ_form
+
+A complex function for generating on-the-fly Forms for viewing database 
+information.  This examines DBA tables, and works out how to build the
+form.  Then it asks the user to input SQL, and order the way it comes back.
+
+Once this is done, Orac goes off and fills the on-the-fly data viewer
+with the required information.
+
+=cut
+
+# xxx
+
 sub univ_form { 
 
    my $self = shift;
 
-   my $w; # For small button window generation
-
    # A complex function for generating on-the-fly Forms
    # for viewing database information
 
-   my $loc_d;
+   my ( $owner,
+        $object,
+        $screen_type,
 
-   ($loc_d,$own,$obj,$uf_type) = @_;
+     ) = @_;
 
-   print STDERR "\nuniv_form: loc_d   >$loc_d<\n" if ($main::debug > 0);
-   print STDERR "univ_form: own     >$own<\n" if ($main::debug > 0);
-   print STDERR "univ_form: obj     >$obj<\n" if ($main::debug > 0);
-   print STDERR "univ_form: uf_type >$uf_type<\n\n" if ($main::debug > 0);
+   my $screen_title = "$main::lg{form_for} $object";
 
-   $m_t = "$main::lg{form_for} $obj";
+   my $univ_form_win = $self->{Main_window}->Toplevel();
 
-   my $bd = $loc_d->DialogBox(  -title=>$m_t,
-                                -buttons=>[ $main::lg{exit} ]
-                             );
+   $univ_form_win->title( $screen_title );
 
-   my $uf_txt;
+   my $help_txt;
 
-   if ($uf_type eq 'index'){
-      $uf_txt = "$own.$obj, $main::lg{sel_cols}";
+   if ($screen_type eq 'index'){
+
+      $help_txt = "$owner.$object, $main::lg{sel_cols}";
+
    } else {
-      $uf_txt = "$main::lg{prov_sql} $main::lg{sel_info}";
-   }
-   $bd->Label(-text=>$uf_txt,-anchor=>'n')->pack();
 
-   my $t = $bd->Scrolled('Text',
-                         -height=>16,
-                         -wrap=>'none',
-                         -cursor=>undef,
-                         -foreground=>$main::fc,
-                         -background=>$main::bc
-                        );
+      $help_txt = "$main::lg{prov_sql} $main::lg{sel_info}";
+
+   }
+
+   $univ_form_win->Label( -text=>$help_txt,
+                          -anchor=>'n',
+                        )->pack();
+
+   $univ_form_win->{text} = 
+      $univ_form_win->Scrolled( 'Text',
+                                -height=>16,
+                                -wrap=>'none',
+                                -cursor=>undef,
+                                -foreground=>$main::fc,
+                                -background=>$main::bc,
+                                -font=>$main::font{name},
+                              );
 
    my $cm = $self->f_str('selected_dba','1');
+
    my $sth = $self->{Database_conn}->prepare( $cm ) || 
                 die $self->{Database_conn}->errstr;
-   $sth->bind_param(1,$own);
-   $sth->bind_param(2,$obj);
+
+   $sth->bind_param(1,$owner);
+   $sth->bind_param(2,$object);
+
    $sth->execute;
 
-   my @h_t = (  $main::lg{i_col},
-                $main::lg{i_sel_sql},
-                $main::lg{i_dat_typ},
-                $main::lg{i_ord}
-             );
-
-   my $i;
-
-   for $i (0..3){
-      unless (($uf_type eq 'index') && ($i == 2)){
-         if ($i == 3){
-            $w = $t->Entry(-textvariable=>\$h_t[$i],-cursor=>undef,-width=>3);
-         } else {
-            $w = $t->Entry(-textvariable=>\$h_t[$i],-cursor=>undef);
-         }
-
-         $w->configure(-background=>$main::fc,
-                       -foreground=>$main::ec);
-
-         $t->windowCreate('end',-window=>$w);
-      }
-   }
-   $t->insert('end', "\n");
-
-   my @c_t;
-   my @t_t;
-   $ind_bd_cnt = 0;
-
-   my @res;
-
-   while (@res = $sth->fetchrow) {
-      $c_t[$ind_bd_cnt] = $res[0];
-      $w = $t->Entry(-textvariable=>\$c_t[$ind_bd_cnt],-cursor=>undef);
-      $t->windowCreate('end',-window=>$w);
-
-      unless ($uf_type eq 'index'){
-
-         $sql_entry[$ind_bd_cnt] = "";
-
-         $w = $t->Entry(   -textvariable=>\$sql_entry[$ind_bd_cnt],
-                           -cursor=>undef,
-                           -foreground=>$main::fc,
-                           -background=>$main::ec
+   my @entry_bubbles = (  $main::lg{i_col},
+                          $main::lg{i_sel_sql},
+                          $main::lg{i_dat_typ},
+                          $main::lg{i_ord}
                        );
 
-         $t->windowCreate('end',-window=>$w);
+   my $i;
+   my $w; # For small button window generation
+
+   for $i (0..3){
+
+      unless ( ($screen_type eq 'index') && 
+               ($i == 2)
+             )
+      {
+
+         $w = $univ_form_win->{text}->Entry( 
+
+                              -textvariable=>\$entry_bubbles[$i],
+                              -cursor=>undef,
+                                           );
+         if ($i == 3)
+         {
+            $w->configure(-width=>3);
+         } 
+         else 
+         {
+            $w->configure(-width=>16);
+         } 
+
+         $w->configure(  -background=>$main::fc,
+                         -foreground=>$main::ec,
+                      );
+
+         $univ_form_win->{text}->windowCreate('end',-window=>$w);
+      }
+   }
+
+   $univ_form_win->{text}->insert('end', "\n");
+
+   my @column_tabs;
+   my @title_tabs;
+   my $index_win_cnt = 0;
+
+   my @res;
+   my @sql_entry;
+   my @actual_entry;
+   my @ordered_entry;
+
+   my $counter = 0;
+   my $need_focus = 0;
+   my $focus_r;
+
+   while (@res = $sth->fetchrow) {
+
+      $counter++;
+
+      $column_tabs[$index_win_cnt] = $res[0];
+
+      $w = $univ_form_win->{text}->Entry(
+
+                  -textvariable=>\$column_tabs[$index_win_cnt],
+                  -cursor=>undef,
+                  -width=>16,
+
+                                        );
+
+      $univ_form_win->{text}->windowCreate('end',-window=>$w);
+
+      unless ($screen_type eq 'index'){
+
+         $sql_entry[$index_win_cnt] = "";
+
+         $w = $univ_form_win->{text}->Entry( 
+
+                             -textvariable=>\$sql_entry[$index_win_cnt],
+                             -cursor=>undef,
+                             -foreground=>$main::fc,
+                             -background=>$main::ec,
+                             -width=>16,
+
+                                           );
+
+         $univ_form_win->{text}->windowCreate('end',-window=>$w);
+
+         if ($counter == 1) 
+         {
+            $focus_r = \$w;
+            $need_focus = 1;
+         }
 
       }
-      $t_t[$ind_bd_cnt] = "$res[1] $res[2]";
+      $title_tabs[$index_win_cnt] = "$res[1] $res[2]";
 
-      $w = $t->Entry( -textvariable=>\$t_t[$ind_bd_cnt],
-                      -cursor=>undef);
+      $w = $univ_form_win->{text}->Entry( 
 
-      $t->windowCreate('end',-window=>$w);
+                             -textvariable=>\$title_tabs[$index_win_cnt],
+                             -cursor=>undef,
+                             -width=>16,
 
-      $i_ac[$ind_bd_cnt] = "$res[0]";
+                                        );
 
-      $i_uc[$ind_bd_cnt] = 0;
+      $univ_form_win->{text}->windowCreate('end',-window=>$w);
 
-      $w = $t->Checkbutton( -variable=>\$i_uc[$ind_bd_cnt],
-                            -relief=>'flat');
+      $actual_entry[$index_win_cnt] = "$res[0]";
+      $ordered_entry[$index_win_cnt] = 0;
 
-      $t->windowCreate('end',-window=>$w);
+      $w = $univ_form_win->{text}->Checkbutton( 
 
-      $t->insert('end', "\n");
-      $ind_bd_cnt++;
+                   -variable=>\$ordered_entry[$index_win_cnt],
+                   -relief=>'flat'
+
+                                              );
+
+      $univ_form_win->{text}->windowCreate('end',-window=>$w);
+
+      $univ_form_win->{text}->insert('end', "\n");
+      $index_win_cnt++;
    }
-   $ind_bd_cnt--;
+   $index_win_cnt--;
    $sth->finish;
 
-   $t->configure( -state=>'disabled' );
+   $univ_form_win->{text}->configure( -state=>'disabled' );
 
-   $t->pack( -expand =>1,
+   $univ_form_win->{text}->pack( -expand =>1,
              -fill=>'both'
            );
 
-   my $bb = $bd->Frame->pack( -side=>'bottom',
-                              -before=> $t
-                            );
+   my $bb;
+   my $balloon;
+   $self->create_balloon_bars(\$bb, \$balloon, \$univ_form_win );
 
-   if ($uf_type eq 'index'){
-      $uf_txt = 'Build Index';
+   if ($screen_type eq 'index'){
+
+      $help_txt = $main::lg{build_index};
+
    } else {
-      $uf_txt = $main::lg{sel_info};
+
+      $help_txt = $main::lg{sel_info};
+
    }
 
-   $bb->Button( -text=>$uf_txt,
-                -command=>sub{ $bd->Busy;
-                               $self->selector($bd,$uf_type);
-                               $bd->Unbusy}
-              )->pack (-side=>'right', 
-                       -anchor=>'e');
+   my $image = $univ_form_win->Photo( 
+            -file => "$FindBin::RealBin/img/forward.gif" );
 
-   $bd->Show;
+   my $forward_b = $bb->Button( -image=>$image,
+                                -command=>sub{ 
+                               $self->selector( \$univ_form_win,
+                                                \$screen_type,,
+                                                \$screen_title,
+                                                \$index_win_cnt,
+                                                \@actual_entry,
+                                                \$owner,
+                                                \$object,
+                                                \@ordered_entry,
+                                                \@sql_entry,
+                                              );
+                                             }
+                              )->pack (-side=>'left', 
+                                       -anchor=>'w');
+
+   $balloon->attach($forward_b, -msg => $help_txt );
+
+   $self->window_exit_button( \$bb, \$univ_form_win );
+   main::iconize( $univ_form_win );
+
+   if ($need_focus)
+   {
+      $$focus_r->focusForce;
+   }
 }
+
+=head2 selector
+
+User may wish to narrow search for info with universal form, down to a 
+particular set of rows, and order these rows.  This function helps
+univ_form() and allows them to do that.
+
+=cut
 
 sub selector {
 
@@ -445,100 +571,197 @@ sub selector {
    # a particular set of rows, and order these rows.
    # This function allows them to do that.
 
-   my($sel_d,$uf_type) = @_;
+   my( $win_ref,
+       $screen_type_r,
+       $screen_title_r,
+       $index_cnt_r,
+       $entries_r,
+       $owner_r,
+       $object_r,
+       $ordered_entry_r,
+       $sql_entry_r,
 
-   if ($uf_type eq 'index'){
-      $self->build_ord($sel_d,$uf_type);
+     ) = @_;
+
+   my @actual_entries = @$entries_r;
+   my @ordered_entry = @$ordered_entry_r;
+   my @sql_entry = @$sql_entry_r;
+
+   # Start building up the select string
+
+   my $l_sel_str = ' select ';
+
+   if ($$screen_type_r eq 'index'){
+
+      $self->build_ord( $win_ref,
+                        $screen_type_r,
+                        $index_cnt_r,
+                        $ordered_entry_r,
+                        \$l_sel_str,
+                        $owner_r,
+                        $object_r,
+                        $entries_r,
+                        $screen_title_r,
+                      );
       return;
    }
-   $l_sel_str = ' select ';
 
    my $i;
 
-   for $i (0..$ind_bd_cnt){
-      if ($i != $ind_bd_cnt){
-         $l_sel_str = $l_sel_str . "$i_ac[$i], ";
+   for $i (0..$$index_cnt_r){
+
+      if ($i != $$index_cnt_r){
+
+         $l_sel_str = $l_sel_str . "$actual_entries[$i], ";
+
       } else {
-         $l_sel_str = $l_sel_str . "$i_ac[$i] ";
+
+         $l_sel_str = $l_sel_str . "$actual_entries[$i] ";
+
       }
    }
 
-   $l_sel_str = $l_sel_str . "\nfrom ${own}.${obj} ";
+   $l_sel_str = $l_sel_str . "\nfrom " . $$owner_r . '.' . $$object_r . " ";
 
    my $flag = 0;
    my $last_one = 0;
 
-   for $i (0..$ind_bd_cnt){
-      if ($i_uc[$i] == 1){
+   for $i (0..$$index_cnt_r){
+
+      if ($ordered_entry[$i] == 1){
+
          $flag = 1;
          $last_one = $i;
+
       }
    }
 
    my $where_bit = "\nwhere ";
-   for $i (0..$ind_bd_cnt){
+
+   for $i (0..$$index_cnt_r)
+   {
       my $sql_bit = $sql_entry[$i];
-      if (defined($sql_bit) && length($sql_bit)){
-         $l_sel_str = $l_sel_str . $where_bit . "$i_ac[$i] $sql_bit ";
+
+      if (defined($sql_bit) && length($sql_bit))
+      {
+
+         $l_sel_str = $l_sel_str . $where_bit . 
+                      "$actual_entries[$i] $sql_bit ";
+
          $where_bit = "\nand ";
+
       }
    }
-   $self->build_ord($sel_d,$uf_type);
-   $self->and_finally($sel_d,$l_sel_str);
+
+   $self->build_ord( $win_ref,
+                     $screen_type_r,
+                     $index_cnt_r,
+                     $ordered_entry_r,
+                     \$l_sel_str,
+                     $owner_r,
+                     $object_r,
+                     $entries_r,
+                     $screen_title_r,
+                  );
+
+   $self->and_finally( $win_ref, 
+                       \$l_sel_str, 
+                       $index_cnt_r, 
+                       $entries_r,
+                       $screen_title_r,
+                     );
+   return;
 }
+
+=head2 and_finally
+
+Now we've built up our full SQL statement for this table with
+selector(), fill a Perl array with everything and display it in
+the univ_form(), on-the-fly viewer.
+
+=cut
+
 sub and_finally {
+
    my $self = shift;
 
-   my($af_d,$cm) = @_;
+   my( $win_ref,
+       $cm_ref,
+       $count_r,
+       $entries_r,
+       $title_r,
+
+     ) = @_;
+
+   my @entries = @$entries_r;
 
    # Now we've built up our full SQL statement for this table,
    # fill a Perl array with everything and display it.
 
-   $ary_ref = $self->{Database_conn}->selectall_arrayref($cm);
+   my $ary_ref = $self->{Database_conn}->selectall_arrayref( $$cm_ref );
 
-   $min_row = 0;
-   $max_row = @$ary_ref;
+   my $min_row = 0;
+   my $max_row = @$ary_ref;
+
    if ($max_row == 0){
-      main::mes($af_d, $main::lg{no_rows});
-   } else {
-      $gc = $min_row;
 
-      my $c_d = $af_d->DialogBox(-title=>$m_t);
+      main::mes($$win_ref, $main::lg{no_rows});
+
+   } else {
+
+      my $out_screen = $main::mw->Toplevel(-title=>$$title_r);
 
       my(@lb) = qw/-anchor n -side top -expand 1 -fill both/;
-      my $top_frame = $c_d->Frame->pack(@lb);
+      my $top_frame = $out_screen->Frame->pack(@lb);
    
-      my $t = $top_frame->Scrolled('Text',
-                                   -height=>16,
-                                   -wrap=>'none',
-                                   -cursor=>undef,
-                                   -foreground=>$main::fc,
-                                   -background=>$main::bc);
+      $out_screen->{text} = 
+            $top_frame->Scrolled('Text',
+                                 -height=>16,
+                                 -width=>80,
+                                 -wrap=>'none',
+                                 -cursor=>undef,
+                                 -foreground=>$main::fc,
+                                 -background=>$main::bc,
+                                 -font=>$main::font{name},
+                                );
 
-      for my $i (0..$ind_bd_cnt) {
-         $lrg_t[$i] = "";
-         $w = $t->Entry(-textvariable=>\$i_ac[$i],
-                        -cursor=>undef);
-         $t->windowCreate('end',-window=>$w);
+      my @output;
+
+      for my $i (0..$$count_r) {
+
+         $output[$i] = "";
+
+         $w = $out_screen->{text}->Entry(-textvariable=>\$entries[$i],
+                                         -cursor=>undef,
+                                        );
+
+         $out_screen->{text}->windowCreate('end',-window=>$w);
    
-         $w = $t->Entry(-textvariable=>\$lrg_t[$i],
+         $w = $out_screen->{text}->Entry(-textvariable=>\$output[$i],
                         -cursor=>undef,
                         -foreground=>$main::fc,
                         -background=>$main::ec,
-                        -width=>40);
+                        -width=>30);
 
-         $t->windowCreate('end',-window=>$w);
-         $t->insert('end', "\n");
+         $out_screen->{text}->windowCreate('end',-window=>$w);
+         $out_screen->{text}->insert('end', "\n");
       }
-      $t->configure(-state=>'disabled');
-      $t->pack(@lb);
+      $out_screen->{text}->configure(-state=>'disabled');
+      $out_screen->{text}->pack(@lb);
 
-      my $c_br = $c_d->Frame->pack(-before=>$top_frame,
-                                   -side=>'bottom',
-                                   -expand=>'no');
+      my $loc_menu;
+      $self->create_button_bar(\$loc_menu, \$out_screen );
+      $self->window_exit_button(\$loc_menu, \$out_screen );
+
+      my $bot_f = $out_screen->Frame->pack( -fill=>'both',
+                                            -side=>'bottom',
+                                            -expand=>'no'
+                                          );
    
-      $gen_sc = 
-         $c_br->Scale( 
+      my $univ_scale;
+
+      $univ_scale = 
+         $bot_f->Scale( 
              -orient=>'horizontal',
              -label=>"$main::lg{rec_of} " . $max_row,
              -length=>400,
@@ -547,44 +770,106 @@ sub and_finally {
              -tickinterval=>($max_row/8),
 
              -command=>[ 
-                sub {   $self->calc_scale_record($gen_sc->get())
+                sub {   $self->calc_scale_record(  \$univ_scale,
+                                                   \@output,
+                                                   $univ_scale->get(),
+                                                   $ary_ref, 
+                                                   $count_r,
+                                                )
                     }  ]
 
                      )->pack(side=>'left');
 
-      $c_br->Button(-text=>$main::ssq,
-                    -command=>sub{$self->see_sql($c_d,$l_sel_str)}
+      $bot_f->Button(-text=>$main::ssq,
+                     -command=>sub{$self->see_sql($out_screen,$$cm_ref)}
 
                    )->pack(side=>'right');
 
-      $self->go_for_gold();
-      $c_d->Show;
+      $self->go_for_gold( \$univ_scale, 
+                          \@output, 
+                          $min_row, 
+                          $ary_ref, 
+                          $count_r,
+                        );
+
+      main::iconize( $out_screen );
    }
-   undef $ary_ref;
+   return;
 }
+
+=head2 calc_scale_record
+
+This whizzes backwards and forwards through the univ_form() records' array,
+displaying up the required information.
+
+=cut
+
 sub calc_scale_record {
    my $self = shift;
 
    # Whizz backwards and forwards through the records
 
-   my($sv) = @_;
-   $gc = $sv - 1;
+   my( $univ_scale_ref,
+       $output_r,
+       $normal_position, 
+       $ary_ref,
+       $count_r,
 
-   $self->go_for_gold();
+     ) = @_;
+
+   my $array_count_pos = $normal_position - 1;
+
+   $self->go_for_gold( $univ_scale_ref,
+                       $output_r,
+                       $array_count_pos, 
+                       $ary_ref,
+                       $count_r,
+                     );
 
 }
+
+=head2 go_for_gold
+
+Work out which row of information to display, and then display it.  The
+name of this function comes from a very bad 80's TV show, hosted
+by Henry Kelly :)
+
+=cut
+
 sub go_for_gold {
+
    my $self = shift;
+
+   my ($univ_scale_ref,
+       $output_r,
+       $count,
+       $ary_ref,
+       $count_r,
+ 
+      ) = @_;
 
    # Work out which row of information to display,
    # and then display it.
 
-   my $curr_ref = $ary_ref->[$gc];
-   for my $i (0..$ind_bd_cnt) {
-      $lrg_t[$i] = $curr_ref->[$i];
+   my $curr_ref = $ary_ref->[$count];
+
+   for my $i (0..$$count_r) {
+
+      $output_r->[$i] = $curr_ref->[$i];
    }
-   $gen_sc->set(($gc + 1));
+
+   $$univ_scale_ref->set(($count + 1));
+
 }
+
+=head2 build_ord
+
+It all gets a bit nasty here.  This works out the user's intentions on 
+how to order their required information for the univ_form() set of 
+functions.
+
+=cut
+
 sub build_ord {
 
    my $self = shift;
@@ -593,61 +878,136 @@ sub build_ord {
    # the user's intentions on how to order their
    # required information.
 
-   my($bl_d,$uf_type) = @_;
+   my( $win_ref, 
+       $screen_type_r,
+       $index_count_r,
+       $order_r,
+       $select_string_r,
+       $own_r,
+       $obj_r,
+       $entries_r, 
+       $title_r, 
+
+     ) = @_;
+
+   my @orders = @$order_r;
+
    my $l_chk = 0;
 
    my $i;
 
-   for $i (0..$ind_bd_cnt){
-      if ($i_uc[$i] == 1){
+   for $i (0..$$index_count_r){
+
+      if ($orders[$i] == 1){
+
          $l_chk = 1;
+
       }
    }
 
    if ($l_chk == 1){
 
-      $self->now_build_ord($bl_d,$uf_type);
+      my $total_indexed_count;
+      my @index_array;
+      my @index_head;
+      my @index_open;
 
-      if ($uf_type eq 'index'){
+      $self->now_build_ord( $win_ref,
+                            $screen_type_r,
+                            \$total_indexed_count,
+                            $index_count_r,
+                            $entries_r,
+                            $title_r, 
+                            \@index_array, 
+                            \@index_head, 
+                            \@index_open, 
+                            $order_r,
+                          );
 
-         $self->really_build_index($bl_d,$own,$obj);
+      if ($$screen_type_r eq 'index'){
+
+         $self->really_build_index( $win_ref,
+                                    $own_r,
+                                    $obj_r,
+                                    \$total_indexed_count,
+                                    \@index_array, 
+                                    \@index_head, 
+                                    $title_r,
+                                  );
 
       } else {
 
-         $l_sel_str = $l_sel_str . "\norder by ";
-         for my $cl (1..$tot_i_cnt){
-            $l_sel_str = $l_sel_str . "$tot_ind_ar[$ih[$cl]] ";
-            if ($dsc_n[$ih[$cl]] == 1){
-               $l_sel_str = $l_sel_str . "desc ";
+         $$select_string_r = $$select_string_r . "\norder by ";
+
+         for my $cl (1..$total_indexed_count)
+         {
+
+            $$select_string_r = $$select_string_r . 
+                                "$index_array[$index_head[$cl]] ";
+
+            if ($dsc_n[$index_head[$cl]] == 1)
+            {
+               $$select_string_r = $$select_string_r . "desc ";
             }
-            if ($cl != $tot_i_cnt){
-               $l_sel_str = $l_sel_str . ", ";
+
+            if ($cl != $total_indexed_count)
+            {
+               $$select_string_r = $$select_string_r . ", ";
             }
          }
       }
    } else {
-      if ($uf_type eq 'index'){
-         main::mes($bl_d,$main::lg{no_cols_sel});
+
+      if ($$screen_type_r eq 'index'){
+
+         main::mes($$win_ref, $main::lg{no_cols_sel});
+
       }
    }
 }
+
+=head2 now_build_ord
+
+This helps build up the ordering SQL string.
+
+=cut
+
 sub now_build_ord {
+
    my $self = shift;
 
    # This helps build up the ordering SQL string.
 
-   my($nbo_d,$uf_type) = @_;
-   $tot_i_cnt = 0;
+   my($win_ref, 
+      $screen_type_r,
+      $total_r,
+      $index_count_r,
+      $entries_r,
+      $title_r,
+      $index_arr_r,
+      $index_head_r,
+      $index_open_r,
+      $order_r,
+     
+     ) = @_;
+
+   my @entries = @$entries_r;
+
+   $$total_r = 0;
 
    my $i;
 
-   for $i (0..$ind_bd_cnt){
-      if ($i_uc[$i] == 1){
-         $tot_i_cnt++;
-         $tot_ind_ar[$tot_i_cnt] = $i_ac[$i];
+   for $i (0..$$index_count_r){
+
+      if ($order_r->[$i] == 1){
+
+         $$total_r++;
+         $index_arr_r->[$$total_r] = $entries[$i];
+
       }
    }
-   my $b_d = $nbo_d->DialogBox(-title=>$m_t); 
+
+   my $b_d = $$win_ref->DialogBox(-title=>$$title_r); 
 
    $b_d->Label(  -text=>$main::lg{ind_ord_arrng},
                  -anchor=>'n'
@@ -660,7 +1020,7 @@ sub now_build_ord {
                           -foreground=>$main::fc,
                           -background=>$main::bc);
 
-   if ($uf_type eq 'index'){
+   if ($$screen_type_r eq 'index'){
 
       # User may be wanting to generate DDL to create new Index.
       # If so, this picks up the other information required.
@@ -721,21 +1081,21 @@ sub now_build_ord {
       $t->insert('end', "\n");
    }
    my @pos_txt;
-   for $i (1..($tot_i_cnt + 2)){
-      if ($i <= $tot_i_cnt){
+   for $i (1..($$total_r + 2)){
+      if ($i <= $$total_r){
          $pos_txt[$i] = "Pos $i";
          $w = $t->Entry(-textvariable=>\$pos_txt[$i],
                         -width=>7,
                         -background=>$main::fc,
                         -foreground=>$main::ec);
       } else {
-         if ($i == ($tot_i_cnt + 1)){
+         if ($i == ($$total_r + 1)){
             $pos_txt[$i] = $main::lg{i_col};
             $w = $t->Entry(-textvariable=>\$pos_txt[$i],
                            -background=>$main::fc,
                            -foreground=>$main::ec);
          } else {
-            unless ($uf_type eq 'index'){
+            unless ($$screen_type_r eq 'index'){
                $pos_txt[$i] = $main::lg{i_desc};
                $w = $t->Entry(-textvariable=>\$pos_txt[$i],
                               -width=>8,
@@ -754,29 +1114,39 @@ sub now_build_ord {
 
    my $j_row;
 
-   for $j_row (1..$tot_i_cnt){
+   for $j_row (1..$$total_r){
 
-      $ih[$j_row] = $j_row;
+      $index_head_r->[$j_row] = $j_row;
       $dsc_n[$j_row] = 0;
-      $o_ih[$j_row] = $ih[$j_row];
+      $index_open_r->[$j_row] = $index_head_r->[$j_row];
 
       my $j_col;
 
-      for $j_col (1..($tot_i_cnt + 2)){
-         if ($j_col <= $tot_i_cnt){
+      for $j_col (1..($$total_r + 2)){
+         if ($j_col <= $$total_r){
 
             $w = $t->Radiobutton(
                         -relief=>'flat',
                         -value=>$j_row,
-                        -variable=>\$ih[$j_col],
+                        -variable=>\$index_head_r->[$j_col],
                         -width=>4,
-                        -command=>[ sub {  $self->j_inri()  }]);
+                        -command=> sub {  
+
+           $self->j_inri($index_head_r,
+                         $total_r,
+                         $index_open_r,
+                        )  
+
+                                       },
+                                  
+
+                                );
 
             $t->windowCreate('end',-window=>$w);
          } else {
-            if ($j_col == ($tot_i_cnt + 1)){
+            if ($j_col == ($$total_r + 1)){
 
-               $w = $t->Entry( -textvariable=>\$tot_ind_ar[$j_row],
+               $w = $t->Entry( -textvariable=>\$index_arr_r->[$j_row],
                                -cursor=>undef,
                                -foreground=>$main::fc,
                                -background=>$main::ec
@@ -784,7 +1154,7 @@ sub now_build_ord {
 
                $t->windowCreate('end',-window=>$w);
             } else {
-               unless ($uf_type eq 'index'){
+               unless ($$screen_type_r eq 'index'){
 
                   $w = $t->Checkbutton( -variable=>\$dsc_n[$j_row],
                                         -relief=>'flat',
@@ -801,36 +1171,58 @@ sub now_build_ord {
    $t->pack();
    $b_d->Show;
 }
+
+=head2 really_build_index
+
+Picks up everything finally reqd. to build up the DDL for index creation.
+It then works out the exact DDL, including INITIAL and NEXT sizes, to
+create a particular index, on a particular database object.
+
+=cut
+
 sub really_build_index {
+
    my $self = shift;
 
    # Picks up everything finally reqd. to build
    # up the DDL for index creation
 
-   my($rbi_d,$own,$obj) = @_;
+   my( $win_ref, 
+       $own_r, 
+       $obj_r,
+       $total_r,
+       $index_array_r,
+       $index_head_r,
+       $title_r,
 
-   my $d = $rbi_d->DialogBox();
+     ) = @_;
 
-   $d->add( "Label",
-            -text=>"$main::lg{ind_crt_for} $own.$obj"
-          )->pack(side=>'top');
+   my $d = $main::mw->Toplevel( 
+              -title=>"$main::lg{ind_crt_for} " . $$own_r . '.' . $$obj_r
+                              );
 
-   my $l_text = $d->Scrolled( 'Text',
+   $d->{text} = $d->Scrolled( 'Text',
                               -wrap=>'none',
                               -cursor=>undef,
                               -foreground=>$main::fc,
-                              -background=>$main::bc
+                              -background=>$main::bc,
+                              -font=>$main::font{name},
                             );
 
-   $l_text->pack(-expand=>1,-fil=>'both');
+   $d->{text}->pack(-expand=>1,-fil=>'both');
 
-   tie (*L_TXT, 'Tk::Text', $l_text);
+   tie (*L_TXT, 'Tk::Text', $d->{text});
 
    my $cm = $self->f_str('build_ind','1');
 
-   for my $cl (1..$tot_i_cnt){
-      my $bs = " v_this_build($cl) := '$tot_ind_ar[$ih[$cl]]'; ";
+   for my $cl (1..$$total_r)
+   {
+
+      my $bs = " v_this_build($cl) := '" .
+               $index_array_r->[$index_head_r->[$cl]] .
+               "' ; ";
       $cm = $cm . $bs;
+
    }
 
    my $cm_part2 = $self->f_str('build_ind','2');
@@ -840,41 +1232,75 @@ sub really_build_index {
 
    my $sth = $self->{Database_conn}->prepare( $cm ) || 
                 die $self->{Database_conn}->errstr; 
-   $sth->bind_param(1,$own);
-   $sth->bind_param(2,$obj);
-   $sth->bind_param(3,$tot_i_cnt);
+
+   $sth->bind_param(1,$$own_r);
+   $sth->bind_param(2,$$obj_r);
+   $sth->bind_param(3,$$total_r);
+
    $sth->execute;
 
    my $full_list;
    $full_list = scalar $self->{Database_conn}->func('dbms_output_get');
+
    if (length($full_list) != 0){
       my $avg_entry_size = $full_list + 0.00;
 
-      my($pct_free,$initrans) = $self->ind_prep($self->f_str('build_ind','3'),$own,$obj);
-      my($n_rows) =             $self->ind_prep($self->f_str('build_ind','4') . ' ' . $own . '.' . $obj . ' ');
-      my($avail_data_space) =   $self->ind_prep($self->f_str('build_ind','5'),$Block_Size,$initrans,$pct_free);
-      my($space) = $self->ind_prep($self->f_str('build_ind','6'),$avail_data_space,$avg_entry_size,$avg_entry_size);
-      my ($blocks_req) =         $self->ind_prep($self->f_str('build_ind','7'),$n_rows,$avg_entry_size,$space);
-      my ($initial_extent) =     $self->ind_prep($self->f_str('build_ind','8'),$blocks_req,$Block_Size);
-      my ($next_extent) =        $self->ind_prep($self->f_str('build_ind','9'),$initial_extent);
+      my($pct_free,$initrans) =
+         $self->ind_prep($self->f_str('build_ind','3'),$$own_r,$$obj_r);
 
-      print L_TXT "\nrem  Index Script for new index ${ind_name} on ${own}.${obj}\n\n";
-      print L_TXT "create index ${own}.${ind_name} on\n";
-      print L_TXT "   ${own}.${obj} (\n";
-      for my $cl (1..$tot_i_cnt){
-         my $bs = "      $tot_ind_ar[$ih[$cl]]\n";
-         if ($cl != $tot_i_cnt){
+      my($n_rows) =
+        $self->ind_prep($self->f_str('build_ind','4') . 
+                        ' ' . $$own_r . '.' . $$obj_r . ' ');
+
+      my($avail_data_space) =   
+         $self->ind_prep($self->f_str('build_ind','5'),
+             $Block_Size, $initrans, $pct_free);
+
+      my($space) =
+         $self->ind_prep($self->f_str('build_ind','6'),
+                         $avail_data_space,$avg_entry_size,$avg_entry_size);
+
+      my ($blocks_req) =
+         $self->ind_prep($self->f_str('build_ind','7'),
+                         $n_rows,$avg_entry_size,$space);
+
+      my ($initial_extent) =
+         $self->ind_prep($self->f_str('build_ind','8'),
+                         $blocks_req,$Block_Size);
+
+      my ($next_extent) =
+          $self->ind_prep($self->f_str('build_ind','9'),$initial_extent);
+
+      print L_TXT "\nrem  Index Script for new index ${ind_name} on " .
+                  $$own_r . '.' . $$obj_r . "\n\n";
+
+      print L_TXT "create index " . $$own_r . ".${ind_name} on\n";
+
+      print L_TXT "   " . $$own_r . '.' . $$obj_r . " (\n";
+
+      for my $cl (1..$$total_r){
+
+         my $bs = "      $index_array_r->[$index_head_r->[$cl]]\n";
+
+         if ($cl != $$total_r){
             $bs = $bs . ', ';
          }
          print L_TXT $bs;
       }
+
       print L_TXT "   ) tablespace ${t_n}\n";
-      print L_TXT "   storage (initial ${initial_extent}K next ${next_extent}K pctincrease 0)\n";
+      print L_TXT "   storage (initial ${initial_extent}K " .
+                  "next ${next_extent}K pctincrease 0)\n";
       print L_TXT "   pctfree ${pct_free};\n\n";
       print L_TXT "\nrem Average Index Entry Size:  ${avg_entry_size}   ";
 
-      my $b = $l_text->Button(-text=>"Calculation SQL",-command=>sub{$self->see_sql($d,$cm)});
-      $l_text->window('create','end',-window=>$b);
+
+      my $b = $d->{text}->Button( -text=>"Calculation SQL",
+                                  -command=>sub {$self->see_sql($d,$cm)}
+                                );
+
+      $d->{text}->window('create','end',-window=>$b);
+
 
       print L_TXT "\nrem Database Block Size:       ${Block_Size}\n";
       print L_TXT "rem Current Table Row Count:   ${n_rows}\n";
@@ -882,8 +1308,19 @@ sub really_build_index {
       print L_TXT "rem Space For Each Index:      ${space}\n";
       print L_TXT "rem Blocks Required:           ${blocks_req}\n\n";
    }
-   $d->Show;
+
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$d );
+   $self->window_exit_button(\$loc_menu, \$d );
+
+   main::iconize( $d );
 }
+
+=head2 ind_prep
+
+Small helper function for working out Index DDL.
+
+=cut
 
 sub ind_prep {
 
@@ -907,176 +1344,74 @@ sub ind_prep {
    $sth->finish;
    return @res;
 }
+
+=head2 j_inri
+
+Here lies the end of sanity.  Welcome!  This function drove me mad when
+I first wrote it.  It basically takes several lines of radiobuttons,
+and makes sure only one of the is set in each column.  This is
+used to help the user select the correct ordering for their table
+selections.  There must've been an easier way than this, but it worked
+at the time, looked nice, and still works now, so I'm leaving it
+alone.  I'll let you work out what j_inri stands for.
+
+=cut
+
 sub j_inri {
+
    my $self = shift;
+
+   my ($index_head_r,
+       $total_r,
+       $index_open_r,
+
+      ) = @_;
 
    # Here lies the end of sanity.  Welcome!
 
    my $i = 0;
    my $cl = 0;
-   for $cl (1..$tot_i_cnt){
-      if ($o_ih[$cl] != $ih[$cl]){
+
+   for $cl (1..$$total_r){
+
+      if ($index_open_r->[$cl] != $index_head_r->[$cl])
+      {
          $i = $cl;
          last;
       }
    }
    if ($i > 0){
-      for $cl (1..$tot_i_cnt){
+      for $cl (1..$$total_r){
          unless ($cl == $i){
-            if ($ih[$cl] == $ih[$i]){
-                $ih[$cl] = $o_ih[$i];
-                $o_ih[$cl] = $ih[$cl];
+            if ($index_head_r->[$cl] == $index_head_r->[$i]){
+                $index_head_r->[$cl] = $index_open_r->[$i];
+                $index_open_r->[$cl] = $index_head_r->[$cl];
                 last;
             }
          }
       }
-      $o_ih[$i] = $ih[$i];
+      $index_open_r->[$i] = $index_head_r->[$i];
    }
 }
-sub tab_det_orac {
-   my $self = shift;
 
-   # Produces simple graphical representations of complex
-   # percentage style reports.
+=head2 work_out_why
 
-   my ( $title, $func ) = @_;
+Works out new Y-coordinate positions for various simple canvas graphs
+called by Orac.
 
-   print STDERR "tab_det_orac: selfmw >" . 
-      $self->{Main_window} . "<\n" if ($main::debug > 0);
-
-   my $d = 
-      $self->{Main_window}->DialogBox(
-         -title=>"$title: $main::v_db ($main::lg{blk_siz} $Block_Size)"
-                                     );
-
-   my $cf = $d->Frame;
-   $cf->pack(-expand=>'1',-fill=>'both');
-
-   my $c = $cf->Scrolled( 'Canvas',
-                          -relief=>'sunken',
-                          -bd=>2,
-                          -width=>500,
-                          -height=>280,
-                          -background=>$main::bc
-                        );
-
-   $keep_tablespace = 'XXXXXXXXXXXXXXXXX';
-
-   my $cm = $self->f_str($func,'1');
-
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
-
-   if($func eq 'tab_det_orac'){
-      my $i;
-      for ($i = 1;$i <= 6;$i++){
-         $sth->bind_param($i,$Block_Size);
-      }
-   }
-   $sth->execute;
-
-   my $i = 1;
-
-   my $Grand_Total = 0.00;
-   my $Grand_Used_Mg = 0.00;
-   my $Grand_Free_Mg = 0.00;
-
-   my @res;
-
-   my $Use_Pct;
-   my $Used_Mg;
-   my $Total;
-   my $Fname;
-   my $T_Space;
-   my $Free_Mg;
-
-   while (@res = $sth->fetchrow) {
-     if($func eq 'tabspace_diag'){
-        if($res[0] eq 'free'){
-           $Free_Mg = $res[2];
-           next;
-        } else {
-           $T_Space = $res[1];
-           $Fname = '';
-           $Total = $res[2];
-           $Used_Mg = $Total - $Free_Mg;
-           $Use_Pct = ($Used_Mg/$Total)*100;
-        }
-     } else {
-        ($T_Space,$Fname,$Total,$Used_Mg,$Free_Mg,$Use_Pct) = @res;
-     }
-     if ((!defined($Used_Mg)) || (!defined($Use_Pct))){
-        $Used_Mg = 0.00;
-        $Use_Pct = 0.00;
-     }
-     $Grand_Total = $Grand_Total + $Total;
-     $Grand_Used_Mg = $Grand_Used_Mg + $Used_Mg;
-     if (defined($Free_Mg)){
-        $Grand_Free_Mg = $Grand_Free_Mg + $Free_Mg;
-     }
-     if($func ne 'tab_det_orac'){
-        $Fname = '';
-     } 
-     if($func eq 'tune_health'){
-        $Use_Pct = $Total;
-     }
-     $self->add_item( $func,
-                      $c,
-                      $i,
-                      $T_Space,
-                      $Fname,
-                      $Total,
-                      $Used_Mg,
-                      $Free_Mg,
-                      $Use_Pct
-                    );
-     $i++;
-   }
-   $sth->finish;
-
-   if($func ne 'tune_health'){
-      my $Grand_Use_Pct = (($Grand_Used_Mg/$Grand_Total)*100.00);
-
-      $self->add_item(  $func,
-                        $c,
-                        0,
-                        '',
-                        '',
-                        $Grand_Total,
-                        $Grand_Used_Mg,
-                        $Grand_Free_Mg,
-                        $Grand_Use_Pct
-                     );
-   }
-
-   my $b = $c->Button( -text=>$main::ssq,
-                       -command=>sub{  $self->see_sql( $d , $cm )  });
-
-   print STDERR "tab_det_orac: i >$i<\n" if ($main::debug > 0);
-
-   my $y_start = $self->work_out_why($i);
-
-   $c->create(  'window', 
-                '1c',
-                "$y_start" . 'c',
-                -window=>$b,
-                -anchor=>'nw',
-                -tags=>'item'
-             );
-
-   $c->configure(-scrollregion=>[ $c->bbox("all") ]);
-   $c->pack(-expand=>'yes',-fill=>'both');
-   $d->Show;
-
-}
+=cut
 
 sub work_out_why {
    my $self = shift;
 
-   print STDERR "work_out_why: i >$_[0]<\n" if ($main::debug > 0);
-
    return (0.8 + (1.2 * $_[0]));
 }
+
+=head2 add_item
+
+Produces rectangular bar line on canvas for simple charts.
+
+=cut
 
 sub add_item {
 
@@ -1119,8 +1454,6 @@ sub add_item {
    }
    my $dst_f = ($Use_Pct/$chopper) + 0.4;
 
-   print STDERR "add_item: c >$c<\n" if ($main::debug > 0);
-
    $c->create( ( 'rectangle', 
                  "$dst_f" . 'c',
                  "$y_start". 'c',
@@ -1157,7 +1490,8 @@ sub add_item {
                      "$y_start" . 'c',
                      -anchor=>'nw',
                      -justify=>'left',
-                     -text=>$this_text  
+                     -text=>$this_text  ,
+                     -font => $main::font{name},
                  )
              );
 
@@ -1170,6 +1504,7 @@ sub add_item {
                     "$y_start" . 'c',
                     -anchor=>'nw',
                     -justify=>'left',
+                     -font => $main::font{name},
                     -text=>sprintf("%10.2fM Total %10.2fM Used %10.2fM Free",
                                    $Total, 
                                    $Used_Mg, 
@@ -1179,17 +1514,31 @@ sub add_item {
                 );
    }
 }
+
+=head2 dbwr_fileio
+
+Works out File/IO and produces graphical report.
+
+=cut
+
 sub dbwr_fileio {
    my $self = shift;
 
    # Works out File/IO and produces graphical report.
 
    my $t_tit = "$main::lg{file_io} $main::v_db";
-   my $d = $self->{Main_window}->DialogBox(-title=>$t_tit);
+
+   my $d = $self->{Main_window}->Toplevel();
+   $d->title($t_tit);
+
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$d );
+   $self->window_exit_button(\$loc_menu, \$d );
+
    my $cf = $d->Frame;
    $cf->pack(-expand=>'1',-fill=>'both');
 
-   my $c = $cf->Scrolled(  'Canvas',
+   $d->{text} = $cf->Scrolled(  'Canvas',
                            -relief=>'sunken',
                            -bd=>2,
                            -width=>500,
@@ -1225,7 +1574,7 @@ sub dbwr_fileio {
 
       for $i (0 .. $i){
 
-         $self->dbwr_print_fileio(  $c, 
+         $self->dbwr_print_fileio(  $d->{text}, 
                                     $max_value, 
                                     $i,
                                     $dbwr_fi[$i][0],
@@ -1239,12 +1588,12 @@ sub dbwr_fileio {
       }
    }
 
-   my $b = $c->Button(-text=>$main::ssq,
+   my $b = $d->{text}->Button(-text=>$main::ssq,
                       -command=>sub{$self->see_sql($d,$cm)});
 
    my $y_start = $self->this_pak_get_y(($i + 1));
 
-   $c->create(  'window', 
+   $d->{text}->create(  'window', 
                 '1c', 
                 "$y_start" . 'c',
                 -window=>$b,
@@ -1252,15 +1601,31 @@ sub dbwr_fileio {
                 -tags=>'item'
              );
 
-   $c->configure(-scrollregion=>[ $c->bbox("all") ]);
+   $d->{text}->configure(-scrollregion=>[ $d->{text}->bbox("all") ]);
 
-   $c->pack(-expand=>'yes',-fill=>'both');
-   $d->Show;
+   $d->{text}->pack(-expand=>'yes',-fill=>'both');
+   
+   main::iconize( $d );
 }
+
+=head2 this_pak_get_y 
+
+Another small helper function to increment the Y-coord values
+on simple Canvas line graphs.
+
+=cut
+
 sub this_pak_get_y {
    my $self = shift;
    return (($_[0] * 2.5) + 0.2);
 }
+
+=head2 dbwr_print_fileio
+
+Prints out lines required for File/IO graphical report.
+
+=cut
+
 sub dbwr_print_fileio {
    my $self = shift;
 
@@ -1329,6 +1694,7 @@ sub dbwr_print_fileio {
                         "$txt_y_start" . 'c',
                         -anchor=>'nw',
                         -justify=>'left',
+                        -font => $main::font{name},
                         -text=>"$txt_stf[$i]"
                     )
                 );
@@ -1339,6 +1705,7 @@ sub dbwr_print_fileio {
                         "$txt_y_start" . 'c',
                         -anchor=>'nw',
                         -justify=>'left',
+                        -font => $main::font{name},
                         -text=>"$stf[$i]"
                     )
                 );
@@ -1352,16 +1719,25 @@ sub dbwr_print_fileio {
                      "$txt_y_start" . 'c',
                      -anchor=>'nw',
                      -justify=>'left',
+                     -font => $main::font{name},
                      -text=>"$name"
                  )
              );
 
 }
 
+=head2 errors_orac
+
+Creates Viewer window, for selecting invalid database objects.
+Once this is done, all the reported compilation errors on the 
+object are printed in the main screen.
+
+=cut
+
 sub errors_orac {
    my $self = shift;
 
-   # Creates DBA Viewer window
+   # Creates Error Viewer window
 
    my $cm = $self->f_str('errors_orac','1');
 
@@ -1372,60 +1748,38 @@ sub errors_orac {
    my $detected = 0;
 
    my @res;
+   my $window;
 
    while (@res = $sth->fetchrow) {
       $detected++;
       if($detected == 1){
 
-         $main::swc{errors_orac} = MainWindow->new();
-         $main::swc{errors_orac}->title($main::lg{err_obj});
+         $window = $self->{Main_window}->Toplevel();
+         $window->title($main::lg{err_obj});
 
-         my(@err_lay) = qw/-side top -padx 5 -expand no -fill both/;
+         my $err_menu;
+         $self->create_button_bar(\$err_menu, \$window );
+         $self->window_exit_button(\$err_menu, \$window );
+         $self->double_click_message(\$window);
 
-         my $err_menu = $main::swc{errors_orac}->Frame->pack(@err_lay);
-         my $orac_li = $main::swc{errors_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+         my $err_top = $window->Frame->pack(-side=>'top',
+                                            -padx=>5,
+                                            -expand=>'yes',
+                                            -fill=>'both'
+                                           );
 
-         $err_menu->Label(-image=>$orac_li,
-                          -borderwidth=>2,
-                          -relief=>'flat'
-                         )->pack(-side=>'left',-anchor=>'w');
-
-         $err_menu->Button(
-            -text=>$main::lg{exit},
-            -command=> 
-               sub{  
-                  $main::swc{errors_orac}->withdraw();
-                  $main::sub_win_but_hand{errors_orac}->configure(
-                                                             -state=>'active'
-                                                                 )
-                  }
-
-                          )->pack(-side=>'left');
-
-         my $err_top = $main::swc{errors_orac}->Frame->pack(-side=>'top',
-                                                         -padx=>5,
-                                                         -expand=>'yes',
-                                                         -fill=>'both');
-
-         $main::swc{errors_orac}->{text} = 
+         $window->{text} = 
              $err_top->ScrlListbox(-width=>50,
+                                   -font=>$main::font{name},
                                    -background=>$main::bc,
                                    -foreground=>$main::fc
                                   )->pack(-side=>'top',
                                           -expand=>'yes',
                                           -fill=>'both');
 
-         $err_top->Label(  -text=>$main::lg{doub_click},
-                           -anchor=>'s',
-                           -relief=>'groove'
-
-                        )->pack(-side=>'bottom',
-                                -before=>$main::swc{errors_orac}->{text},
-                                -expand=>'no');
-
-         main::iconize($main::swc{errors_orac});
+         main::iconize( $window );
       }
-      $main::swc{errors_orac}->{text}->insert('end', @res);
+      $window->{text}->insert('end', @res);
    }
    $sth->finish;
    if($detected == 0){
@@ -1434,19 +1788,26 @@ sub errors_orac {
       $self->{Main_window}->Unbusy;
    } else {
 
-      $main::sub_win_but_hand{errors_orac}->configure(-state=>'disabled');
-      $main::swc{errors_orac}->{text}->pack();
+      $window->{text}->pack();
 
-      $main::swc{errors_orac}->{text}->bind(
+      $window->{text}->bind(
          '<Double-1>', 
-         sub{  $main::swc{errors_orac}->Busy;
+         sub{  $window->Busy;
                $self->selected_error(
-               $main::swc{errors_orac}->{text}->get('active')
+               $window->{text}->get('active')
                                      );
-               $main::swc{errors_orac}->Unbusy}
+               $window->Unbusy}
                                        );
    }
 }
+
+=head2 dbas_orac
+
+Creates DBA Viewer window, for selecting various DBA_XXXX tables,
+which can then be selected upon.
+
+=cut
+
 sub dbas_orac {
    my $self = shift;
 
@@ -1459,57 +1820,34 @@ sub dbas_orac {
    my $detected = 0;
 
    my @res;
+   my $window;
 
    while (@res = $sth->fetchrow) {
       $detected++;
 
       if($detected == 1){
 
-         $main::swc{dbas_orac} = MainWindow->new();
-         $main::swc{dbas_orac}->title($main::lg{dba_views});
+         $window = $self->{Main_window}->Toplevel();
+         $window->title($main::lg{dba_views});
 
-         my(@dba_lay) = qw/-side top -padx 5 -expand no -fill both/;
+         my $dba_menu;
+         $self->create_button_bar(\$dba_menu, \$window );
+         $self->window_exit_button(\$dba_menu, \$window );
+         $self->double_click_message(\$window);
 
-         my $dba_menu = $main::swc{dbas_orac}->Frame->pack(@dba_lay);
-         my $orac_li = $main::swc{dbas_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+         my(@dba_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+         my $dba_top = $window->Frame->pack(@dba_lay);
 
-         $dba_menu->Label(-image=>$orac_li,
-                          -borderwidth=>2,
-                          -relief=>'flat')->pack(-side=>'left',-anchor=>'w');
-
-         $dba_menu->Button(
-            -text=>$main::lg{exit},
-            -command=>
-
-               sub{
-                  $main::swc{dbas_orac}->withdraw();
-                  $main::sub_win_but_hand{dbas_orac}->configure(
-                                                             -state=>'active'
-                                                               )
-                  } 
-
-                          )->pack(-side=>'left');
-      
-         (@dba_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-         my $dba_top = $main::swc{dbas_orac}->Frame->pack(@dba_lay);
-
-         $main::swc{dbas_orac}->{text} = 
+         $window->{text} = 
             $dba_top->ScrlListbox(-width=>50,
+                                  -font=>$main::font{name},
                                   -background=>$main::bc,
                                   -foreground=>$main::fc
                                  )->pack(-expand=>'yes',-fill=>'both');
 
-         $dba_top->Label(-text=>$main::lg{doub_click},
-                         -anchor=>'s',
-                         -relief=>'groove'
-                        )->pack(-expand=>'no',
-                                -side=>'bottom',
-                                -before=>$main::swc{dbas_orac}->{text}
-                               );
-
-         main::iconize($main::swc{dbas_orac});
+         main::iconize($window);
       }
-      $main::swc{dbas_orac}->{text}->insert('end', @res);
+      $window->{text}->insert('end', @res);
    }
    $sth->finish;
    if($detected == 0){
@@ -1518,35 +1856,36 @@ sub dbas_orac {
       $self->{Main_window}->Unbusy;
    } else {
 
-      $main::sub_win_but_hand{dbas_orac}->configure(-state=>'disabled');
-      $main::swc{dbas_orac}->{text}->pack();
+      $window->{text}->pack();
 
-      $main::swc{dbas_orac}->{text}->bind(
+      $window->{text}->bind(
          '<Double-1>',
          sub{ 
-              print STDERR "dbas_orac: 0\n" if ($main::debug > 0);
-              $main::swc{dbas_orac}->Busy;
-              print STDERR "dbas_orac: 1\n" if ($main::debug > 0);
+              $window->Busy;
               $self->{Main_window}->Busy;
-              print STDERR "dbas_orac: 2\n" if ($main::debug > 0);
-              $self->univ_form( $self->{Main_window},
-                                'SYS',
-                                $main::swc{dbas_orac}->{text}->get('active'),
+
+              $self->univ_form( 'SYS',
+                                $window->{text}->get('active'),
                                 'form'
                               );
-              print STDERR "dbas_orac: 3\n" if ($main::debug > 0);
+
               $self->{Main_window}->Unbusy;
-              print STDERR "dbas_orac: 4\n" if ($main::debug > 0);
-              $main::swc{dbas_orac}->Unbusy;
-              print STDERR "dbas_orac: 5\n" if ($main::debug > 0);
+              $window->Unbusy;
             } 
 
                                    );
    }
 }
-sub addr_orac {
 
-   print STDERR "in addr_orac:\n" if ($main::debug > 0);
+=head2 addr_orac
+
+Produces a list of all the PADDR addresses in the database, to 
+help a DBA examine what's running.  Useful info for deciding
+what to kill off in a locked up database.
+
+=cut
+
+sub addr_orac {
 
    my $self = shift;
 
@@ -1559,59 +1898,32 @@ sub addr_orac {
    my $detected = 0;
 
    my @res;
+   my $window;
 
    while (@res = $sth->fetchrow) {
       $detected++;
       if($detected == 1){
-         $main::swc{addr_orac} = MainWindow->new();
-         $main::swc{addr_orac}->title($main::lg{spec_addrss});
+         $window = $self->{Main_window}->Toplevel();
+         $window->title($main::lg{spec_addrss});
 
-         my(@adr_lay) = qw/-side top -padx 5 -expand no -fill both/;
-         my $addr_menu = $main::swc{addr_orac}->Frame->pack(@adr_lay);
-         my $orac_li = $main::swc{addr_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+         my $addr_menu;
+         $self->create_button_bar(\$addr_menu, \$window );
+         $self->window_exit_button(\$addr_menu, \$window );
+         $self->double_click_message(\$window);
 
+         my(@adr_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+         my $adr_top = $window->Frame->pack(@adr_lay);
 
-         $addr_menu->Label( -image=>$orac_li,
-                            -borderwidth=>2,
-                            -relief=>'flat'
-                          )->pack(-side=>'left',
-                                  -anchor=>'w');
-
-         $addr_menu->Button(
-            -text=>$main::lg{exit},
-            -command=> 
-
-               sub{ 
-                  $main::swc{addr_orac}->withdraw();
-                  $main::sub_win_but_hand{addr_orac}->configure(
-                                                          -state=>'active'
-                                                               )
-                  } 
-
-                           )->pack(-side=>'left');
-
-
-         (@adr_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-         my $adr_top = $main::swc{addr_orac}->Frame->pack(@adr_lay);
-
-         $main::swc{addr_orac}->{text} = 
+         $window->{text} = 
             $adr_top->ScrlListbox(-width=>20,
+                                  -font=>$main::font{name},
                                   -background=>$main::bc,
                                   -foreground=>$main::fc
                                  )->pack(-expand=>'yes',-fill=>'both');
 
-         $adr_top->Label(-text=>$main::lg{doub_click},
-                         -anchor=>'s',
-                         -relief=>'groove'
-
-                        )->pack(   -expand=>'no',
-                                   -side=>'bottom',
-                                   -before=>$main::swc{addr_orac}->{text}
-                               );
-
-         main::iconize($main::swc{addr_orac});
+         main::iconize($window);
       }
-      $main::swc{addr_orac}->{text}->insert('end', @res);
+      $window->{text}->insert('end', @res);
    }
    $sth->finish;
 
@@ -1623,30 +1935,31 @@ sub addr_orac {
 
    } else {
 
-      $main::sub_win_but_hand{addr_orac}->configure(-state=>'disabled');
-      $main::swc{addr_orac}->{text}->pack();
+      $window->{text}->pack();
 
-      $main::swc{addr_orac}->{text}->bind(
+      $window->{text}->bind(
          '<Double-1>', 
          sub{  
-               print STDERR "addr_orac: a1\n" if ($main::debug > 0);
-
-               my $loc_addr = $main::swc{addr_orac}->{text}->get('active');
-
-               print STDERR "addr_orac: a2\n" if ($main::debug > 0);
+               my $loc_addr = $window->{text}->get('active');
 
                $self->f_clr( $main::v_clr );
                $self->show_sql( 'sel_addr' , '1',
                                 $main::lg{sel_addr} . ': ' . $loc_addr,
                                 $loc_addr );
 
-               print STDERR "addr_orac: a3\n" if ($main::debug > 0);
-
             }  
                                      );
 
    }
 }
+
+=head2 sids_orac
+
+Produces a list of all the SIDs in the database, to 
+help a DBA examine what's running.  Useful info for deciding
+what to kill off in a locked up database.
+
+=cut
 
 sub sids_orac {
 
@@ -1661,59 +1974,32 @@ sub sids_orac {
    my $detected = 0;
 
    my @res;
+   my $window;
 
    while (@res = $sth->fetchrow) {
       $detected++;
       if($detected == 1){
-         $main::swc{sids_orac} = MainWindow->new();
-         $main::swc{sids_orac}->title($main::lg{spec_sids});
+         $window = $self->{Main_window}->Toplevel();
+         $window->title($main::lg{spec_sids});
 
-         my(@sid_lay) = qw/-side top -padx 5 -expand no -fill both/;
-         my $sid_menu = $main::swc{sids_orac}->Frame->pack(@sid_lay);
-         my $orac_li = $main::swc{sids_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+         my $sid_menu;
+         $self->create_button_bar(\$sid_menu, \$window );
+         $self->window_exit_button(\$sid_menu, \$window );
+         $self->double_click_message(\$window);
 
-         $sid_menu->Label(
-                           -image=>$orac_li,
-                           -borderwidth=>2,
-                           -relief=>'flat'
+         my(@sid_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+         my $sid_top = $window->Frame->pack(@sid_lay);
 
-                         )->pack( -side=>'left',
-                                  -anchor=>'w' );
-
-         $sid_menu->Button(  
-            -text=>$main::lg{exit},
-            -command=> 
-
-               sub{ 
-                  $main::swc{sids_orac}->withdraw();
-                  $main::sub_win_but_hand{sids_orac}->configure(
-                                                            -state=>'active'
-                                                               ) 
-                  } 
-
-                          )->pack(-side=>'left');
-
-         (@sid_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-         my $sid_top = $main::swc{sids_orac}->Frame->pack(@sid_lay);
-
-         $main::swc{sids_orac}->{text} = 
+         $window->{text} = 
             $sid_top->ScrlListbox(-width=>20,
+                                  -font=>$main::font{name},
                                   -background=>$main::bc,
                                   -foreground=>$main::fc
                                  )->pack(-expand=>'yes',-fill=>'both');
 
-         $sid_top->Label(-text=>$main::lg{doub_click},
-                         -anchor=>'s',
-                         -relief=>'groove'
-
-                        )->pack(  -expand=>'no',
-                                  -side=>'bottom',
-                                  -before=>$main::swc{sids_orac}->{text}
-                               );
-
-         main::iconize($main::swc{sids_orac});
+         main::iconize($window);
       }
-      $main::swc{sids_orac}->{text}->insert('end', @res);
+      $window->{text}->insert('end', @res);
    }
    $sth->finish;
    if($detected == 0){
@@ -1722,23 +2008,29 @@ sub sids_orac {
       $self->{Main_window}->Unbusy;
    } else {
 
-      $main::sub_win_but_hand{sids_orac}->configure(-state=>'disabled');
-      $main::swc{sids_orac}->{text}->pack();
+      $window->{text}->pack();
 
-      $main::swc{sids_orac}->{text}->bind(
+      $window->{text}->bind(
          '<Double-1>', 
-         sub { $main::swc{sids_orac}->Busy;
+         sub { $window->Busy;
 
                $self->f_clr( $main::v_clr );
-               my $sid_param = $main::swc{sids_orac}->{text}->get('active');
+               my $sid_param = $window->{text}->get('active');
                $self->show_sql( 'sel_sid' , '1',
                                 $main::lg{sel_sid} . ': ' . $sid_param,
                                 $sid_param );
 
-               $main::swc{sids_orac}->Unbusy}
+               $window->Unbusy}
                                      );
    }
 }
+
+=head2 gh_roll_name
+
+Produces Rollback report.
+
+=cut
+
 sub gh_roll_name {
    my $self = shift;
 
@@ -1759,6 +2051,14 @@ sub gh_roll_name {
    $self->about_orac('txt/Oracle/rollback.1.txt');
 
 }
+
+=head2 gh_roll_stats
+
+Produces Rollback Statistics report.
+
+=cut
+
+
 sub gh_roll_stats {
    my $self = shift;
 
@@ -1776,6 +2076,12 @@ sub gh_roll_stats {
    $self->about_orac('txt/Oracle/rollback.2.txt');
 }
 
+=head2 gh_pool_frag
+
+Produces reports trying to determine shared pool fragmentation, etc.
+
+=cut
+
 sub gh_pool_frag {
 
    my $self = shift;
@@ -1787,6 +2093,16 @@ sub gh_pool_frag {
    $self->about_orac('txt/Oracle/pool_frag.2.txt');
 
 }
+
+=head2 explain_plan
+
+Produces a scrolling box, with which to view all of the SQL code
+in the database library.  If the user is the logged-on user, gives
+Orac user opportunity to "Explain Plan".  Alternatively, Orac user
+can clear screen and input their own new SQL to "Explain".
+
+=cut
+
 
 sub explain_plan {
 
@@ -1807,52 +2123,39 @@ sub explain_plan {
 
    }
 
-   $main::swc{explain_plan} = MainWindow->new();
-   $main::swc{explain_plan}->title($main::lg{explain_plan});
+   my $window;
 
-   my(@exp_lay) = qw/-side top -padx 5 -expand no -fill both/;
-   my $dmb = $main::swc{explain_plan}->Frame->pack(@exp_lay);
+   $window = $self->{Main_window}->Toplevel();
+   $window->title($main::lg{explain_plan});
 
-   my $orac_li = $main::swc{explain_plan}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
-
-   $dmb->Label( -image=>$orac_li,
-                -borderwidth=>2,
-                -relief=>'flat'
-             )->pack( -side=>'left',
-                      -anchor=>'w' );
+   my $dmb;
+   $self->create_button_bar(\$dmb, \$window );
 
    # Add buttons.  Add a holder for the actual explain plan
    # button so we can enable/disable it later
 
    if($explain_ok){
+
       $expl_butt = $dmb->Button(-text=>$main::lg{explain},
                                 -command=>sub{ $self->explain_it() }
                                )->pack(side=>'left');
 
+
       $dmb->Button(  -text=>$main::lg{clear},
                      -command=>sub{
-                         $main::swc{explain_plan}->Busy;
+
+                         $window->Busy;
+
                          $w_explain[2]->delete('1.0','end');
                          $w_holders[0] = $main::v_sys;
                          $w_holders[1] = $main::lg{explain_help};
                          $expl_butt->configure(-state=>'normal');
-                         $main::swc{explain_plan}->Unbusy;
+
+                         $window->Unbusy;
                                                   }
                   )->pack(side=>'left');
    }
-
-   $dmb->Button(
-      -text=>$main::lg{exit},
-
-      -command=> sub{
-
-         $main::swc{explain_plan}->withdraw();
-         $main::sub_win_but_hand{explain_plan}->configure(-state=>'active');
-         undef $sql_browse_arr
-
-                    } 
-
-               )->pack(-side=>'left');
+   $self->window_exit_button(\$dmb, \$window );
 
    # Set counter up
 
@@ -1882,15 +2185,16 @@ sub explain_plan {
 
    # Now work out screen sizings
 
-   (@exp_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-   my $top_slice = $main::swc{explain_plan}->Frame->pack(@exp_lay);
+   my(@exp_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+   my $top_slice = $window->Frame->pack(@exp_lay);
 
-   $main::swc{explain_plan}->{text} = 
+   $window->{text} = 
       $top_slice->Scrolled(  'Text',
                              -wrap=>'none',
                              -cursor=>undef,
                              -height=>($l_entry_height + $num_cols + 3),
                              -width=>($l_entry_width + $l_label_width + 5),
+                             -font=>$main::font{name},
                              -foreground=>$main::fc,
                              -background=>$main::bc
                           );
@@ -1903,54 +2207,54 @@ sub explain_plan {
       #  2  SQL
 
       $w_holders[$i] = '';
-      $w_explain[$i] = $main::swc{explain_plan}->{text}->Entry( 
+      $w_explain[$i] = $window->{text}->Entry( 
                               -textvariable=>\$w_titles[$i],
                               -cursor=>undef,
                               -width=>$l_label_width
                                                   );
-      $main::swc{explain_plan}->{text}->windowCreate('end',
+      $window->{text}->windowCreate('end',
                                                      -align=>'top',
                                                      -window=>$w_explain[$i]);
 
       if ($i == 2){
          $w_explain[$i] = 
-            $main::swc{explain_plan}->{text}->Scrolled( 
+            $window->{text}->Scrolled( 
                                         'Text',
-                                        # -wrap=>'none', # NB: commented out
                                         -cursor=>undef,
                                         -height=>$l_entry_height,
                                         -width=>$l_entry_width,
+                                        -font=>$main::font{name},
                                         -foreground=>$main::fc,
                                         -background=>$main::ec
                                                       );
       }
       else {
          $w_explain[$i] = 
-              $main::swc{explain_plan}->{text}->Entry( 
+              $window->{text}->Entry( 
                                  -textvariable=>\$w_holders[$i],
                                  -cursor=>undef,
                                  -width=>$l_entry_width
                                                       );
       }
       $w_explain[$i]->configure(-background=>$main::ec,
-                                -foreground=>$main::fc);
+                                -foreground=>$main::fc,
+                                -font=>$main::font{name},
+                               );
 
-      $main::swc{explain_plan}->{text}->windowCreate('end',
+      $window->{text}->windowCreate('end',
                                                      -window=>$w_explain[$i]);
-      $main::swc{explain_plan}->{text}->insert('end', "\n");
+      $window->{text}->insert('end', "\n");
    }
-   $main::swc{explain_plan}->{text}->pack( -expand=>1,
+   $window->{text}->pack( -expand=>1,
                                            -fil=>'both');
 
    # Stop anyone getting rid of text-embedded
    # widgets with a dodgy delete key press
 
-   $main::swc{explain_plan}->{text}->configure( -state=>'disabled' );
+   $window->{text}->configure( -state=>'disabled' );
 
    # Now build up the slider, which will trawl through v$sqlarea to
    # paste up various bits of SQL text currently in database.
-
-   print STDERR "explain_plan: w_titles >@w_titles<\n" if ($main::debug > 0);
 
    my $sql_min_row = 0;
    my $sql_max_row = @$sql_browse_arr;
@@ -1961,7 +2265,7 @@ sub explain_plan {
       # Build up scale slider button, and splatt onto window.
 
       my $bot_slice = 
-             $main::swc{explain_plan}->Frame->pack( -before=>$top_slice,
+             $window->Frame->pack( -before=>$top_slice,
                                                     -side=>'bottom',
                                                     -padx=>5,
                                                     -expand=>'no',
@@ -1983,7 +2287,7 @@ sub explain_plan {
 
       $bot_slice->Button(
          -text=>$main::ssq,
-         -command=>sub { $self->see_sql( $main::swc{explain_plan}, $cm )}
+         -command=>sub { $self->see_sql( $window, $cm )}
 
                         )->pack(side=>'right');
 
@@ -1994,11 +2298,19 @@ sub explain_plan {
       undef $sql_browse_arr;
    }
 
-   $main::sub_win_but_hand{explain_plan}->configure(-state=>'disabled');
-   main::iconize($main::swc{explain_plan});
+   main::iconize( $window );
 
    return;
 }
+
+=head2 explain_it
+
+Takes the SQL statement directly from the screen and tries an 'Explain Plan' 
+on it.  I'm leaving the SQL hard-coded here so you can see EXACTLY 
+what's going on, particularly as we're dipping our toes into DML.
+
+=cut
+
 sub explain_it {
    my $self = shift;
 
@@ -2052,7 +2364,16 @@ sub explain_it {
    $self->see_plsql( $cm );
 
 }
+
+=head2 calc_scale_sql
+
+Whizz backwards and forwards through the v$sqlarea records, picking up
+the right ones to put into the SQL Browser.
+
+=cut
+
 sub calc_scale_sql {
+
    my $self = shift;
 
    # Whizz backwards and forwards through the 
@@ -2064,6 +2385,14 @@ sub calc_scale_sql {
    $self->pick_up_sql($expl_ok);
 
 }
+
+=head2 pick_up_sql
+
+Takes a DBI information array, and takes out the correct required line
+from it, and pastes it onto the screen.  What fun!  :)
+
+=cut
+
 sub pick_up_sql {
    my $self = shift;
 
@@ -2102,6 +2431,15 @@ sub pick_up_sql {
    }
    return;
 }
+
+=head2 check_exp_plan
+
+Check if the currently logged on DBA user has a valid PLAN_TABLE table to put
+'Explain Plan' results to insert into.
+
+=cut
+
+
 sub check_exp_plan {
    my $self = shift;
 
@@ -2125,10 +2463,24 @@ sub check_exp_plan {
    return $detected;
 }
 
+=head2 block_size
+
+Reads storage of the required Block Size value from a package variable, and
+then gives it back to the caller.
+
+=cut
+
 sub block_size {
    my $self = shift;
    return $Block_Size;
 }
+
+=head2 who_hold
+
+One of my most life-saving functions.  This works out which user is blocking
+which user is nasty lockup situations.  Kill, is usually the answer.
+
+=cut
 
 sub who_hold
 {
@@ -2202,9 +2554,6 @@ sub who_hold
                                            -foreground=>$main::fc
                                           );
 
-         print STDERR "who_hold: scroll_box>$scroll_box<\n" 
-            if ($main::debug > 0);
-
          $self->{Text_var}->windowCreate('end',-window=>$scroll_label);
          $self->{Text_var}->insert('end', "\n");
 
@@ -2226,9 +2575,6 @@ sub who_hold
                       "$l_sid_title:$l_sid," .
                       "$l_pid_title:$l_pid";
 
-      print STDERR "who_hold: (wait) scrllist_str>$scrllist_str<\n" 
-         if ($main::debug > 0);
-
       $scroll_box->insert('end', $scrllist_str);
 
       # Hold User
@@ -2239,20 +2585,11 @@ sub who_hold
       $l_sid = $res[9];
       $l_pid = $res[10];
 
-      print STDERR "who_hold: l_pid       >$l_pid<\n" 
-         if ($main::debug > 0);
-
-      print STDERR "who_hold: l_pid_title >$l_pid_title<\n" 
-         if ($main::debug > 0);
-
       $scrllist_str = "$l_hold_title:$l_username," .
                       "$l_os_title:$l_osuser," .
                       "$l_ser_title:$l_serial," .
                       "$l_sid_title:$l_sid," .
                       "$l_pid_title:$l_pid";
-
-      print STDERR "who_hold: scrllist_str>$scrllist_str<\n" 
-         if ($main::debug > 0);
 
       $scroll_box->insert('end', $scrllist_str);
    }
@@ -2265,19 +2602,9 @@ sub who_hold
             sub{  $self->{Main_window}->Busy;
                   my @first_string = split(',', $scroll_box->get('active') );
    
-                  print STDERR "who_hold: first_string>@first_string<\n" 
-                     if ($main::debug > 0);
-   
                   my @v_osuser = split('\:', $first_string[1]);
                   my @v_username = split('\:', $first_string[0]);
                   my @v_sid = split('\:', $first_string[2]);
-   
-                  print STDERR "who_hold: v_osuser  >$v_osuser[1]<\n" 
-                     if ($main::debug > 0);
-                  print STDERR "who_hold: v_username>$v_username[1]<\n" 
-                     if ($main::debug > 0);
-                  print STDERR "who_hold: v_sid     >$v_sid[1]<\n" 
-                     if ($main::debug > 0);
    
                   $self->who_what( 1,
                                    $v_osuser[1],
@@ -2295,6 +2622,13 @@ sub who_hold
    $self->show_sql( 'wait_hold' , '1',
                     $main::lg{who_hold} );
 }
+
+=head2 mts_mem
+
+Report for finding MTS statistics, and providing secondary button 
+to reveal further stats.
+
+=cut
 
 sub mts_mem
 {
@@ -2346,9 +2680,6 @@ sub mts_mem
                                            -foreground=>$main::fc
                                           );
 
-         print STDERR "mts_mem: scroll_box>$scroll_box<\n" 
-            if ($main::debug > 0);
-
          $self->{Text_var}->windowCreate('end',-window=>$scroll_label);
          $self->{Text_var}->insert('end', "\n");
 
@@ -2370,11 +2701,9 @@ sub mts_mem
             sub{  $self->{Main_window}->Busy;
                   my @stat_str = split('\:', $scroll_box->get('active') );
    
-                  print STDERR "mts_mem: stat_str>@stat_str<\n" 
-                     if ($main::debug > 0);
-   
                   $self->who_what( 2,
-                                   $stat_str[1]
+                                   $stat_str[1],
+                                   "${l_stat_title}:$stat_str[1]",
                                  );
                   $self->{Main_window}->Unbusy
                }
@@ -2387,6 +2716,15 @@ sub mts_mem
    
 }
 
+=head2 do_a_generic
+
+On the final level of an HList, does the actual work required.
+
+Takes the final PL/SQL function, runs it, and then splatts out the
+results into a DialogBox for the User to peruse.
+
+=cut
+
 sub do_a_generic {
 
    my $self = shift;
@@ -2395,11 +2733,6 @@ sub do_a_generic {
    # required.
 
    my ($l_mw, $l_gen_sep, $l_hlst, $input) = @_;
-
-   print STDERR "do_a_generic: l_mw      >$l_mw<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: l_gen_sep >$l_gen_sep<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: l_hlst    >$l_hlst<\n" if ($main::debug > 0);
-   print STDERR "do_a_generic: input     >$input<\n" if ($main::debug > 0);
 
    $l_mw->Busy;
    my $owner;
@@ -2418,21 +2751,65 @@ sub do_a_generic {
    $second_sth->bind_param(2,$generic);
    $second_sth->execute;
 
-   my $d = $l_mw->DialogBox();
+   my $window = $self->{Main_window}->Toplevel();
 
-   $d->add("Label",
-           -text=>"$l_hlst $main::lg{sql_for} $owner.$generic"
-          )->pack(side=>'top');
+   $window->bind('<Destroy>' => sub {
+                                 $window = undef;
+                                                    }
+                                );
 
-   my $l_txt = $d->Scrolled('Text',
+   # We may be using pretty :-) icons instead of text.  If so,
+   # we gotta give help to let people know what the icons are.
+
+   my $menu_bar;
+   my $balloon;
+   my %b_images;
+
+   $self->create_balloon_bars(\$menu_bar, \$balloon, \$window );
+
+   if ( ($l_hlst eq 'Tables') || 
+        ($l_hlst eq 'Indexes') ||
+        ($l_hlst eq 'Views') )
+   {
+      foreach my $bit ('sizeindex', 
+                      'form', 
+                      'freespace',
+                      'index',
+                      'constraint',
+                      'trig',
+                      'comment',
+                     )
+      {
+         $b_images{$bit} = $window->Photo( 
+            -file => "$FindBin::RealBin/img/${bit}.gif" );
+      }
+   }
+   $b_images{sql} = $window->Photo( 
+      -file => "$FindBin::RealBin/img/sql.gif" );
+   
+   my $label_text;
+
+   if (!defined($generic)){
+      $label_text = "$l_hlst $main::lg{sql_for} $owner";
+   }
+   else {
+      $label_text = "$l_hlst $main::lg{sql_for} $owner.$generic";
+   }
+
+   $window->title($label_text);
+
+   $window->{text} = 
+      $window->Scrolled(
+                         'Text',
                          -height=>16,
                          -wrap=>'none',
                          -cursor=>undef,
+                         -font=>$main::font{name},
                          -foreground=>$main::fc,
                          -background=>$main::bc
                         )->pack(-expand=>1,-fil=>'both');
 
-   tie (*L_TEXT, 'Tk::Text', $l_txt);
+   tie (*L_TEXT, 'Tk::Text', $window->{text} );
 
    my $j = 0;
    my $full_list;
@@ -2455,109 +2832,262 @@ sub do_a_generic {
    }
    print L_TEXT "\n\n  ";
 
-   my @b;
-   $b[0] = $l_txt->Button( -text=>$main::ssq,
-                           -command=>sub{$self->see_sql($d,$cm)}
-                         );
+   my $b = $menu_bar->Button(-image=>$b_images{sql},
 
-   $l_txt->window('create', 'end',-window=>$b[0]);
+                             -command=> sub{
+
+                         $window->Busy;
+                         $self->see_sql($window,$cm);
+                         $window->Unbusy;
+
+                                           }
+
+                             )->pack(-side=>'left');
+
+   $balloon->attach($b, -msg => $main::ssq );
 
    if ( ($l_hlst eq 'Tables') || ($l_hlst eq 'Indexes') ){
-      print L_TEXT "\n\n  ";
 
-      my $i = 1;
+      if ($l_hlst eq 'Tables') {
+       
+            my $b = $menu_bar->Button(-image=>$b_images{form},
+                                     -command=> sub{
+
+                                  $window->Busy;
+
+                                  $self->univ_form($owner,
+                                                   $generic,
+                                                   'form');
+
+                                  $window->Unbusy 
+
+                                                   }
+
+                                      )->pack(-side=>'left');
+
+            $balloon->attach($b, -msg => $main::lg{form});
+
+            $b = $menu_bar->Button( -image=>$b_images{sizeindex},
+                                    -command=> sub {
+ 
+                              $window->Busy;
+                              $self->univ_form($owner,
+                                               $generic,
+                                               'index'
+                                              );
+                              $window->Unbusy 
+
+                                                   }
+
+                                  )->pack(-side=>'left');
+
+            $balloon->attach($b, -msg => $main::lg{sizeindex});
+   
+      }
       my @tablist;
+      my @tablist_2;
 
       if ($l_hlst eq 'Tables') {
 
          @tablist = ('Tab_FreeSpace', 
                      'Tab_Indexes',
-                     'Table_Constraints',
+                     'Tab_Constraints',
                      'Triggers',
                      'Comments');
+         @tablist_2 = ('freespace', 
+                       'index',
+                       'constraint',
+                       'trig',
+                       'comment');
       }
       elsif ($l_hlst eq 'Indexes') {
 
          @tablist = ('Index_FreeSpace');
+         @tablist_2 = ('freespace');
       }
 
+      my $i = 0;
       foreach ( @tablist ) {
 
          my $this_txt = $_;
 
-         $b[$i] = 
-            $l_txt->Button(
-               -text=>"$this_txt",
-               -command=>sub { $self->do_a_generic($d, '.', $this_txt, $input);
-                             },
-                          );
+         $b = $menu_bar->Button( -image=>$b_images{$tablist_2[$i]},
+               -text=>$tablist_2[$i],
 
-         $l_txt->window('create', 'end',-window=>$b[$i]);
-         print L_TEXT " ";
+               -command=> sub { 
+
+                    $self->do_a_generic($window, '.', $this_txt, $input);
+
+                              },
+
+                          )->pack(-side=>'left');
+         $balloon->attach($b, -msg => $main::lg{$tablist_2[$i]});
          $i++;
       }
-      print L_TEXT "\n\n  ";
 
-      if ($l_hlst eq 'Tables') {
-         $b[$i] = 
-            $l_txt->Button(-text=>$main::lg{form},
-                           -command=>
-                              sub{$d->Busy;
-   
-      print STDERR "\ndo_a_gen form: d    >$d<\n" if ($main::debug > 0);
-      print STDERR "do_a_gen form: owner  >$owner<\n" if ($main::debug > 0);
-      print STDERR "do_a_gen form: generic>$generic<\n\n" if ($main::debug > 0);
-  
-                                  $self->univ_form($d,
-                                                   $owner,
-                                                   $generic,
-                                                   'form');
-                                  $d->Unbusy }
-                          );
+   } elsif ($l_hlst eq 'Views'){
+      
+         my $b = $menu_bar->Button(
+            -image=>$b_images{form},
+            -command=>sub{  $window->Busy;
 
-         $l_txt->window('create', 'end',-window=>$b[$i]);
-         $i++;
-         print L_TEXT " ";
-
-         $b[$i] = 
-            $l_txt->Button(
-               -text=>$main::lg{build_index},
-               -command=> sub{$d->Busy;
-   
-      print STDERR "\ndo_a_gen inx: d       >$d<\n" if ($main::debug > 0);
-      print STDERR "do_a_gen inx: owner   >$owner<\n" if ($main::debug > 0);
-      print STDERR "do_a_gen inx: generic >$generic<\n\n" if ($main::debug > 0);
-   
-                              $self->univ_form($d,$owner,$generic,'index');
-                              $d->Unbusy }
-                          );
-   
-         $l_txt->window('create','end',-window=>$b[$i]);
-      }
-   } elsif ($l_hlst eq $main::lg{views}){
-      print L_TEXT "\n\n  ";
-
-      $b[1] = 
-         $l_txt->Button(
-            -text=>$main::lg{form},
-            -command=>sub{  $d->Busy;
-
-   print STDERR "do_a_gen vform: d       >$d<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen vform: owner   >$owner<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen vform: generic >$generic<\n" if ($main::debug > 0);
-
-                            $self->univ_form(  $d,
-                                               $owner,
+                            $self->univ_form(  $owner,
                                                $generic,
                                                'form'
                                             );
-                            $d->Unbusy }
-                       );
+                            $window->Unbusy }
 
-      $l_txt->window('create', 'end',-window=>$b[1]);
+                                 )->pack(-side=>'left');
+
+         $balloon->attach($b, -msg => $main::lg{form});
    }
-   print L_TEXT "\n\n";
-   $d->Show;
+
+   $self->window_exit_button(\$menu_bar, \$window );
+
+   main::iconize( $window );
+
    $l_mw->Unbusy;
 }
+
+=head2 tab_det_orac
+
+Produces simple graphical representations of complex percentage style reports.
+
+=cut
+
+sub tab_det_orac {
+   my $self = shift;
+
+   # Produces simple graphical representations of complex
+   # percentage style reports.
+
+   my ( $title, $func ) = @_;
+
+   my $d = $self->{Main_window}->Toplevel();
+   $d->title("$title: $main::v_db ($main::lg{blk_siz} $Block_Size)");
+
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$d );
+   $self->window_exit_button(\$loc_menu, \$d );
+
+   my $cf = $d->Frame;
+   $cf->pack(-expand=>'1',-fill=>'both');
+
+   $d->{text} = $cf->Scrolled( 'Canvas',
+                          -relief=>'sunken',
+                          -bd=>2,
+                          -width=>500,
+                          -height=>280,
+                          -background=>$main::bc
+                        );
+
+   $keep_tablespace = 'XXXXXXXXXXXXXXXXX';
+
+   my $cm = $self->f_str($func,'1');
+
+   my $sth = $self->{Database_conn}->prepare( $cm ) || 
+                die $self->{Database_conn}->errstr; 
+
+   if($func eq 'tab_det_orac'){
+      my $i;
+      for ($i = 1;$i <= 6;$i++){
+         $sth->bind_param($i,$Block_Size);
+      }
+   }
+   $sth->execute;
+
+   my $i = 1;
+
+   my $Grand_Total = 0.00;
+   my $Grand_Used_Mg = 0.00;
+   my $Grand_Free_Mg = 0.00;
+
+   my @res;
+
+   my $Use_Pct;
+   my $Used_Mg;
+   my $Total;
+   my $Fname;
+   my $T_Space;
+   my $Free_Mg;
+
+   while (@res = $sth->fetchrow) {
+     if($func eq 'tabspace_diag'){
+        if($res[0] eq 'free'){
+           $Free_Mg = $res[2];
+           next;
+        } else {
+           $T_Space = $res[1];
+           $Fname = '';
+           $Total = $res[2];
+           $Used_Mg = $Total - $Free_Mg;
+           $Use_Pct = ($Used_Mg/$Total)*100;
+        }
+     } else {
+        ($T_Space,$Fname,$Total,$Used_Mg,$Free_Mg,$Use_Pct) = @res;
+     }
+     if ((!defined($Used_Mg)) || (!defined($Use_Pct))){
+        $Used_Mg = 0.00;
+        $Use_Pct = 0.00;
+     }
+     $Grand_Total = $Grand_Total + $Total;
+     $Grand_Used_Mg = $Grand_Used_Mg + $Used_Mg;
+     if (defined($Free_Mg)){
+        $Grand_Free_Mg = $Grand_Free_Mg + $Free_Mg;
+     }
+     if($func ne 'tab_det_orac'){
+        $Fname = '';
+     } 
+     if($func eq 'tune_health'){
+        $Use_Pct = $Total;
+     }
+     $self->add_item( $func,
+                      $d->{text},
+                      $i,
+                      $T_Space,
+                      $Fname,
+                      $Total,
+                      $Used_Mg,
+                      $Free_Mg,
+                      $Use_Pct
+                    );
+     $i++;
+   }
+   $sth->finish;
+
+   if($func ne 'tune_health'){
+      my $Grand_Use_Pct = (($Grand_Used_Mg/$Grand_Total)*100.00);
+
+      $self->add_item(  $func,
+                        $d->{text},
+                        0,
+                        '',
+                        '',
+                        $Grand_Total,
+                        $Grand_Used_Mg,
+                        $Grand_Free_Mg,
+                        $Grand_Use_Pct
+                     );
+   }
+
+   my $b = $d->{text}->Button( -text=>$main::ssq,
+                       -command=>sub{  $self->see_sql( $d , $cm )  });
+
+   my $y_start = $self->work_out_why($i);
+
+   $d->{text}->create(  'window', 
+                '1c',
+                "$y_start" . 'c',
+                -window=>$b,
+                -anchor=>'nw',
+                -tags=>'item'
+             );
+
+   $d->{text}->configure(-scrollregion=>[ $d->{text}->bbox("all") ]);
+   $d->{text}->pack(-expand=>'yes',-fill=>'both');
+   
+   main::iconize( $d );
+
+}
+
 1;

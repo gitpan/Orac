@@ -1,19 +1,35 @@
 #!/usr/local/bin/perl
-################################################################################
+######################################################################
 # Copyright (c) 1998,1999 Andy Duncan
 #
-# You may distribute under the terms of either the GNU General Public License
-# or the Artistic License,as specified in the Perl README file,with the
-# exception that it cannot be placed on a CD-ROM or similar media for commercial
-# distribution without the prior approval of the author.
+# You may distribute under the terms of either the GNU General 
+# Public License or the Artistic License,as specified in the Perl 
+# README file,with the exception that it cannot be placed on a CD-ROM 
+# or similar media for commercial distribution without the prior 
+# approval of the author.
 #
-# This code is provided with no warranty of any kind,and is used entirely at
-# your own risk. This code was written by the author as a private individual,
-# and is in no way endorsed or warrantied.
+# This code is provided with no warranty of any kind,and is used 
+# entirely at your own risk. This code was written by the author as 
+# a private individual, and is in no way endorsed or warrantied.
 #
-# Support questions and suggestions can be directed to andy_j_duncan@yahoo.com
+# Support questions and suggestions can be directed to 
+# andy_j_duncan@yahoo.com
+#
 # Download from CPAN/authors/id/A/AN/ANDYDUNC
-################################################################################
+######################################################################
+
+=head1 NAME
+
+orac_dba.pl - the Main Oracle module of the Orac tool
+
+=head1 DESCRIPTION
+
+This module sets up the program, by pulling in the required modules,
+setting up menus, providing the main screen, setting up global
+variables and giving the other modules a small library of utility
+functions.
+
+=cut
 
 # Pick up all the standard modules necessary to run the program
 
@@ -32,6 +48,7 @@ use lib $FindBin::RealBin;
 # to handle screen resizing
 
 use Tk::DialogBox;
+use Tk::Balloon;
 use Tk::Pretty;
 use Tk::HList;
 require Tk::BrowseEntry;
@@ -41,22 +58,26 @@ require Tk::BrowseEntry;
 
 use orac_Base;
 use orac_Shell;
+use orac_FileSelect;
+use orac_Font;
+use orac_Print;
 
 use orac_Oracle;
 use orac_Informix;
 use orac_Sybase;
+
+# Bring up the main "Worksheet" window
+
+$main::mw = MainWindow->new();
 
 # Read the menu/English.txt file to pick up all text
 # for use with the rest of the program
 
 main::read_language();
 
-# Set up a few defaults, such as the lovely Steelblue2
-# for the background colour
+# Some hard-coded defaults
 
-main::pick_up_defaults();
-
-$main::orac_version = '1.1.16';
+$main::orac_version = '1.1.26';
 
 $main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
@@ -84,29 +105,71 @@ else {
    $main::do_shell = 0;
 }
 
-# Bring up the main "Worksheet" window
-
-$main::mw = MainWindow->new();
-
-# Start work on the menu, with the Orac badge,
-# and then build up the menu buttons
-
-my(@layout_mb) = qw/-side top -padx 5 -expand no -fill both/;
-$main::mb = $main::mw->Frame->pack(@layout_mb);
-
-my $orac_li = $main::mw->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
-
 $main::conn_ball{green} = 
    $main::mw->Photo( -file => "$FindBin::RealBin/img/grn_ball.gif" );
 
 $main::conn_ball{red} = 
    $main::mw->Photo( -file => "$FindBin::RealBin/img/red_ball.gif" );
 
-$main::mb->Label(-image=>$orac_li,
-                 -borderwidth=>2,
-                 -relief=>'flat'
-                )->pack(-side=>'left',
-                        -anchor=>'w');
+# Build up frames
+
+my(@layout_mb) = qw/-side top -padx 5 -expand no -fill both/;
+
+$main::mb = $main::mw->Frame( -relief => 'ridge',
+                              -borderwidth => 2,
+
+                            )->pack(@layout_mb);
+
+my $bb = $main::mw->Frame( -relief => 'ridge',
+                           -bd => 2,
+                         )->pack(-side=>'top',
+                                 -padx=>5,
+                                 -expand=>'no',
+                                 -fill=>'both',
+                                 -anchor=>'s',
+                                );
+
+my $text_box = $main::mw->Frame->pack(-side => 'bottom',
+                                      -expand => 'yes',
+                                      -fill => 'both',
+                                     );
+
+# To do font stuff, we need to set up the main Text box here,
+# so we can determine its available fonts, as 
+# unobtrusively as possible.  The orac_Font module
+# relies on $main::v_text having been set up, before
+# its blessed reference is created.
+
+$main::v_text = $text_box->Scrolled(  'Text',
+                                      -wrap=>'none',
+                                      -cursor=>undef,
+                                   );
+
+# Apparently, we don't need this tying code anymore.
+#
+#tie (*TEXT,'Tk::Text',$main::v_text);
+
+my $status_bar = $main::mw->Frame( -relief => 'groove',
+                                   -bd => 2 
+                                 )->pack( -side => 'bottom', 
+                                          -before=> $text_box,
+                                          -fill => 'x',
+                                        );
+
+# Set up a few defaults, such as the lovely Steelblue2
+# for the background colour.  We now need to do this
+# here, as we have to have the $main::v_text widget
+# set up to do some stuff with fonts.
+
+main::pick_up_defaults();
+
+# Now we have the foreground and background colours,
+# + fonts, configure the main window.
+
+$main::v_text->configure( -foreground=>$main::fc,
+                          -background=>$main::bc,
+                          -font=>$main::font{name},
+                        );
 
 # First of all, provide the only hard-coded menu that we
 # do, for functions across all databases
@@ -118,6 +181,8 @@ my $file_mb = $main::mb->Menubutton(-text=>$main::lg{file},
 $file_mb->command(-label=>$main::lg{reconn},
                   -command=>sub{main::get_db()});
 
+$file_mb->separator();
+
 $file_mb->command(-label=>$main::lg{about_orac},
                   -command=>
                       sub{ 
@@ -128,16 +193,39 @@ $file_mb->command(-label=>$main::lg{about_orac},
                          }
                  );
 
-$file_mb->command(-label=>$main::lg{menu_config},
-                  -command=>
+# The ordinary File Select Viewer is set here,
+# and the help menu type thing, and the
+# document viewer etc.
 
-                     sub{  
+my @file_viewers = ('file_viewer', 'orac_home', 'docs', 'help', );
+
+foreach my $key (@file_viewers)
+{
+   my $startdir = "$FindBin::RealBin";
+
+   if ($key eq 'orac_home')
+   {
+      $startdir = $main::orac_home;
+   }
+   elsif ( ($key eq 'help') || ($key eq 'docs') )
+   {
+      $startdir = $startdir . '/' . $key;
+   }
+   $main::fileselect{$key}->{startdir} = $startdir;
+}
+
+$file_mb->command(-label=>$main::lg{file_viewer},
+                  -command=> sub{ 
       main::bz();
-      $main::current_db->f_clr($main::v_clr);
-      $main::current_db->about_orac("$FindBin::RealBin/txt/menu_config.txt");
-      main::ubz()
-                        }
-                 );
+      my $fileselect = orac_FileSelect->new( $main::mw,
+                                             $main::v_text,
+                                             $main::lg{file_viewer},
+                                           );
+      $fileselect->req_filebox( $main::fileselect{file_viewer}->{startdir}
+                              );
+      main::ubz();
+                                }
+                    );
 
 $file_mb->separator();
 
@@ -165,6 +253,23 @@ while(<COLOUR_FILE>){
 }
 close(COLOUR_FILE);
 
+# Now a Font option for KB :-)
+
+my $font_button;
+my $balloon;
+
+$file_mb->command(-label=>$main::lg{font_sel},
+                  -command=> sub{ 
+      main::bz();
+      my $fonter = orac_Font->new( $main::mw,
+                                   $main::v_text,
+                                   $main::lg{font_sel},
+                                 );
+      $fonter->orac_fonter(\$balloon, \$font_button);
+      main::ubz()
+                                }
+                  );
+
 # Now give them the 'Exit Orac' option
 
 $file_mb->separator();
@@ -184,55 +289,168 @@ my $main_label = $main::mb->Label( -image => $main::conn_ball{red},
                                  )->pack(-side=>'right',
                                          -anchor=>'e');
 
-(@layout_mb) = qw/-side top -expand yes -fill both/;
-my $middle_box = $main::mw->Frame->pack(@layout_mb);
-
-# Slap up the main Output Box
-
-$main::v_text = $middle_box->Scrolled(  'Text',
-                                        -wrap=>'none',
-                                        -cursor=>undef,
-                                        -foreground=>$main::fc,
-                                        -background=>$main::bc
-                                     );
-
-$main::v_text->pack(-expand=>1,-fill=>'both');
-tie (*TEXT,'Tk::Text',$main::v_text);
-
 # Sort out the options to clear the screen on
 # each report
 
-my $bb = $main::mw->Frame->pack(-side=>'bottom',
-                                -padx=>5,
-                                -expand=>'no',
-                                -fill=>'both',
-                                -anchor=>'s',
-                                -before=>$middle_box);
+my $balloon_status = $status_bar->Label(-relief=>'flat',
+                                        -justify=>'left',
+                                        -anchor=>'w',
+                                        -width=>80,
+                                       )->pack(-side=>'left',
+                                              );
 
-$bb->Button(-text=>$main::lg{clear},
-            -command=>sub{main::bz();
-                          $main::current_db->must_f_clr();
-                          main::ubz()}
-           )->pack(side=>'left');
+$balloon = $main::mw->Balloon(-statusbar => $balloon_status, 
+                              -state => 'status');
+
+# The Reconnection Button
+
+my $b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/recon.gif");
+
+my $b = $bb->Button(-image=>$b_image,
+                    -command=>sub{main::bz();
+                                  main::get_db();
+                                  main::ubz()}
+                   )->pack(side=>'left');
+
+$balloon->attach($b, -msg => $main::lg{reconn});
+
+# The Font Button
+
+$b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/font.gif");
+
+$font_button = $bb->Button(-image=>$b_image,
+                           -command=>sub{
+
+      main::bz();
+      my $fonter = orac_Font->new( $main::mw,
+                                   $main::v_text,
+                                   $main::lg{font_sel},
+                                 );
+      $fonter->orac_fonter(\$balloon, \$font_button);
+      main::ubz();
+                                           }
+
+                             )->pack(side=>'left');
+
+main::font_button_message(\$balloon, \$font_button);
+
+# The Print Button
+
+$b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/print.gif");
+
+$b = $bb->Button(-image=>$b_image,
+                 -command=>sub{
+
+      main::bz();
+      my $printer = orac_Print->new( $main::mw,
+                                     $main::v_text,
+                                     $main::lg{print_sel},
+                                 );
+      $printer->orac_printer();
+      main::ubz()}
+
+                )->pack(side=>'left');
+
+$balloon->attach($b, -msg => $main::lg{print_sel});
+
+$b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/eraser.gif");
+ 	
+$b = $bb->Button(-image=>$b_image,
+                 -command=>sub{main::bz();
+                               $main::current_db->must_f_clr();
+                               main::ubz()}
+                )->pack(side=>'left');
+
+$balloon->attach($b, -msg => $main::lg{clear});
+
+# Now Manual/Automatic clearing
 
 $main::v_clr = 'Y';
-$bb->Radiobutton(-variable=>\$main::v_clr,
-                 -text=>$main::lg{man_clear},
-                 -value=>'N'
-                )->pack (side=>'left');
 
-$bb->Radiobutton(-variable=>\$main::v_clr,
-                 -text=>$main::lg{auto_clear},
-                 -value=>'Y'
-                )->pack (side=>'left');
+my $man_auto_but = $bb->Button;
 
-# Now the Reconnection Button
+my %man_auto_img;
 
-$bb->Button(-text=>$main::lg{reconn},
-            -command=>sub{main::bz();
-                          main::get_db();
-                          main::ubz()}
-           )->pack(side=>'right');
+# Y is automatic, N is manual
+
+$man_auto_img{Y} = 
+   $main::mw->Photo( -file => "$FindBin::RealBin/img/auto.gif" );
+
+$man_auto_img{N} = 
+   $main::mw->Photo( -file => "$FindBin::RealBin/img/manual.gif" );
+
+$man_auto_but->configure(-image => $man_auto_img{ $main::v_clr } );
+   $man_auto_but->configure(-command => sub {  
+
+      if ( $main::v_clr eq 'Y' )
+      {
+         $main::v_clr = 'N';
+         $balloon->attach($man_auto_but, -msg => $main::lg{man_clear} );
+      }
+      else
+      {
+         $main::v_clr = 'Y';
+         $balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
+      }
+      $man_auto_but->configure(-image => $man_auto_img{ $main::v_clr } );
+
+                                           } 
+                        );
+
+$man_auto_but->pack( -side => 'left' );
+$balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
+
+# The File Viewer, Orac Home, Help and Docs Buttons
+
+foreach my $key (@file_viewers)
+{
+   $b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/${key}.gif");
+
+   $b = $bb->Button(-image=>$b_image,
+                    -command=>sub{
+   
+         main::bz();
+         my $fileselect = orac_FileSelect->new( $main::mw,
+                                                $main::v_text,
+                                                $main::lg{$key},
+                                              );
+
+         $fileselect->req_filebox( $main::fileselect{$key}->{startdir}
+                                 );
+         main::ubz();
+
+                                 }
+   
+                   )->pack(side=>'left');
+   
+   $balloon->attach($b, -msg => $main::lg{$key});
+
+}
+
+# Now the other end of the menubar
+
+my $orac_li = $main::mw->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
+
+$bb->Label(-image=>$orac_li,
+           -borderwidth=>2,
+           -relief=>'flat'
+          )->pack(-side=>'right',
+                  -anchor=>'e'
+                 );
+
+$b = $bb->Button(
+           -text=>$main::lg{shell},
+           -command=> 
+                 sub{  
+                       main::call_shell(); 
+                    }
+                )->pack(-side=>'right');
+
+$balloon->attach($b, -msg => $main::lg{dbish});
+
+# Slap up the main Output Box
+
+$main::v_text->pack(-expand=>1,-fill=>'both');
 
 # Set main window title and set window icon
 
@@ -255,9 +473,6 @@ if ((!defined($main::orac_curr_db_typ)) ||
 
 main::get_db();
 
-$main::sub_win_but_hand{dbish}->[0]->invoke('Orac Shell (GUI dbish)') 
-   if $main::do_shell;
-
 # Here we go, lights, cameras, action!
 
 MainLoop();
@@ -268,6 +483,13 @@ MainLoop();
 main::back_orac();
 
 #################### Sub functions begin ####################
+
+=head2 back_orac
+
+Backs out of program as nicely as possible, and saves any chosen
+options in the main configuration file.
+
+=cut
 
 sub back_orac {
 
@@ -284,6 +506,14 @@ sub back_orac {
                       );
    exit 0;
 }
+
+=head2 fill_defaults
+
+Picks up the users required defaults for the screen appearance,
+database requirements etc.
+
+=cut
+
 sub fill_defaults {
 
    # Make sure defaults the way the user likes 'em.
@@ -303,7 +533,46 @@ sub fill_defaults {
                 "\n";
 
    close(DB_FIL);
+
+   # Now deal with fonts.
+
+   open(FONT_FIL,">$main::orac_home/what_font.txt");
+
+   print FONT_FIL $main::font{family} . 
+                  '^' . 
+                  $main::font{size} . 
+                  '^' . 
+                  $main::font{weight} . 
+                  '^' . 
+                  $main::font{slant} . 
+                  '^' . 
+                  "\n";
+
+   close(FONT_FIL);
+
+   # Now deal with printing options.
+
+   open(PRINT_FIL,">$main::orac_home/what_print.txt");
+
+   print PRINT_FIL $main::print{rotate} . 
+                  '^' . 
+                  $main::print{paper} . 
+                  '^' . 
+                  $main::print{command} . 
+                  '^' . 
+                  "\n";
+
+   close(PRINT_FIL);
 }
+
+=head2 get_connected
+
+Puts up the main dialogue to pick a new database.  Allows user to change 
+database type, if they wish.  Also, sets flag to help prevent connection
+error messages, except on the last attempt at connection.
+
+=cut
+
 sub get_connected {
 
    # Put up dialogue to pick a new database.
@@ -403,10 +672,8 @@ sub get_connected {
       # Supplement these, with stored database to which they've
       # successfully connected in the past 
 
-      if (   open(DBFILE,"$FindBin::RealBin/txt/" . 
-                         $main::orac_curr_db_typ . 
-                         "/orac_db_list.txt")
-         )
+      if ( open(DBFILE, "$main::orac_home/txt/$main::orac_curr_db_typ" . 
+                         "/orac_db_list.txt") )
       {
          while(<DBFILE>){
             chomp;
@@ -517,7 +784,7 @@ sub get_connected {
 
       if(!$auto_log) {
 
-         $c_d->gridRowconfigure(1,-weight=>1);
+         $c_d->gridRowconfigure(1,-weight=>1,-pad=>5,);
          $db_list->focusForce;
          $mn_b = $c_d->Show;
 
@@ -602,13 +869,17 @@ sub get_connected {
                      # database, store this fact, and put it 
                      # in the browse option for later use
 
-                     open(DBFILE,
-                          ">>$FindBin::RealBin/txt/" . 
-                          $main::orac_curr_db_typ . 
-                          "/orac_db_list.txt");
-
-                     print DBFILE "$main::v_db\n";
-                     close(DBFILE);
+                     my $dir = "$main::orac_home/txt/$main::orac_curr_db_typ";
+                     mkdir ("$main::orac_home/txt", 0755) 
+                        unless -d "$main::orac_home/txt";
+                     mkdir ($dir, 0755) unless -d $dir;
+                     my $file = "$dir/orac_db_list.txt";
+                     if (open(DBFILE, ">>$file")) {
+                        print DBFILE "$main::v_db\n";
+                        close(DBFILE);
+                     } else {
+                        warn "Unable to open $file: $!\n";
+                     }
                   }
                   $main_label->configure( -image => $main::conn_ball{green} );
                   $main::l_top_t = "$main::v_db";
@@ -618,8 +889,7 @@ sub get_connected {
                   $main::l_top_t = $main::lg{not_conn};
                }
 
-               # Hiya Sean :)
-               # Let me know if this is the right place.
+               # auto_log Patch supplied below by Sean Hull
 
                $auto_log = 0;
 
@@ -647,11 +917,27 @@ sub get_connected {
 
    # Ok, we're done here.  Now Orac can start work.  Stand by your beds.
 }
+
+=head2 connector
+
+Actually attempts the DBI database connection.
+
+=cut 
+
 sub connector {
    print STDERR "connecting: $_[0], $_[1], $_[2]\n" if ($main::debug > 0);
    $main::dbh = DBI->connect($_[0], $_[1], $_[2]);
    $main::current_db->set_db_handle($main::dbh);
 }
+
+=head2 select_dbtyp
+
+User may either be picking default database type for the first time, 
+or changing database type.  Either way, this builds up a dialogue to allow 
+them to do this.
+
+=cut
+
 sub select_dbtyp {
 
    # User may either be picking default database type for the first
@@ -735,7 +1021,15 @@ sub select_dbtyp {
 
    return $loc_db;
 }
+
+=head2 get_dba_user
+
+Picks up the typical DBA user for the particular database.
+
+=cut
+
 sub get_dba_user {
+
    my($db) = @_;
    my $dba_user;
    my $new_db;
@@ -744,6 +1038,7 @@ sub get_dba_user {
 
    open(DB_FIL,"$main::orac_home/all_dbs.txt") ||
 	 open(DB_FIL, "$FindBin::RealBin/config/all_dbs.txt");
+
    while(<DB_FIL>){
       my @hold = split(/\^/, $_);
       if ($db eq $hold[0]){
@@ -754,6 +1049,13 @@ sub get_dba_user {
    close(DB_FIL);
    return ($dba_user,$new_db);
 }
+
+=head2 get_db
+
+Picks up database, and then configures menus accordingly.
+
+=cut
+
 sub get_db {
    # Picks up database, and then configures menus accordingly
 
@@ -771,17 +1073,30 @@ sub get_db {
       # We do this, if either we're into the program for the first time,
       # or the user has changed the database type
 
-      main::del_Jareds_tools();
+      main::del_Jareds_tools(\$main::jareds_tool);
       main::config_menu();
       main::Jareds_tools();
       $main::orac_orig_db = $main::orac_curr_db_typ;
    }
 }
 
+=head2 bz
+
+Makes the main GUI pointer go busy.
+
+=cut
+
 sub bz {
    # Make the main GUI pointer go busy
    $main::mw->Busy;
 }
+
+=head2 ubz
+
+Makes the main GUI pointer go Un-busy.
+
+=cut
+
 sub ubz {
    # Make the main GUI pointer normalise to unbusy
    $main::mw->Unbusy;
@@ -801,6 +1116,13 @@ sub mes {
    $d->Show;
 }
 
+=head2 bc_upd
+
+Change the background colour on all open windows.
+This is where all those text and window handles come in useful.
+
+=cut
+
 sub bc_upd {
 
    # Change the background colour on all open windows.
@@ -808,30 +1130,36 @@ sub bc_upd {
    # come in useful.
 
    eval {
-      $main::v_text->configure(-background=>$main::bc);
+      $main::v_text->configure(-background=>$main::bc, 
+                               -font=>$main::font{name});
    };
    my $comp_str = "";
    my $i;
 
-   my $f;
-   foreach $f (keys(%main::swc))
+   my @kids = $main::mw->children();
+   foreach my $kid ( @kids )
    {
-      if (defined($main::swc{$f})){
-
-         print STDERR "main swc f state >" . 
-                      $main::swc{$f}->state . 
-                      "< \n" if ($main::debug > 0);
-
-         my $comp_str = $main::swc{$f}->state;
-
-         if("$comp_str" ne 'withdrawn'){
+      if ($kid =~ /Toplevel/)
+      {
+         if ( exists( $kid->{text} ) )
+         {
             eval {
-               $main::swc{$f}->{text}->configure(-background=>$main::bc);
+               $kid->{text}->configure(-background=>$main::bc, 
+                                       -font=>$main::font{name},
+                                      );
             }
          }
       }
    }
 }
+
+=head2 read_language
+
+Open up the main configurable language file, and pick up all
+the strings required by Orac.
+
+=cut
+
 sub read_language {
 
    # Open up the main configurable
@@ -851,6 +1179,13 @@ sub read_language {
 #############################################################
 # new language stuff!
 # use keys(%main::languages) to populate the drop down
+
+=head2 get_language_data
+
+Opens up the main configurable language file, and picks up all
+the strings required by Orac.
+
+=cut
 
 sub get_language_data {
 
@@ -872,6 +1207,14 @@ sub get_language_data {
    }
    close(TITLES_FILE);
 }
+
+=head2 read_language_file
+
+In the series of functions that will be modified at some unspecified
+date in the future, to make Orac natural language independent.
+
+=cut
+
 sub read_language_file {
 
    # ARG1 = language_label picked
@@ -890,6 +1233,14 @@ sub read_language_file {
    close(TITLES_FILE);
 }
 #############################################################
+
+=head2 config_menu
+
+Reads the database dependent menu configuration file, and build up menus.
+This function gets pretty complex, and a strong drink may be
+required beforehand, before attempting to work out what it is doing :)
+
+=cut
 
 sub config_menu {
 
@@ -918,11 +1269,12 @@ sub config_menu {
    # warnings
 
    my $file = "$FindBin::RealBin/menu/$main::orac_curr_db_typ/menu.txt";
-   open(MENU_F, $file);
+   open(MENU_F, $file) or warn qq{Unable to open $file $!};;
    while(<MENU_F>){
 
       chomp;
-      my $chop_bit = $_;
+        next if m/^$/;  # Skip blank lines. 
+        my $chop_bit = $_;
       my @menu_line = split(/\^/, $chop_bit);
 
       if ($menu_line[0] eq 'Menubutton'){
@@ -940,8 +1292,13 @@ sub config_menu {
 
          if ($menu_line[1] ne '0'){
 
-            $menu_command = $menu_command . ' $main::sub_win_but_hand{' . 
-                            $menu_line[1] . '} = ';
+            # The use of this has now been deprecated with the 
+            # constant use of Toplevel windows.  However,
+            # we may use it again in the future,
+            # therefore we'll leave it here.
+
+            #$menu_command = $menu_command . ' $main::this_button' . 
+            #                ' = ';
          }
 
          if ($menu_line[0] eq 'command'){
@@ -955,7 +1312,7 @@ sub config_menu {
          } elsif ($menu_line[0] eq 'casc_command'){
 
             $menu_command = $menu_command . 
-                            ' $main::casc_item->command(-label=>$main::lg{' . 
+                            ' $main::but_' . $menu_line[3] . ' = $main::casc_item->command(-label=>$main::lg{' . 
                             $menu_line[3] . '},' . 
                             ' -command=>sub{main::bz();';
 
@@ -1028,37 +1385,40 @@ sub config_menu {
                    $main::mb->Menubutton(-text=>$main::lg{sql_menu},
                                         )->pack(-side=>'left',
                                                 -padx=>2);
-   $main::sub_win_but_hand{dbish} =
-      $main::tm_but[$main::tm_but_ct]->command(
+   $main::tm_but[$main::tm_but_ct]->command(
 
                          -label=>$main::lg{dbish},
                          -command=>sub{  
-
-                     main::bz();
-                     $main::shell = orac_Shell->new( $main::mw, $main::dbh );
-                     $main::shell->dbish_open();
-                     main::ubz()
+                                          main::call_shell();
                                       }
-                                              );
+                                           );
    return;
 }
+
+=head2 Jareds_tools 
+
+Builds up the 'My Tools' options, where Orac users can specify their own
+local SQL files to generate Orac-like reports.
+
+=cut
+
 sub Jareds_tools {
 
    # Build up the 'My Tools' menu option.
 
-   if(!defined($main::jt)){
+   if(!defined($main::jareds_tool)){
 
       # Monster coming up.  You'll cope.
 
       my $comm_str = 
-          ' $main::jt = $main::mb->Menubutton( ' . "\n" . 
+          ' $main::jareds_tool = $main::mb->Menubutton( ' . "\n" . 
           ' -text=>$main::lg{my_tools},' . "\n" .
           ' -menuitems=> ' . "\n" .
           ' [[Button=>$main::lg{help_with_tools},' .
           ' -command=>sub{main::bz();' . "\n" .
           ' $main::current_db->f_clr($main::v_clr);' . "\n" .
           ' $main::current_db->about_orac' .
-             '("$FindBin::RealBin/txt/help_with_tools.txt");' . 
+             '("$FindBin::RealBin/help/HelpTools.txt");' . 
           "\n" .
           ' main::ubz()}], ' . "\n" .
           '  [Cascade=>$main::lg{config_tools},-menuitems => ' . "\n" .
@@ -1142,20 +1502,36 @@ sub Jareds_tools {
       eval $comm_str ; warn $@ if $@;
    }
 }
+
+=head2 save_sql
+
+Picks up the SQL the user has entered, and saves it into the appropriate file.
+
+=cut
+
 sub save_sql {
 
    # Pick up the SQL the user has entered, and
    # save it into the appropriate file
 
-   my($filename) = @_;
+   my($txt_ref, $filename) = @_;
    copy($filename,"${filename}.old");
 
    open(SAV_SQL,">$filename");
-   print SAV_SQL $main::swc{ed_butt_win}->{text}->get("1.0", "end");
+   print SAV_SQL $$txt_ref->get("1.0", "end");
    close(SAV_SQL);
 
    return $filename;
 }
+
+=head2 ed_butt
+
+Allows configuration of 'My Tools' menus, buttons, cascades, etc.  Tries
+to make the setting up of new buttons, cascades etc, as painless as
+possible.
+
+=cut
+
 sub ed_butt {
 
    # Allow configuration of 'My Tools' menus, buttons, cascades, etc
@@ -1164,51 +1540,56 @@ sub ed_butt {
    my $ed_fl_txt = main::get_butt_text($casc,$butt);
    my $sql_file = $main::orac_home.'/sql/tools/' . $casc . '.' . $butt . '.sql';
    
-   $main::swc{ed_butt_win} = MainWindow->new();
+   my $window = $main::mw->Toplevel();
 
-   $main::swc{ed_butt_win}->title(  "$main::lg{cascade} $casc, 
-                                    $main::lg{button} $butt");
+   $window->title(  "$main::lg{cascade} $casc, 
+                    $main::lg{button} $butt");
 
    my $ed_sql_txt = "$ed_fl_txt: $main::lg{ed_sql_txt}";
    my $ed_sql_txt_cnt = 0;
 
-   $main::swc{ed_butt_win}->Label( 
-                                  -textvariable  => \$ed_sql_txt, 
-                                  -anchor=>'n', 
-                                  -relief=>'groove'
-                                )->pack(-expand=>'no');
+   $window->Label( -textvariable  => \$ed_sql_txt, 
+                   -anchor=>'n', 
+                   -relief=>'groove'
+                 )->pack(-expand=>'no');
 
-   $main::swc{ed_butt_win}->{text} = 
-      $main::swc{ed_butt_win}->Scrolled('Text',
-                                  -wrap=>'none',
-                                  -cursor=>undef,
-                                  -foreground=>$main::fc,
-                                  -background=>$main::bc
+   $window->{text} = 
+      $window->Scrolled( 'Text',
+                         -wrap=>'none',
+                         -cursor=>undef,
+                         -font=>$main::font{name},
+                         -foreground=>$main::fc,
+                         -background=>$main::bc
    
-                                 )->pack(-expand=>'yes',
-                                         -fill=>'both');
+                       )->pack(-expand=>'yes',
+                               -fill=>'both'
+                              );
    
    my(@lay) = qw/-side bottom -padx 5 -fill both -expand no/;
 
-   my $f = $main::swc{ed_butt_win}->Frame->pack(@lay);
+   my $f = $window->Frame->pack(@lay);
 
    $f->Button(
       -text=>$main::lg{exit},
-      -command=>sub{ $main::swc{ed_butt_win}->withdraw() }
+      -command=>sub{ $window->destroy() }
 
              )->pack(-side=>'right',
                      -anchor=>'e');
 
    $f->Button(
-      -text=>$main::lg{save},
-      -command=>
+      -text => $main::lg{save},
+      -command =>
 
-          sub{ my $file_name = main::save_sql($sql_file, $ed_fl_txt);
-               $ed_sql_txt_cnt++;
-               $ed_sql_txt = "$ed_fl_txt: $file_name $main::lg{saved}" . 
-                             ' #' . 
-                             $ed_sql_txt_cnt;
-             }
+          sub { 
+
+          my $file_name = main::save_sql(  \$window->{text}, 
+                                           $sql_file,
+                                        );
+          $ed_sql_txt_cnt++;
+          $ed_sql_txt = "$ed_fl_txt: $file_name $main::lg{saved}" . 
+                        ' #' . 
+                        $ed_sql_txt_cnt;
+              },
 
              )->pack(-side=>'right',
                      -anchor=>'e');
@@ -1218,17 +1599,31 @@ sub ed_butt {
             )->pack(-side=>'left',
                     -anchor=>'w');
 
-   main::iconize($main::swc{ed_butt_win});
+   main::iconize( $window );
 
    if(open(SQL_SAV,$sql_file)){
 
       while(<SQL_SAV>){ 
-         $main::swc{ed_butt_win}->{text}->insert("end", $_); 
+         $window->{text}->insert("end", $_); 
       }
       close(SQL_SAV);
 
    }
 }
+
+=head2 config_Jared_tools
+
+More functionality required to allow on-the-fly configuration
+of the 'My Tools' options.
+
+This function is fairly overloaded, and may require some
+detailed analysis, before it becomes clearer what it's doing.
+
+My apologies to those who may want to re-write this, and provide something
+much neater. 
+
+=cut
+
 sub config_Jared_tools {
 
    # More functionality required to allow on-the-fly configuration
@@ -1748,9 +2143,16 @@ sub config_Jared_tools {
          }
       }
    }
-   main::del_Jareds_tools();
+   main::del_Jareds_tools(\$main::jareds_tool);
    main::Jareds_tools();
 }
+
+=head2 sort_Jareds_file 
+
+Configures and sorts the users generated SQL reports buttons.
+
+=cut 
+
 sub sort_Jareds_file {
    copy("$main::orac_home/config.tools","$main::orac_home/config.tools.sort");
    open(JT_CONFIG_READ,"$main::orac_home/config.tools.sort");
@@ -1773,6 +2175,12 @@ sub sort_Jareds_file {
    }
    close(JT_CONFIG_WRITE);
 }
+=head2 get_butt_text
+
+Pick up more information on the configurable buttons.
+
+=cut 
+
 sub get_butt_text {
 
    # Pick up more information on the configurable buttons
@@ -1789,6 +2197,12 @@ sub get_butt_text {
    close(JARED_FILE);
    return $title;
 }
+
+=head2 run_Jareds_tool
+
+When user selects their own button, run the associated report.
+
+=cut
 
 sub run_Jareds_tool {
 
@@ -1824,16 +2238,30 @@ sub run_Jareds_tool {
 
 }
 
+=head2 del_Jareds_tools
+
+If the 'My Tools' menu currently exists, then destroy it.  This helps
+regenerate "fresh" menus, as required.
+
+=cut
+
 sub del_Jareds_tools {
 
    # If the 'My Tools' menu currently exists, then
    # destroy it
 
-   if(defined($main::jt)){
-      $main::jt->destroy();
-      $main::jt = undef;
+   my ($but_ref) = @_;
+   if(defined($$but_ref)){
+      $$but_ref->destroy;
+      $$but_ref = undef;
    }
 }
+
+=head2 iconize
+
+Take a Window handle, and tie an icon to it.
+
+=cut
 
 sub iconize {
 
@@ -1844,6 +2272,14 @@ sub iconize {
    my $icon_img = $w->Photo('-file' => "$FindBin::RealBin/img/orac.gif");
    $w->Icon('-image' => $icon_img);
 }
+
+=head2 pick_up_defaults
+
+This allows user to select main database type.  Also allows selection 
+of pre-defined background colour.  Assign some pre-defined values in case
+the config file not yet available.
+
+=cut
 
 sub pick_up_defaults {
 
@@ -1895,8 +2331,96 @@ sub pick_up_defaults {
       }
       close(DB_FIL);
    }
+
+   # Now deal with fonts
+
+   $file = "$main::orac_home/what_font.txt";
+
+   if(-e $file){
+      open(FONT_FIL,$file);
+
+      while(<FONT_FIL>){
+         my @hold = split(/\^/, $_);
+         $main::font{family} = $hold[0];
+         $main::font{size} = $hold[1];
+         $main::font{weight} = $hold[2];
+         $main::font{slant} = $hold[3];
+      }
+      close(FONT_FIL);
+   } 
+   else
+   {
+      # No font has previously been saved, therefore,
+      # now is the time and the place.
+
+      my $font;
+
+      my $font_command =
+         ' $font = $main::v_text->fontCreate(-family => \'courier\', ' .
+                                           ' -size => 10, ' .
+                                           ' -weight => \'normal\', ' .
+                                           ' -slant => \'roman\' ' .
+                                           '); ';
+
+      eval $font_command;
+
+      if ($@) {
+
+         # Just gotta take the default
+
+         $font = $main::v_text->fontCreate();
+
+      }
+
+      $main::font{family} = $main::v_text->fontConfigure($font, -family);
+      $main::font{size} = $main::v_text->fontConfigure($font, -size);
+      $main::font{weight} = $main::v_text->fontConfigure($font, -weight);
+      $main::font{slant} = $main::v_text->fontConfigure($font, -slant);
+   }
+   $main::font{name} = 
+      $main::v_text->fontCreate( -family => $main::font{family},
+                                 -size => $main::font{size},
+                                 -weight => $main::font{weight},
+                                 -slant => $main::font{slant},
+                               );
+
+
+   # Now deal with printing options
+
+   $file = "$main::orac_home/what_print.txt";
+
+   if(-e $file){
+      open(PRINT_FIL,$file);
+
+      while(<PRINT_FIL>){
+         my @hold = split(/\^/, $_);
+         $main::print{rotate} = $hold[0];
+         $main::print{paper} = $hold[1];
+         $main::print{command} = $hold[2];
+      }
+      close(PRINT_FIL);
+   } 
+   else
+   {
+      # No printing options have previously been saved, therefore,
+      # now is the time and the place.
+
+      $main::print{rotate} = 0;
+      $main::print{paper} = 'A4';
+      $main::print{command} = '';
+   }
+
    return;
+
 }
+
+=head1 BEGIN
+
+Special functionality to isolate acceptable errors, depending
+on database type, and place other errors into readable GUI
+windows for ease of debugging/reading by users.
+
+=cut
 
 BEGIN {
 
@@ -1951,6 +2475,36 @@ BEGIN {
          $main::store_msgs .= $warning;
       }
    };
+}
+
+sub call_shell {
+
+   main::bz();
+   $main::shell = orac_Shell->new( $main::mw, $main::dbh );
+   $main::shell->dbish_open();
+   main::ubz()
+
+}
+
+sub font_button_message {
+
+   my ($balloon_ref, $font_button_ref) = @_;
+
+   my $font  = $main::font{family} . 
+               '-' . 
+               $main::font{size} . 
+               '-' . 
+               $main::font{weight} . 
+               '-' . 
+               $main::font{slant};
+
+   my $message = $main::lg{font_sel} . 
+                 ' (' .
+                 $font .
+                 ')';
+
+   $$balloon_ref->attach($$font_button_ref, -msg => $message );
+   return $font;
 }
 
 # EOF
