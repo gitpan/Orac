@@ -1,8 +1,11 @@
 Orac  --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
 
-THIS IS A [B]LEADING EDGE DEVELOPMENT, IN AN ATTEMPT TO ADD ORACLE 
-DEVELOPMENT TOOLS TO ORAC, AS WELL AS DBA ONES.  FOR STABLE USAGE,
-UNTIL FURTHER NOTICE, USE THE Orac-1.2.0 download.
+NB: ....Oracle Development Usage Gradually Being Added...
+    .........By Andy Duncan & Richard Sutherland.........
+
+THIS IS A DEVELOPMENT VERSION OF ORAC, AND AN ATTEMPT TO ADD ORACLE 
+DEVELOPMENT TOOLS TO ORAC, AS WELL AS DBA ONES.  FOR STABLE DBA USAGE,
+UNTIL FURTHER NOTICE, USE THE Orac-1.2.0 DOWNLOAD.
 
    Copyright (c) 1998,1999,2000,2001 Andy Duncan, England
 
@@ -21,7 +24,7 @@ to our "docs" or "help" directories.
 
 Orac-1.2.0 is the latest stable version of Orac.  You may wish
 to download this if you have any problems with these later development
-versions.
+versions, if you are a DBA.
 
 TERMS AND CONDITIONS OF USE:
 
@@ -72,6 +75,9 @@ PREREQUISITES (For Everybody)
    This (or the latest version) is available from:
 
    http://www.perl.com/CPAN-local/modules/by-authors/id/R/RV/RVSUTHERL/
+
+   For an indefinite period, the latest DDL::Oracle package will
+   come automatically with the Orac download.  This may change.
 
 LINUX USERS:
 
@@ -338,6 +344,12 @@ Orac-1.2.1  Yep, it HAS been a while, but let's get this monkey running
             again.  The VERY early beginnings of developer support
             for Oracle developers using Richard Sutherland's DDL option.
             Thanks to Andy Campbell, Sun employee and DBA genius! :-)
+Orac-1.2.2  Much more embodiement of Richard Sutherland's DDL-Oracle
+            coded by RVS and AndyD.  This version of Oracle now automatically 
+            incorporates the latest version of DDL::Oracle.  Automatic
+            detection of DBA or normal development user.  Wishlists
+            are welcome of where Oracle Development functionality
+            should go next.  We're just making this up as we go along! :-)
 
 EXTRA NOTES FOR LINUX USERS:
 

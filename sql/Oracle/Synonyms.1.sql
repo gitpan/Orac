@@ -1,3 +1,3 @@
 select distinct owner
-from   dba_synonyms
+from   all_synonyms
 order by owner

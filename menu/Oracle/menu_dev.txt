@@ -1,2 +1,4 @@
-Menubutton^data_obj^
-command^0^1^oi_tables^$main::current_db->dev_tables^^
+Menubutton^devel^
+command^0^1^oi_tables^$main::current_db->dev_tables^'TABLE'^
+command^0^1^indexs^$main::current_db->dev_tables^'INDEX'^
+command^0^1^oi_synonyms^$main::current_db->dev_tables^'SYNONYM'^

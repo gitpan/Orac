@@ -1,4 +1,4 @@
 select synonym_name
-from   dba_synonyms
+from   all_synonyms
 where  UPPER(owner) = UPPER( ? )
 order by synonym_name

@@ -1,2 +1,2 @@
-select username from dba_users
+select username from all_users
 order by username

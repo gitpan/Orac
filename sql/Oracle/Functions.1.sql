@@ -1,4 +1,4 @@
 select distinct owner
-from   dba_source
+from   all_source
 where  type = 'FUNCTION'
 order by owner

@@ -1,3 +1,3 @@
 select distinct owner
-from dba_tables
+from all_tables
 order by owner

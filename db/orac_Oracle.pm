@@ -4,6 +4,7 @@ use strict;
 @orac_Oracle::ISA = qw{orac_Base};
 
 my $Block_Size;
+my $Count_DBA_Tables;
 my $Oracle_Version;
 
 my $sql_slider;
@@ -27,6 +28,29 @@ my @w_titles;
 my @w_explain;
 
 my $oracle_dba_user;
+my $view;
+
+my %l_hlst_to_type =
+(
+  Constraints  => 'constraint',
+  Functions    => 'function',
+  Indexes      => 'index',
+  Links        => 'database link',
+  PackageBods   => 'package body',
+  PackageHeads  => 'package',
+  Procedures    => 'procedure',
+  Profiles      => 'profile',
+  Roles         => 'role',
+  Rollbacks     => 'rollback segment',
+  Sequences     => 'sequence',
+  SnapshotLogs  => 'snapshot log',
+  Snapshots     => 'snapshot',
+  Synonyms      => 'synonym',
+  Tables        => 'table',
+  Tablespaces   => 'tablespace',
+  Users         => 'user',
+  Views         => 'view',
+);
 
 =head1 NAME
 
@@ -104,7 +128,7 @@ sub init1 {
    }
 }
 
-=head2 init1
+=head2 init2
 
 Picks up a few values used again and again by the rest
 of the orac_Oracle object (eg: block size).
@@ -118,76 +142,69 @@ sub init2 {
    $self->{Database_conn} = $_[0];
    $self->Dump;
 
-   my $dn = 0;
-   do {
-      my $d = $main::mw->DialogBox(-title=>"Oracle User Type",
-                                   -buttons=>[ "DBA", "Developer","Exit"]
-                                  );
-      my $button = $d->Show;
-   
-      if ($button eq "DBA"){
-         $oracle_dba_user = 1;
-      } elsif ($button eq "Developer"){
-         $oracle_dba_user = 0;
-      } else {
-         main::back_orac();
-      }
-   
-      if ($oracle_dba_user){
-   
-         # Get the block size, as soon as we
-         # logon to a database.  Saves us having to
-         # continually find it out again, and again.
-   
-         my $cm = $self->f_str('get_db','1');
+   # Get the block size locally.
 
-         eval {
-            my $sth = $self->{Database_conn}->prepare( $cm ); 
-            $sth->execute;
-            ($Block_Size) = $sth->fetchrow;
-            $sth->finish;
-         };
-         if ($@) {
-            warn $@;
-            main::mes($main::mw,"This DBA User does not appear to have\n" .
-                                "the right permissions for reading DBA\n" .
-                                "tables.  You may wish to choose the\n" .
-                                "\"Developer\" option instead");
-         } else {
-            $dn = 1;
-         }
-      } else {
-         eval {
-            require DDL::Oracle;
-         };
-         if ($@) {
-            warn $@;
-            main::mes($main::mw,
-                         "Oracle Development usage requires\n" .
-                         "Richard Sutherland's DDL-Oracle module.\n" .
-                         "You can get hold of this here:\n\n" .
-                         "http://www.perl.com/CPAN-local/modules/" .
-                         "by-authors/id/R/RV/RVSUTHERL/"
-                     );
-         } else {
-            my $cm = $self->f_str('get_user_db','1');
+   my $cm = $self->f_str('get_user_db','1');
 
-            my $sth = $self->{Database_conn}->prepare( $cm ); 
-            $sth->execute;
-            ($Block_Size) = $sth->fetchrow;
-            $sth->finish;
+   my $sth = $self->{Database_conn}->prepare( $cm ); 
+   $sth->execute;
+   ($Block_Size) = $sth->fetchrow;
+   $sth->finish;
 
-            $cm = $self->f_str('get_version','1');
+   # Get the Version locally
 
-            $sth = $self->{Database_conn}->prepare( $cm ); 
-            $sth->execute;
-            ($Oracle_Version) = $sth->fetchrow;
-            $sth->finish;
+   $cm = $self->f_str('get_version','1');
 
-            $dn = 1;
-         }
-      }
-   } until $dn;
+   $sth = $self->{Database_conn}->prepare( $cm ); 
+   $sth->execute;
+   ($Oracle_Version) = $sth->fetchrow;
+   $sth->finish;
+
+   # Figure out if the user is a DBA somehow.  I'll default to user
+   # for now, until I can work out DBA status, later.
+
+   $view = 'USER';
+   $oracle_dba_user = 0;
+
+   eval {
+      $main::conn_comm_flag = 1;
+      $cm = $self->f_str('check_dba','1');
+
+      $sth = $self->{Database_conn}->prepare( $cm ); 
+      $sth->execute;
+      ($Count_DBA_Tables) = $sth->fetchrow;
+      $sth->finish;
+      $main::conn_comm_flag = 0;
+   };
+   if ($@) {
+      $view = 'USER';
+      $oracle_dba_user = 0;
+   } else {
+      $view = 'DBA';
+      $oracle_dba_user = 1;
+   }
+
+   eval {
+      require DDL::Oracle;
+   };
+   if ($@) {
+      warn $@;
+      main::mes($main::mw,
+                   "Oracle Development usage requires\n" .
+                   "Richard Sutherland's DDL-Oracle module.\n" .
+                   "You can get hold of this here:\n\n" .
+                   "http://www.perl.com/CPAN-local/modules/" .
+                   "by-authors/id/R/RV/RVSUTHERL/"
+               );
+   } else {
+        DDL::Oracle->configure( 
+                  dbh      => $self->{Database_conn},
+                  resize   => 0,
+#                  view     => 'user',
+                  heading  => 0,
+                  prompt   => 0,
+                );
+   }
 
    # Enable the PL/SQL memory area, for this
    # database connection
@@ -2889,16 +2906,6 @@ sub do_a_generic {
 
    ($owner, $generic, $dum) = split("\\$l_gen_sep", $input);
 
-   my $cm = $self->f_str( $l_hlst , '99' );
-
-   $self->{Database_conn}->func(1000000, 'dbms_output_enable');
-   my $second_sth = $self->{Database_conn}->prepare( $cm ) ||
-      die $self->{Database_conn}->errstr;
-
-   $second_sth->bind_param(1,$owner);
-   $second_sth->bind_param(2,$generic);
-   $second_sth->execute;
-
    my $window = $self->{Main_window}->Toplevel();
 
    $window->bind('<Destroy>' => sub {
@@ -2962,24 +2969,133 @@ sub do_a_generic {
 
    tie (*L_TEXT, 'Tk::Text', $window->{text} );
 
-   my $j = 0;
-   my $full_list;
+   my $cm;
 
-   my $consec_empty = 0;
+   if (
+           $l_hlst eq 'Comments'
+        or $l_hlst eq 'Index_FreeSpace'
+        or $l_hlst eq 'Refreshgroups'
+        or $l_hlst eq 'RoleGrants'
+        or $l_hlst eq 'Tab_FreeSpace'
+        or $l_hlst eq 'UserGrants'
+      )
+   {
+     $cm = $self->f_str( $l_hlst , '99' );
 
-   while($j < 100000){
-      $full_list = scalar $self->{Database_conn}->func('dbms_output_get');
-      if ((!defined($full_list)) || (length($full_list) == 0)){
-         $consec_empty++;
-      }
-      else {
-         $consec_empty = 0;
-         $text_lines = $text_lines . "$full_list\n";
-      }
-      if ($consec_empty > 100){
-         last;
-      }
-      $j++;
+     $self->{Database_conn}->func(1000000, 'dbms_output_enable');
+     my $second_sth = $self->{Database_conn}->prepare( $cm ) ||
+        die $self->{Database_conn}->errstr;
+
+     $second_sth->bind_param(1,$owner);
+     $second_sth->bind_param(2,$generic);
+     $second_sth->execute;
+
+     my $j = 0;
+     my $full_list;
+
+     my $consec_empty = 0;
+
+     while($j < 100000){
+        $full_list = scalar $self->{Database_conn}->func('dbms_output_get');
+        if ((!defined($full_list)) || (length($full_list) == 0)){
+           $consec_empty++;
+        }
+        else {
+           $consec_empty = 0;
+           $text_lines = $text_lines . "$full_list\n";
+        }
+        if ($consec_empty > 100){
+           last;
+        }
+        $j++;
+     }
+   }
+   elsif (
+              $l_hlst eq 'Triggers'
+           or $l_hlst eq 'Tab_Indexes'
+           or $l_hlst eq 'Tab_Constraints'
+         )
+   {
+     my $stmt;
+     my $type;
+
+     if ( $l_hlst eq 'Triggers' )
+     {
+       $type = 'trigger';
+
+       $stmt =
+          "
+           SELECT
+                  '$owner'
+                , trigger_name
+           FROM
+                  ${view}_triggers
+           WHERE
+                  table_name = '$generic'
+          ";
+     }
+     elsif ( $l_hlst eq 'Tab_Indexes' )
+     {
+       $type = 'index';
+
+       $stmt =
+          "
+           SELECT
+                  '$owner'
+                , index_name
+           FROM
+                  ${view}_indexes
+           WHERE
+                  table_name = '$generic'
+          ";
+     }
+     elsif ( $l_hlst eq 'Tab_Constraints' )
+     {
+       $type = 'constraint';
+
+       $stmt =
+          "
+           SELECT
+                  '$owner'
+                , constraint_name
+           FROM
+                  ${view}_constraints
+           WHERE
+                  table_name = '$generic'
+          ";
+     }
+
+     if ( $view eq 'DBA' )
+     {
+       $stmt .=  "   AND  owner = '$owner'";
+     }
+
+     $stmt .=  "ORDER BY 2";
+
+     my $sth = $self->{Database_conn}->prepare( $stmt ) ||
+                die $self->{Database_conn}->errstr;
+     $sth->execute;
+     my $aref = $sth->fetchall_arrayref;
+     $sth->finish;
+
+     my $obj = DDL::Oracle->new(
+                                 type => $type,
+                                 list => $aref,
+                               );
+     $text_lines = $obj->create ;
+   }
+   else
+   {
+     my $obj = DDL::Oracle->new(
+                                 type => $l_hlst_to_type{ $l_hlst },
+                                 list => [
+                                           [
+                                             $owner,
+                                             $generic || $owner,
+                                           ]
+                                         ],
+                               );
+     $text_lines = $obj->create ;
    }
 
    # Finally, pump out the monkey
@@ -3276,10 +3392,11 @@ which can then be selected upon.
 
 sub dev_tables {
    my $self = shift;
+   my ( $obj_type ) = @_;
 
    # Creates Tables Viewer window
 
-   my $cm = $self->f_str('dev_tables','1');
+   my $cm = $self->f_str('dev_tables',$obj_type);
    my $sth = $self->{Database_conn}->prepare( $cm ) ||
                 die $self->{Database_conn}->errstr;
    $sth->execute;
@@ -3288,8 +3405,8 @@ sub dev_tables {
    my @res;
    my $window;
 
+   my $schema = 0;
    my $resize = 0;
-   my $heading = 0;
    my $action = 'create';
 
    while (@res = $sth->fetchrow) {
@@ -3298,7 +3415,7 @@ sub dev_tables {
       if($detected == 1){
 
          $window = $self->{Main_window}->Toplevel();
-         $window->title("Tables DDL");
+         $window->title($obj_type . " DDL");
 
          my $dev_menu;
          my $balloon;
@@ -3311,32 +3428,40 @@ sub dev_tables {
 
          $self->double_click_message(\$window);
 
-         $dev_menu->Radiobutton(variable=>\$resize,
-                                text=>"Resize Off",
+         $dev_menu->Radiobutton(variable=>\$schema,
+                                text=>"Schema Off",
                                 value=>0
                                )->pack (-side=>'left',
                                         -anchor=>'w');
 
+         $dev_menu->Radiobutton(variable=>\$schema,
+                                text=>"Schema On",
+                                value=>1
+                               )->pack (-side=>'left',
+                                        -anchor=>'w');
+
+         my $resize_state = 'disabled';
+
+         if (($obj_type =~ /TABLE/) || ($obj_type =~ /INDEX/)) {
+            $resize_state = 'normal';
+         }
+
          $dev_menu->Radiobutton(variable=>\$resize,
-                                text=>"Resize On",
-                                value=>1
+                                text=>"Extent Resize Off",
+                                value=>0,
+                                state=>$resize_state
                                )->pack (-side=>'left',
                                         -anchor=>'w');
 
-         $dev_menu->Radiobutton(variable=>\$heading,
-                                text=>"Heading Off",
-                                value=>0
-                               )->pack (-side=>'left',
-                                        -anchor=>'w');
-
-         $dev_menu->Radiobutton(variable=>\$heading,
-                                text=>"Heading On",
-                                value=>1
+         $dev_menu->Radiobutton(variable=>\$resize,
+                                text=>"Extent Resize On",
+                                value=>1,
+                                state=>$resize_state
                                )->pack (-side=>'left',
                                         -anchor=>'w');
 
          $dev_2_menu->Radiobutton(variable=>\$action,
-                                  text=>"Table",
+                                  text=>"Create",
                                   value=>'create'
                                  )->pack (-side=>'left',
                                           -anchor=>'w');
@@ -3347,14 +3472,16 @@ sub dev_tables {
                                  )->pack (-side=>'left',
                                           -anchor=>'w');
 
-         my $resize_state = 'disabled';
+         $resize_state = 'disabled';
 
          if ($Oracle_Version =~ /^8/){
-            $resize_state = 'normal';
+            if (($obj_type =~ /TABLE/) || ($obj_type =~ /INDEX/)) {
+               $resize_state = 'normal';
+            }
          }
 
          $dev_2_menu->Radiobutton(variable=>\$action,
-                                  text=>"Resize (Oracle 8)",
+                                  text=>"Resize (Oracle 8 Tables & Indexes)",
                                   value=>'resize',
                                   state=>$resize_state
                                  )->pack (-side=>'left',
@@ -3392,16 +3519,15 @@ sub dev_tables {
               DDL::Oracle->configure( 
                         dbh      => $self->{Database_conn},
                         resize   => $resize,
-                        view     => 'user',
-                        heading  => $heading,
+                        schema   => $schema,
+                        heading  => 0,
+                        view     => $view,
                         blksize  => $Block_Size,
                         version  => $Oracle_Version
                       );
 
-              my $type = "TABLE";
-
               my $obj = DDL::Oracle->new(
-                            type  => $type,
+                            type  => $obj_type,
                             list  => [
                                        [
                                          $main::v_sys,
@@ -3428,7 +3554,6 @@ sub dev_tables {
               $self->{Main_window}->Unbusy;
               $window->Unbusy;
             }
-
                                    );
    }
 }

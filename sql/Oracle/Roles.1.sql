@@ -1,3 +1,3 @@
 select role
-from   dba_roles
+from   all_roles
 order by 1

@@ -1,3 +1,3 @@
 select distinct owner
-from dba_constraints
+from all_constraints
 order by owner

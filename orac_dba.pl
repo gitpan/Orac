@@ -49,7 +49,7 @@ main::splash_screen(0);
 # before the main loop.
 
 use DBI '1.13';
-$VERSION = '1.210';
+$VERSION = '1.220';
 
 # Now enter strict mode
 use strict;

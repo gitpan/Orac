@@ -78,6 +78,7 @@ det_tab_datafil^Detailed Chart by Tablespace/Datafile^
 dev_crt^Create Database Device^
 dev_dump_crt^Create Dump Device^
 dev_rev^Reverse Engineer Database Devices^
+devel^Devel^
 diag^Diagnostics^
 diag_ind^Find Bad Indexes^
 disconn^Disconnected...^

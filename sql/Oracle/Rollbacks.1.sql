@@ -1,2 +1,2 @@
 select distinct segment_name
-from dba_rollback_segs
+from all_rollback_segs
