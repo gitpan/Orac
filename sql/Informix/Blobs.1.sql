@@ -1,4 +1,4 @@
-select b.*, t.tabname, c.colname
+select b.*, t.tabname, c.colname, c.coltype
 from informix.syscolumns c, informix.systables t, informix.sysblobs b
 where t.tabtype = 'T'
   and t.tabid = c.tabid

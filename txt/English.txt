@@ -179,6 +179,7 @@ oi_triggers^Triggers^
 oi_view_dets^View details^
 oi_views^Views^
 orac_pan^Orac Control Panel^
+oracle_sess_io^ORACLE Session IO^
 orig_exts^Original Extents^
 params^Parameters^
 pck_bods^PackageBods^

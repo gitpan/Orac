@@ -6,6 +6,40 @@ package orac_Informix;
 require orac_Base;
 @orac_Informix::ISA = qw{orac_Base};
 
+#0 = CHAR
+#1 = SMALLINT
+#2 = INTEGER
+#3 = FLOAT
+#4 = SMALLFLOAT
+#5 = DECIMAL
+#6 = SERIAL
+#7 = DATE
+#8 = MONEY
+#9 = n/a
+#10 = DATETIME
+#11 = BYTE
+#12 = TEXT
+#13 = VARCHAR
+#14 = INTERVAL
+#15 = NCHAR
+#16 = NVARCHAR
+my @type_names = qw( CHAR SMALLINT INTEGER FLOAT SMALLFLOAT DECIMAL SERIAL
+                     DATE MONEY not_used DATETIME BYTE TEXT VARCHAR INTERVAL
+                     NCHAR NVARCHAR); 
+#YEAR 0
+#MONTH 2
+#DAY 4
+#HOUR 6
+#MINUTE 8
+#SECOND 10
+#FRACTION(1) 11
+#FRACTION(2) 12
+#FRACTION(3) 13
+#FRACTION(4) 14
+#FRACTION(5) 15
+my @date_names = qw/ YEAR not_used MONTH not_used DAY not_used HOUR not_used
+                     MINUTE not_used SECOND FRACTION(1) FRACTION(2)
+                     FRACTION(3) FRACTION(4) FRACTION(5) /;
 
 =head1 NAME
 
@@ -120,7 +154,7 @@ No args, no return value.
 sub onstat_databases
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Databases", "1");
 }
 
@@ -134,7 +168,7 @@ No args, no return value.
 sub onstat_dbspaces
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("DBSpaces", "1");
 }
 
@@ -148,7 +182,7 @@ No args, no return value.
 sub onstat_chunks
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Chunks", "1");
 }
 
@@ -162,7 +196,7 @@ No args, no return value.
 sub onstat_onconfig_params
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->{Text_var}->insert('end', $self->gf_str("$ENV{INFORMIXDIR}/etc/$ENV{ONCONFIG}"));
 }
 
@@ -210,7 +244,7 @@ No args, no return value.
 sub dbschema_syns
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Synonyms", "1");
 }
 
@@ -225,9 +259,7 @@ No args, no return value.
 sub dbschema_grants
 {
     my $self = shift;
-    # Do your stuff
-    $self->{sql_name} = "Grants";
-    $self->{sql_num} = "1";
+    $self->f_clr();
     $self->show_sql("Grants", "1");
 }
 
@@ -244,7 +276,7 @@ NOT IMPLEMENTED YET!
 sub dbschema_indices
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Indicies", "1");
 }
 
@@ -260,7 +292,7 @@ NOT IMPLEMENTED YET!
 sub dbschema_schema
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Schema", "1");
 
     # IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
@@ -279,7 +311,7 @@ NOT IMPLEMENTED YET!
 sub onstat_threads
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Threads", "1");
 }
 
@@ -310,7 +342,7 @@ No args, no return value.
 sub onstat_blobs
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->show_sql("Blobs", "1");
 }
 
@@ -331,7 +363,7 @@ No args, no return value.
 sub onstat_io_profile
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->live_update("IOProfile", 1, $main::lg{oi_io_profile_title});
 }
 
@@ -347,7 +379,7 @@ No args, no return value.
 sub onstat_locks_held
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->live_update("Locks", 1, $main::lg{locks_held});
 }
 
@@ -362,7 +394,7 @@ No args, no return value.
 sub onstat_tblspace_info
 {
     my $self = shift;
-    # Do your stuff
+    $self->f_clr();
     $self->live_update("TblSpace", 1, $main::lg{oi_tblspace_info});
 }
 
@@ -377,9 +409,7 @@ No args, no return value.
 sub onstat_sessions
 {
     my $self = shift;
-    # Do your stuff
-    $self->{sql_name} = "Sessions";
-    $self->{sql_num} = "1";
+    $self->f_clr();
     $self->live_update("Sessions", 1, $main::lg{oi_sessions});
 }
 
@@ -406,11 +436,14 @@ dependent things.
 
 sub post_process_sql
 {
-    my ($self, $sql_name, $sql_num, $tar) = @_;
-    #print STDERR "post_process_sql: $self->{sql_name} $self->{sql_num}\n";
+    my ($self, $sql_name, $sql_num, $tar, $r_bindees) = @_;
+#print STDERR "post_process_sql: $sql_name $sql_num\n";
     my $key = "$sql_name$sql_num";
     my %care = ( "Sessions1" => 1,
-                 "Grants1" => 1
+                 "Grants1" => 1,
+                 "Tables3" => 1,
+                 "TableInfo2" => 1,
+                 "Blobs1" => 1,
                );
     if ($care{$key})
     {
@@ -454,9 +487,56 @@ sub post_process_sql
                 elsif ($val eq "G") { $val = "role"; }
                 $tar->[$j]->[1] = $val;
             }
+            elsif ($key eq "Tables3")
+            {
+                my $val = $tar->[0]->[3] % 256;
+                # fix col_type
+                $tar->[0]->[3] = col_type($tar->[0]->[3]);
+                # fix DECIMAL fields
+                if ($type_names[$val] eq "DECIMAL")
+                {
+                    $val = $tar->[0]->[4];
+                    $tar->[0]->[4] = sprintf("prec:%d  scale:%d", int($val/256), ($val%256)); 
+                }
+                # fix TIME fields
+                elsif (($type_names[$val] eq "DATETIME") ||
+                       ($type_names[$val] eq "INTERVAL"))
+                {
+                    $val = $tar->[0]->[4];
+                    my $len = int($val/256);
+                    $val -= $len*256;
+                    my $lqv = int($val/16);
+                    my $sqv = int($val%16);
+                    $tar->[0]->[4] = "length:$len  largest:$date_names[$lqv]  smallest:$date_names[$sqv]";
+                }
+            }
+            elsif ($key eq "TableInfo2")
+            {
+                my $val = $tar->[$j]->[7];
+                my $count = 0;
+                ($count) = $self->do_query_fetch1("select count(*) from $r_bindees->[0]");
+                $tar->[$j]->[7] = $count;
+                $tar->[$j]->[6] = col_type($tar->[$j]->[6]);
+            }
+            elsif ($key eq "Blobs1")
+            {
+                $tar->[$j]->[6] = col_type($tar->[$j]->[6]);
+            }
         }
     }
     return;
+}
+
+sub col_type
+{
+    my $val = $_[0];
+    my $nullable = "";
+    if ($val > 255)
+    {
+        $nullable = "  (not null)";
+        $val %= 256;
+    }
+    return "$type_names[$val]$nullable";
 }
 
 ###############################################################################

@@ -23,12 +23,12 @@ command^0^0^trggrs^$main::current_db->generic_hlist^'Triggers'+'.'^
 separator^
 command^0^0^oi_grants^$main::current_db->dbschema_grants^^
 command^0^0^oi_indices^$main::current_db->dbschema_indices^^
-separator^
-command^0^0^oi_schema^$main::current_db->dbschema_schema^^
+#separator^
+#command^0^0^oi_schema^$main::current_db->dbschema_schema^^
 Menubutton^user^
 command^0^0^oi_threads^$main::current_db->onstat_threads^^
 command^0^0^oi_curr_sql^$main::current_db->onstat_curr_sql^^
-command^0^0^oi_expl_err^$main::current_db->finderr_num^^
+#command^0^0^oi_expl_err^$main::current_db->finderr_num^^
 Menubutton^tune^
 command^0^0^oi_io_profile^$main::current_db->onstat_io_profile^^
 command^0^0^lcks_held^$main::current_db->onstat_locks_held^^

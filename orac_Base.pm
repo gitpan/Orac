@@ -19,8 +19,10 @@ inherited and used as is.
  &Dump()
  &about_orac()
  &add_contents()
+ &do_a_generic()
  &db_check_error()
  &do_query()
+ &do_query_fetch1()
  &do_query_fetch_all()
  &f_clr()
  &f_str()
@@ -51,7 +53,8 @@ inherited and used as is.
               do_query_fetch_all db_check_error print_stack live_update
               stop_live_update f_str get_frm f_clr must_f_clr see_plsql
               see_sql about_orac gf_str need_sys need_ps generic_hlist
-              show_or_hide add_contents post_process_sql );
+              show_or_hide add_contents post_process_sql do_a_generic
+              do_query_fetch1 );
 
 use strict;
 
@@ -227,7 +230,7 @@ sub get_lines
    my @tlen;
    my @names = @{$sth->{NAME}};
 
-   $self->post_process_sql($sql_name, $sql_num, $tar);
+   $self->post_process_sql($sql_name, $sql_num, $tar, \@bindees);
 
    # as this is new, how do I know if the user's version has 
    # this before I use it?
@@ -384,6 +387,35 @@ sub do_query_fetch_all
 
    return $tbl_ary_ref;
 }
+
+=head2 array do_query_fetch1(statement)
+
+This subroutine takes an SQL statement (a select) as ARG 1, executes it,
+fetches the 1 row as the answer, and returns that row as an
+array for the answer.  If it fails, it dies.
+
+This is useful for those times you KNOW you're getting back a single row,
+or even a single value; e.g. a count.
+
+Example:
+   ($count) = do_query_fetch1("select count(*) from table");
+
+=cut
+
+sub do_query_fetch1
+{
+   my ($self, $stmt) = @_;
+   my @row_ary;
+   my $sth;
+
+   $sth = $self->do_query($stmt);
+   @row_ary  = $sth->fetchrow_array();
+   $self->db_check_error($stmt, "Fetch");
+   $sth->finish();
+
+   return @row_ary;
+}
+
 # generic check for errors while interacting with the DB
 sub db_check_error
 {
@@ -437,7 +469,11 @@ sub live_update
 {
    my $self = shift;
 
-   my ($sql_name, $sql_num, $title) = @_;
+   my ($sql_name, $sql_num, $title, $sleeptime) = @_;
+
+   if(!defined($sleeptime)){
+      $sleeptime = 1;
+   }
 
    # some sanity checking :-)
    unless ($sql_name) { return; }
@@ -472,7 +508,7 @@ sub live_update
 
       $self->{Text_var}->update();
 
-      sleep(1);
+      sleep($sleeptime);
    }
 
    # the user hit stop, so remove the stop button
@@ -502,17 +538,17 @@ sub f_str {
    my $rt = "";
 
    if(defined($sub) && defined($number)){
-      my $file = 'sql/' . 
+      my $file = ($self->{Database_type} eq "tools" ? $main::orac_home : $FindBin::RealBin) . 
+		         '/sql/' . 
                  $self->{Database_type} . 
                  '/' . 
                  sprintf("%s.%s.sql",$sub,$number);
 
       print STDERR "f_str: file >$file<\n" if ($main::debug > 0);
 
+	  local ($/) = (undef); # make the line delimiter empty to read in file in one call
       open(SQL,$file);
-      while(<SQL>){
-         $rt = $rt . $_;
-      }
+      $rt = <SQL>; # read in file in one fell swoop
       close(SQL);
    }
    return $rt;
@@ -614,10 +650,11 @@ sub see_sql {
                          -width=>60,
                          -wrap=>'none',
                          -cursor=>undef,
+						 -setgrid=>1,
                          -foreground=>$main::fc,
                          -background=>$main::bc);
 
-   $t->pack(-expand=>1,-fil=>'both');
+   $t->pack(-expand=>1,-fill=>'both');
    tie (*THIS_TEXT,'Tk::Text',$t);
    print THIS_TEXT "$_[1]\n";
    $d->Show;
@@ -646,8 +683,9 @@ sub gf_str
 
    if (-r $file)
    {
+	  local ($/) = (undef);  # unset so the file will be read in all at once
       open(SQL, "<$file") or return "ERROR:  can not open $file\n";
-      $rt = $rt . $_ while(<SQL>);
+      $rt = <SQL>;  # read entire file at once
       close(SQL);
    }
    return $rt;
@@ -745,9 +783,9 @@ sub generic_hlist
                            )->pack('-fill'   => 'both',
                                    '-expand' => 'both');
 
-   $open_folder_bitmap = $g_mw->Photo(-file=>'img/folder.open.gif');
-   $closed_folder_bitmap = $g_mw->Photo(-file=>'img/folder.gif');
-   $file_bitmap = $g_mw->Photo(-file=>'img/clipbrd.gif');
+   $open_folder_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/folder.open.gif");
+   $closed_folder_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/folder.gif");
+   $file_bitmap = $g_mw->Photo(-file=>"$FindBin::RealBin/img/clipbrd.gif");
 
    my $cm = $self->f_str( $g_hlst ,'1');
    print STDERR "prepare1: $cm\n" if ($main::debug > 0);
@@ -792,7 +830,7 @@ sub show_or_hide
    my $x = $path;
 
    print STDERR "before x=>$x<\n" if ($main::debug > 0);
-   $x =~ s/[^.$gen_sep]//ge;
+   $x =~ s/[^.$gen_sep]//g;
    print STDERR "after  x=>$x<\n" if ($main::debug > 0);
 
    $g_hlvl = length($x) + 1;
@@ -843,7 +881,7 @@ sub add_contents
 
    # is there another level down?
    my $x = $path;
-   $x =~ s/[^.$gen_sep]//ge;
+   $x =~ s/[^.$gen_sep]//g;
    $g_hlvl = length($x) + 2;
    my $bitmap = (sql_file_exists($self->{Database_type}, $g_hlst, $g_hlvl + 1)
                 ? $closed_folder_bitmap
@@ -852,11 +890,11 @@ sub add_contents
    # get the SQL & execute!
    my $s = $self->f_str( $g_hlst, $g_hlvl);
    print STDERR "prepare2: SQL>\n$s\n<\n ($path)\n" if ($main::debug > 0);
-   my $sth = $self->{Database_conn}->prepare( $s ) or die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $s )
+      or die $self->{Database_conn}->errstr; 
 
    # in theory this should work, COOL! I didn't know you could 
-   # give split a variable
-   # for the RE pattern. :-)
+   # give split a variable for the RE pattern. :-)
 
    my @params = split("\\$gen_sep", $path);
 
@@ -867,12 +905,18 @@ sub add_contents
    # should we search $s for number of placeholders, 
    # and restrict @params to that number?
 
-   $sth->execute(@params);
+   if ($self->{Database_type} ne 'Sybase') {
+       $sth->execute(@params);
+   } else {
+       $self->{Database_conn}->do("use @params");
+       $sth ->execute;
+   }
 
    # fetch the values
    my @res;
    while (@res = $sth->fetchrow)
    {
+      $self->post_process_sql( $g_hlst, $g_hlvl, [ \@res ], \@params );
       # if the result has multiple columns, assume there will only be 1 row,
       # but we should display the columns as rows; but if there is only
       # 1 column, assume we'll get multiple rows/fetchs
@@ -898,6 +942,20 @@ sub add_contents
       }
    }
    $sth->finish;
+}
+
+=head2 do_a_generic
+
+A support function of generic_hlist, DO NOT CALL DIRECTLY!!!
+
+show_or_hide calls this when it needs to add new items.
+The base, no nothing, version.
+
+=cut
+
+sub do_a_generic
+{
+   return;
 }
 
 =head2 sql_file_exists

@@ -24,6 +24,9 @@ use FileHandle;
 use Cwd;
 use Time::Local;
 use DBI;
+use File::Copy;
+use FindBin;
+use lib $FindBin::RealBin;
 
 # A hunky clundgy kinda-of-a-thing
 # to handle screen resizing
@@ -41,7 +44,7 @@ use orac_Shell;
 
 use orac_Oracle;
 use orac_Informix;
-#use orac_Sybase;
+use orac_Sybase;
 
 # Read the menu/English.txt file to pick up all text
 # for use with the rest of the program
@@ -53,12 +56,15 @@ main::read_language();
 
 main::pick_up_defaults();
 
-$main::orac_version = '1.1.14';
+$main::orac_version = '1.1.16';
 
 $main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
 $main::ec = $main::lg{def_fill_fld_col};
 $main::fc = $main::lg{def_fg_col};
+
+# Added by Alex Shnir to support color change in Create Table(Sybase)
+$main::sc = $main::lg{def_bg_col};
 
 # Debugging flag for developers?
 # for kevinb :)
@@ -88,10 +94,13 @@ $main::mw = MainWindow->new();
 my(@layout_mb) = qw/-side top -padx 5 -expand no -fill both/;
 $main::mb = $main::mw->Frame->pack(@layout_mb);
 
-my $orac_li = $main::mw->Photo(-file=>'img/orac.gif');
+my $orac_li = $main::mw->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
-$main::conn_ball{green} = $main::mw->Photo( -file => "img/grn_ball.gif" );
-$main::conn_ball{red} = $main::mw->Photo( -file => "img/red_ball.gif" );
+$main::conn_ball{green} = 
+   $main::mw->Photo( -file => "$FindBin::RealBin/img/grn_ball.gif" );
+
+$main::conn_ball{red} = 
+   $main::mw->Photo( -file => "$FindBin::RealBin/img/red_ball.gif" );
 
 $main::mb->Label(-image=>$orac_li,
                  -borderwidth=>2,
@@ -111,25 +120,29 @@ $file_mb->command(-label=>$main::lg{reconn},
 
 $file_mb->command(-label=>$main::lg{about_orac},
                   -command=>
-                      sub{ main::bz();
-                           $main::current_db->f_clr($main::v_clr);
-                           $main::current_db->about_orac('README');
-                           main::ubz()
+                      sub{ 
+                 main::bz();
+                 $main::current_db->f_clr($main::v_clr);
+                 $main::current_db->about_orac("$FindBin::RealBin/README");
+                 main::ubz()
                          }
                  );
 
 $file_mb->command(-label=>$main::lg{menu_config},
                   -command=>
-                     sub{  main::bz();
-                           $main::current_db->f_clr($main::v_clr);
-                           $main::current_db->about_orac('txt/menu_config.txt');
-                           main::ubz()
+
+                     sub{  
+      main::bz();
+      $main::current_db->f_clr($main::v_clr);
+      $main::current_db->about_orac("$FindBin::RealBin/txt/menu_config.txt");
+      main::ubz()
                         }
                  );
+
 $file_mb->separator();
 
 # Build up the colour options, so
-# a nice lemonchiffon is possible as a backdrop
+# a nice lemonchiffon is possible as a backdrop :)
 
 $main::bc_txt = $main::lg{back_col_menu};
 $file_mb->cascade(-label=>$main::bc_txt);
@@ -139,7 +152,7 @@ $main::bc_cols = $main::bc_men->Menu;
 # Now pick up all the lovely colours and build a radiobutton
 
 $file_mb->entryconfigure($main::bc_txt,-menu=>$main::bc_cols);
-open(COLOUR_FILE, "txt/colours.txt");
+open(COLOUR_FILE, "$FindBin::RealBin/txt/colours.txt");
 while(<COLOUR_FILE>){
    chomp;
    eval {
@@ -174,6 +187,8 @@ my $main_label = $main::mb->Label( -image => $main::conn_ball{red},
 (@layout_mb) = qw/-side top -expand yes -fill both/;
 my $middle_box = $main::mw->Frame->pack(@layout_mb);
 
+# Slap up the main Output Box
+
 $main::v_text = $middle_box->Scrolled(  'Text',
                                         -wrap=>'none',
                                         -cursor=>undef,
@@ -181,7 +196,7 @@ $main::v_text = $middle_box->Scrolled(  'Text',
                                         -background=>$main::bc
                                      );
 
-$main::v_text->pack(-expand=>1,-fil=>'both');
+$main::v_text->pack(-expand=>1,-fill=>'both');
 tie (*TEXT,'Tk::Text',$main::v_text);
 
 # Sort out the options to clear the screen on
@@ -210,6 +225,8 @@ $bb->Radiobutton(-variable=>\$main::v_clr,
                  -text=>$main::lg{auto_clear},
                  -value=>'Y'
                 )->pack (side=>'left');
+
+# Now the Reconnection Button
 
 $bb->Button(-text=>$main::lg{reconn},
             -command=>sub{main::bz();
@@ -273,7 +290,7 @@ sub fill_defaults {
 
    my($db_typ, $dba, $loc_bc, $db) = @_;
 
-   open(DB_FIL,'>config/what_db.txt');
+   open(DB_FIL,">$main::orac_home/what_db.txt");
 
    print DB_FIL $db_typ . 
                 '^' . 
@@ -332,13 +349,13 @@ sub get_connected {
                                                  $main::orac_version );
 
       }
-#     elsif($main::orac_curr_db_typ eq 'Sybase'){
-#
-#         $main::current_db = orac_Sybase->new( $main::mw, 
-#                                               $main::v_text,
-#                                               $main::orac_version );
-#
-#      }
+      elsif($main::orac_curr_db_typ eq 'Sybase'){
+ 
+          $main::current_db = orac_Sybase->new( $main::mw, 
+                                                $main::v_text,
+                                                $main::orac_version );
+ 
+      }
       else {
 
          $main::current_db = 
@@ -377,7 +394,7 @@ sub get_connected {
       my @ic;
       my $ic;
       my $i;
-      for ($i = 1;$i < $h;$i++){
+      for ($i = 0;$i < $h;$i++){
          @ic = split(/:/,$h[$i]);
          $ic = @ic;
          $ls_db{$ic[($ic - 1)]} = 101;
@@ -386,7 +403,11 @@ sub get_connected {
       # Supplement these, with stored database to which they've
       # successfully connected in the past 
 
-      if (open(DBFILE,"txt/" . $main::orac_curr_db_typ . "/orac_db_list.txt")){
+      if (   open(DBFILE,"$FindBin::RealBin/txt/" . 
+                         $main::orac_curr_db_typ . 
+                         "/orac_db_list.txt")
+         )
+      {
          while(<DBFILE>){
             chomp;
             $ls_db{$_} = 102;
@@ -582,7 +603,7 @@ sub get_connected {
                      # in the browse option for later use
 
                      open(DBFILE,
-                          ">>txt/" . 
+                          ">>$FindBin::RealBin/txt/" . 
                           $main::orac_curr_db_typ . 
                           "/orac_db_list.txt");
 
@@ -663,6 +684,7 @@ sub select_dbtyp {
                         );
 
       my $b_d = $d->BrowseEntry(-cursor=>undef,
+                                -state=>'readonly',
                                 -variable=>\$loc_db,
                                 -foreground=>$main::fc,
                                 -background=>$main::ec,
@@ -671,7 +693,8 @@ sub select_dbtyp {
    
       # Check out which DBs we're currently allowed to pick from
 
-      open(DB_FIL,'config/all_dbs.txt');
+      open(DB_FIL,"$main::orac_home/all_dbs.txt") ||
+		open(DB_FIL, "$FindBin::RealBin/config/all_dbs.txt");
       my $i = 0;
       while(<DB_FIL>){
          my @hold = split(/\^/, $_);
@@ -719,7 +742,8 @@ sub get_dba_user {
 
    # Picks up the typical DBA user for the particular database
 
-   open(DB_FIL,'config/all_dbs.txt');
+   open(DB_FIL,"$main::orac_home/all_dbs.txt") ||
+	 open(DB_FIL, "$FindBin::RealBin/config/all_dbs.txt");
    while(<DB_FIL>){
       my @hold = split(/\^/, $_);
       if ($db eq $hold[0]){
@@ -769,9 +793,10 @@ sub mes {
    my $d = $_[0]->DialogBox();
    my $t = $d->Scrolled( 'Text',
                          -cursor=>undef,
-                         -foreground=>$main::fc,
-                         -background=>$main::bc);
-   $t->pack(-expand=>1,-fil=>'both');
+						 -setgrid => 1,
+                         -height=>10,
+                       );
+   $t->pack(-expand=>1,-fill=>'both');
    $t->insert('end', $_[1]);
    $d->Show;
 }
@@ -793,7 +818,9 @@ sub bc_upd {
    {
       if (defined($main::swc{$f})){
 
-         print STDERR "main swc f state >" . $main::swc{$f}->state . "< \n" if ($main::debug > 0);
+         print STDERR "main swc f state >" . 
+                      $main::swc{$f}->state . 
+                      "< \n" if ($main::debug > 0);
 
          my $comp_str = $main::swc{$f}->state;
 
@@ -811,7 +838,7 @@ sub read_language {
    # language file, and pick up all
    # the strings required by Orac
 
-   open(TITLES_FILE, "txt/English.txt");
+   open(TITLES_FILE, "$FindBin::RealBin/txt/English.txt");
    my $lhand;
    my $rhand;
    while(<TITLES_FILE>){
@@ -831,8 +858,11 @@ sub get_language_data {
    # language file, and pick up all
    # the strings required by Orac
 
-   open(TITLES_FILE, "txt/languages.txt") or die "can't open txt/languages.txt";
+   open(TITLES_FILE, "$FindBin::RealBin/txt/languages.txt") 
+      or die "can't open $FindBin::RealBin/txt/languages.txt";
+
    # expect to find:  language_label,language_file
+
    my $lhand;
    my $rhand;
    undef %main::languages;
@@ -843,11 +873,16 @@ sub get_language_data {
    close(TITLES_FILE);
 }
 sub read_language_file {
+
    # ARG1 = language_label picked
-   my $file = "txt/$main::languages{$_[0]}";
+
+   my $file = "$FindBin::RealBin/txt/$main::languages{$_[0]}";
+
    open(TITLES_FILE, "<$file") or die "can't open language file $file";
+
    my $lhand;
    my $rhand;
+
    while(<TITLES_FILE>){
       ($lhand,$rhand) = split(/\^/, $_);
       $main::lg{$lhand} = $rhand;
@@ -882,7 +917,7 @@ sub config_menu {
    # Initialize variables to prevent
    # warnings
 
-   my $file = "menu/$main::orac_curr_db_typ/menu.txt";
+   my $file = "$FindBin::RealBin/menu/$main::orac_curr_db_typ/menu.txt";
    open(MENU_F, $file);
    while(<MENU_F>){
 
@@ -972,8 +1007,14 @@ sub config_menu {
             '}, -menu => $main::casc_item); ' . 
             "\n";
       }
+      if ($menu_line[0] eq 'add_cascade_button') {
+         $menu_command .= $main::current_db->add_cascade_button($menu_line[1]);
+      }
    }
    close(MENU_F);
+
+   # And if you think it was fun writing that stuff above,
+   # then you ain't coming to no parties of mine :)
 
    # Here we go!  Slap up those menus.
 
@@ -989,35 +1030,14 @@ sub config_menu {
                                                 -padx=>2);
    $main::sub_win_but_hand{dbish} =
       $main::tm_but[$main::tm_but_ct]->command(
-                         -label=>$main::lg{dbish},
 
+                         -label=>$main::lg{dbish},
                          -command=>sub{  
 
-print STDERR "\n\n" . Tk::Pretty::Pretty( $main::mw->configure ) . "\n\n" 
-   if ($main::debug > 0);
-my $nt = "Special Note for 1.1.13\n" .
-         "-----------------------\n" .
-         "The orac_Shell utility is based partially upon a\n" .
-         "pre-official version of Format.pm, which will\n" .
-         "probably be released in a forthcoming the DBI distribution.\n" .
-         "In order to get orac_Shell to work, please move your\n" .
-         "current DBI::Format files from Format.pm to Format.pm.old,\n" .
-         "or whatever, and replace them with the Format.pm file\n" .
-         "in this directory.  We will let you know when this file\n" .
-         "is available in a 'real' DBI release, and will update\n" .
-         "this README file accordingly.  In the meantime, I hope\n" .
-         "you enjoy using Tom Lowery's excellent orac_Shell functionality.\n" .
-         "\n" .
-         "Rgds,\n" .
-         "AndyD :)";
-main::mes($main::mw, $nt);
-                                         main::bz();
-
-         print STDERR "mw >$main::mw<,  dbh >$main::dbh< \n" if ($main::debug > 0);
-
-                                         $main::shell = orac_Shell->new( $main::mw, $main::dbh );
-                                         $main::shell->dbish_open();
-                                         main::ubz()
+                     main::bz();
+                     $main::shell = orac_Shell->new( $main::mw, $main::dbh );
+                     $main::shell->dbish_open();
+                     main::ubz()
                                       }
                                               );
    return;
@@ -1037,7 +1057,8 @@ sub Jareds_tools {
           ' [[Button=>$main::lg{help_with_tools},' .
           ' -command=>sub{main::bz();' . "\n" .
           ' $main::current_db->f_clr($main::v_clr);' . "\n" .
-          ' $main::current_db->about_orac(\'txt/help_with_tools.txt\');' . 
+          ' $main::current_db->about_orac' .
+             '("$FindBin::RealBin/txt/help_with_tools.txt");' . 
           "\n" .
           ' main::ubz()}], ' . "\n" .
           '  [Cascade=>$main::lg{config_tools},-menuitems => ' . "\n" .
@@ -1075,7 +1096,7 @@ sub Jareds_tools {
           '  ], ' . "\n" .
           '  [Separator=>\'\'], ' . "\n";
 
-      if(open(JT_CASC,'tools/config.tools')){
+      if(open(JT_CASC,"$main::orac_home/config.tools")){
          while(<JT_CASC>){
             my @jt_casc = split(/\^/, $_);
             if ($jt_casc[0] eq 'C'){
@@ -1085,7 +1106,7 @@ sub Jareds_tools {
                            $jt_casc[2] . 
                            '\',-menuitems => [ ' . "\n";
 
-               open(JT_CASC_BUTTS,'tools/config.tools');
+               open(JT_CASC_BUTTS,"$main::orac_home/config.tools");
                while(<JT_CASC_BUTTS>){
                   my @jt_casc_butts = split(/\^/, $_);
                   if (($jt_casc_butts[0] eq 'B') && 
@@ -1127,7 +1148,7 @@ sub save_sql {
    # save it into the appropriate file
 
    my($filename) = @_;
-   main::orac_copy($filename,"${filename}.old");
+   copy($filename,"${filename}.old");
 
    open(SAV_SQL,">$filename");
    print SAV_SQL $main::swc{ed_butt_win}->{text}->get("1.0", "end");
@@ -1141,7 +1162,7 @@ sub ed_butt {
 
    my($casc,$butt) = @_;
    my $ed_fl_txt = main::get_butt_text($casc,$butt);
-   my $sql_file = 'tools/sql/' . $casc . '.' . $butt . '.sql';
+   my $sql_file = $main::orac_home.'/sql/tools/' . $casc . '.' . $butt . '.sql';
    
    $main::swc{ed_butt_win} = MainWindow->new();
 
@@ -1260,7 +1281,7 @@ sub config_Jared_tools {
 
          my @inp_value;
          my $inp_count = 0;
-         if(open(JT_CONFIG,'tools/config.tools')){
+         if(open(JT_CONFIG,"$main::orac_home/config.tools")){
             while(<JT_CONFIG>){
                my @hold = split(/\^/, $_);
 
@@ -1322,7 +1343,7 @@ sub config_Jared_tools {
       if(($param == 69)||
          ($param == 49)){
 
-         open(JT_CONFIG_READ,'tools/config.tools');
+         open(JT_CONFIG_READ,"$main::orac_home/config.tools");
 
          while(<JT_CONFIG_READ>){
 
@@ -1357,7 +1378,7 @@ sub config_Jared_tools {
 
                       )->pack(side=>'right');
 
-      # Stand by your grids!
+      # Stand by your priests!
 
       Tk::grid($l,-row=>0,-column=>0,-sticky=>'e');
       Tk::grid($cs,-row=>0,-column=>1,-sticky=>'ew');
@@ -1370,7 +1391,7 @@ sub config_Jared_tools {
                return (1,$inp_text);
             } else {
 
-               open(JT_CONFIG_APPEND,'>>tools/config.tools');
+               open(JT_CONFIG_APPEND,">>$main::orac_home/config.tools");
                if($param == 1){
 
                   print JT_CONFIG_APPEND $main_check . 
@@ -1492,7 +1513,7 @@ sub config_Jared_tools {
 
       my $i_count = 0;
 
-      if(open(JT_CONFIG,'tools/config.tools')){
+      if(open(JT_CONFIG,"$main::orac_home/config.tools")){
 
          while(<JT_CONFIG>){
             my @hold = split(/\^/, $_);
@@ -1517,6 +1538,11 @@ sub config_Jared_tools {
             }
          }
       }
+
+      # Ok, Ok, this stuff is all horrible, but I ain't rewriting
+      # it.  If you want to code improvements, please, please, please
+      # get in touch!!!  :)
+
       if ($i_count > 0){
          @casc2 = sort @casc1;
          $i_count = 0;
@@ -1544,6 +1570,7 @@ sub config_Jared_tools {
                $d_inp = $casc2[$i_count];
 
                $b_d = $d->BrowseEntry( -cursor=>undef,
+                                       -state=>'readonly',
                                        -variable=>\$d_inp,
                                        -foreground=>$main::fc,
                                        -background=>$main::ec,
@@ -1614,11 +1641,11 @@ sub config_Jared_tools {
                       (length($safe_flag)) && 
                       ($safe_flag == 1)){
 
-                     main::orac_copy('tools/config.tools',
-                                     'tools/config.tools.old');
+                    copy("$main::orac_home/config.tools",
+                                     "$main::orac_home/config.tools.old");
 
-                     open(JT_CONFIG_READ,'tools/config.tools.old');
-                     open(JT_CONFIG_WRITE,'>tools/config.tools');
+                     open(JT_CONFIG_READ,"$main::orac_home/config.tools.old");
+                     open(JT_CONFIG_WRITE,">$main::orac_home/config.tools");
 
                      while(<JT_CONFIG_READ>){
                         chomp;
@@ -1691,7 +1718,7 @@ sub config_Jared_tools {
 
                } elsif($param == 79) {
 
-                  my $filename = 'tools/sql/' . 
+                  my $filename = $main::orac_home .'/sql/tools/' . 
                                  $loc_casc . 
                                  '.' . 
                                  $fin_inp . 
@@ -1725,8 +1752,8 @@ sub config_Jared_tools {
    main::Jareds_tools();
 }
 sub sort_Jareds_file {
-   main::orac_copy('tools/config.tools','tools/config.tools.sort');
-   open(JT_CONFIG_READ,'tools/config.tools.sort');
+   copy("$main::orac_home/config.tools","$main::orac_home/config.tools.sort");
+   open(JT_CONFIG_READ,"$main::orac_home/config.tools.sort");
    my @file_read;
    my @file_write;
    my $i_count = 0;
@@ -1737,7 +1764,7 @@ sub sort_Jareds_file {
    }
    close(JT_CONFIG_READ);
 
-   open(JT_CONFIG_WRITE,'>tools/config.tools');
+   open(JT_CONFIG_WRITE,">$main::orac_home/config.tools");
    @file_write = sort @file_read;
    $i_count = 0;
    foreach(@file_write){
@@ -1752,7 +1779,7 @@ sub get_butt_text {
 
    my($casc,$butt) = @_;
    my $title = '';
-   open(JARED_FILE,'tools/config.tools');
+   open(JARED_FILE,"$main::orac_home/config.tools");
    while(<JARED_FILE>){
       my @hold = split(/\^/, $_);
       if(($hold[0] eq 'B') && ($hold[1] eq $casc) && ($hold[2] eq $butt)){
@@ -1807,35 +1834,17 @@ sub del_Jareds_tools {
       $main::jt = undef;
    }
 }
-sub orac_copy {
 
-   # This is to avoid Orac becoming OS dependent.
-   # Obviously, on UNIX it would be easy to write
-   # system("cp $file1 $file2");, but this would
-   # make us dependent on UNIX.  Hopefully, this
-   # function provided file copying functionality
-   # without tying Orac down to the OS.
-
-   my($ammo,$target) = @_;
-   if(open(ORAC_AMMO,"$ammo")){
-      if(open(ORAC_TARGET,">${target}")){
-         while(<ORAC_AMMO>){
-            print ORAC_TARGET $_;
-         }
-         close(ORAC_TARGET);
-      }
-      close(ORAC_AMMO);
-   }
-}
 sub iconize {
 
    # Take a Window handle, and tie an icon 
    # to it.
 
    my($w) = @_;
-   my $icon_img = $w->Photo('-file' => 'img/orac.gif');
+   my $icon_img = $w->Photo('-file' => "$FindBin::RealBin/img/orac.gif");
    $w->Icon('-image' => $icon_img);
 }
+
 sub pick_up_defaults {
 
    # This allows user to select main database type.
@@ -1845,8 +1854,35 @@ sub pick_up_defaults {
 
    $main::bc = $main::lg{def_backgr_col};
 
+   if ($ENV{ORAC_HOME})
+   {
+	 $main::orac_home = $ENV{ORAC_HOME};
+   }
+   elsif ($^O =~ /MSWin/ && $ENV{USERPROFILE})
+   {
+	 $main::orac_home = $ENV{USERPROFILE} . "/orac";
+   }
+   elsif ($ENV{HOME})
+   {
+	 $main::orac_home = $ENV{HOME} . "/.orac";
+   }
+
+   die "Please set environment variable ORAC_HOME to a " .
+       "directory for user customization and rerun.\n" 
+      unless $main::orac_home;
+   
+   unless (-d $main::orac_home)
+   {
+	 die "Unable to create ORAC_HOME: $!\n" 
+            unless mkdir($main::orac_home, 0700);
+	 die "Unable to create ORAC_HOME/sql: $!\n" 
+            unless mkdir("$main::orac_home/sql", 0700);
+	 die "Unable to create ORAC_HOME/sql/tools: $!\n" 
+            unless mkdir("$main::orac_home/sql/tools", 0700);
+   }
+
    my $i = 0;
-   my $file = 'config/what_db.txt';
+   my $file = "$main::orac_home/what_db.txt";
    if(-e $file){
       open(DB_FIL,$file);
       while(<DB_FIL>){
@@ -1861,6 +1897,7 @@ sub pick_up_defaults {
    }
    return;
 }
+
 BEGIN {
 
    # If any non-fatal warnings/errors are detected by
@@ -1872,36 +1909,48 @@ BEGIN {
    # on database connection, until the last variation
    # on database connection is attempted.
 
-# Old warning code, needed to be modified due
-# to Sybase's requirements.
-#
    $SIG{__WARN__} = sub{
-      if ((!defined($main::conn_comm_flag)) || ($main::conn_comm_flag == 0)){
-         if (defined $main::mw) {
-            main::mes($main::mw,$_[0]);
-         } else {
+
+      my $warning = $_[0];
+
+      if ( (!defined($main::conn_comm_flag)) || 
+           ($main::conn_comm_flag == 0)
+         )
+      {
+         chop $warning;
+
+         my $loc_comp_str = 'Object does not have any ' .
+                            'declarative constraints.';
+
+	 if (defined($main::orac_curr_db_typ))
+         {
+	    if (($main::orac_curr_db_typ eq 'Sybase') && 
+                (($warning eq $loc_comp_str) || 
+                 ($warning eq ' ')
+                )
+               ) 
+            {
+               return;
+            }
+         }
+	 if (defined $main::mw) 
+         {
+	    main::mes($main::mw,$warning);
+	 } 
+         else 
+         {
             print STDOUT join("\n",@_),"n";
          }
+
+	 # Handle print command in SQL 
+         # (sybase print sends output to message handler)
+
+      } 
+      elsif ($main::conn_comm_flag == 999) 
+      {
+         $main::store_msgs .= $warning;
       }
    };
-
-#   $SIG{__WARN__} = sub{
-#       my $warning = $_[0];
-#if ((!defined($main::conn_comm_flag)) || ($main::conn_comm_flag == 0)){
-#    chop $warning;
-#    return if ($main::orac_curr_db_typ eq 'Sybase' && ($warning eq 'Object does not have any declarative constraints.' || $warning eq ' '));
-#    if (defined $main::mw) {
-#      main::mes($main::mw,$warning);
-#    } else {
-#	print STDOUT join("\n",@_),"n";
-#    }
-#    # Handle print command in SQL (sybase print sends output to message handler)
-#} elsif ($main::conn_comm_flag == 999) {
-#    $main::store_msgs .= $warning;
-#}
-#   };
 }
 
-# my $e = $cw->Subwidget("top")->pack(side=>'top',fill=>'both',expand=>'y');
-# $cw->Subwidget("bottom")->pack(side=>'bottom',before=>$e,expand=>'n');
-
+# EOF

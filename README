@@ -21,9 +21,9 @@ NB: Please read about the new Orac Users mailing list below :)
 
 Orac WEB PAGE:
 
-You can find our web page at:
+You can usually find our web page at:
 
-=> http://www.kkitts.com/orac-dba/
+=> http://www.kkitts.com/
 
 This is managed by Kevin Kitts.  Please go here for the latest information,
 on Orac.
@@ -58,11 +58,7 @@ PREREQUISITES (For Everybody)
    At least: perl5.005_02
              DBI-1.13
              Tk800.015
-
-PREREQUISITES (For Oracle Users on Solaris):
-
-   You'll need perl5.005_02 & 
-   modules DBD-Oracle-1.03
+             Latest relevant DBD database driver for DBI-1.13
 
 LINUX USERS:
 
@@ -84,13 +80,28 @@ SLIGHTLY LESS QUICK START GUIDE (based upon Oracle on Solaris):
 *). Load perl5.005_02, DBD-Oracle-1.03, DBI-1.13 & Tk800.015
 *). Unzip (gzip -d, gunzip) the Orac-x.y.z.tar.gz file
 *). Untar (tar xvf) the Orac-x.y.z.tar file
-*). cd Orac-x.y.z
 *). Set ORACLE_HOME in your environment
 *). Run orac_dba.pl, first making sure the top line of the
     file has the right Perl string address, eg:
         => #!/usr/local/bin/perl
     Or run it with the Perl program directly, 'perl orac_dba.pl'.
 *). Most things should be fairly straightforward after that.
+
+
+NOTE ON USER CUSTOMISATIONS
+
+User customisations (e.g., last DB accessed and user tool menus) go to either:
+   1) If $ORAC_HOME (%ORAC_HOME% for Windows) exists, to that directory
+   2) If on Windows, %USERPROFILE%/orac
+   3) $HOME/.orac
+
+Users no longer have to cd into the Orac distribution directory.  On
+Unix systems, you could have a symbolic link from
+/usr/local/bin/orac_dba.pl to the Orac distribution directory.  On
+Windows machines, you could have a shortcut to the Orac_dba.pl
+(although this doesn't work from the command line).  $ORAC_HOME can be 
+set to a shared directory if users want to share their user
+customisations.
 
 
 ABOUT Orac:
@@ -127,21 +138,22 @@ our 'Explain Plan' functionality for Oracle users.
 
 Orac MONGERS (in alphabetical surname order):
 
-Name           Email                            Position
-----           -----                            --------
-Kevin Brannen  <kbrannen@physiciansdata.com>    Orac Informix Development
-Andy Duncan    <andy_j_duncan@yahoo.com>        Orac Solaris Development
-Sean Hull      <shull@panix.com>                Orac Oracle Development
-Kevin Kitts    <kkitts@his.com>                 Orac Linux Supremo + Webmaster
-Thomas Lowery  <stlassociates@usa.net>          Orac Shell Development
-Charles Wolfe  <cwolfe@ix.netcom.com>           Orac NT Guru
+Name           Email                            Patch of Interest
+----           -----                            -----------------
+Bruce Albrecht <bruce@zuhause.mn.org>           Multi-User Functionality
+Kevin Brannen  <kbrannen@physiciansdata.com>    Informix/RulesMeister
+Andy Duncan    <andy_j_duncan@yahoo.com>        Oracle
+Sean Hull      <shull@panix.com>                Linux/Oracle
+Kevin Kitts    <kkitts@his.com>                 Linux/Webmaster
+Thomas Lowery  <stlassociates@usa.net>          Shell/OO Development
+Charles Wolfe  <cwolfe@ix.netcom.com>           NT Guru
+Alex Shnir     <alex@getmessage.com>            Sybase
 
 FUTURE OF Orac:
 
-We are aiming, within the next few versions, to move to a completely GPL
-solution.  We also want to create a completely OS independent, database
-independent tool.  If you'd like to help us do this, and/or join the 
-Orac Mongers listing above, please let us know and we'll go from there.
+We want to create a completely OS independent, database
+independent Open Source tool.  If you'd like to help us do this, and/or join
+the Orac Mongers listing above, please let us know and we'll go from there.
 
 
 REVISION HISTORY:
@@ -244,22 +256,11 @@ Orac-1.1.10 A lot more tidying.
 Orac-1.1.11 Additional Oracle items on menus.
 Orac-1.1.12 Bug fixes for Orac-1.1.11 (thanks Duc)
 Orac-1.1.13 More patches, plus latest orac_Shell
-
-            Special Note for 1.1.13
-            -----------------------
-            The orac_Shell utility is based partially upon a
-            pre-official version of Format.pm, which will
-            probably be released in a forthcoming the DBI distribution.
-            In order to get orac_Shell to work, please move your
-            current DBI::Format files from Format.pm to Format.pm.old,
-            or whatever, and replace them with the Format.pm file
-            in this directory.  We will let you know when this file
-            is available in a 'real' DBI release, and will update
-            this README file accordingly.  In the meantime, I hope
-            you enjoy using Tom Lowery's excellent orac_Shell functionality.
-
-            Rgds,
-            AndyD :)
+Orac-1.1.14 More of the same.
+Orac-1.1.15 Gradual Addition of Alex's Sybase functionality.
+            + multi-user functionality added by Bruce Albrecht
+Orac-1.1.16 Private releases of 1.1.15 tidied up, and put together
+            for this public release.
        
 EXTRA NOTES FOR LINUX USERS:
 
@@ -349,9 +350,11 @@ this is the case, you may also need to install the Win32-TieRegistry
 package, also from packages/zips.
 
 
+Download
+--------
 You can download the latest Orac via:
 
-=> http://www.kkitts.com/orac-dba/
+=> http://www.kkitts.com/
 
 or you can download directly from the master CPAN site, here:
 

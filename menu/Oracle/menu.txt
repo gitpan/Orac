@@ -101,6 +101,7 @@ casc_command^0^1^sess_uga_max^$main::current_db->show_sql^'sess_curr_max_mem'+'3
 separator^
 cascade^dbwr^
 casc_command^0^1^file_io^$main::current_db->dbwr_fileio^^
+casc_command^0^1^oracle_sess_io^$main::current_db->live_update^'dbtop'+'1'+$main::lg{oracle_sess_io}^
 casc_command^0^1^dbwr_mon^$main::current_db->show_sql^'dbwr_monitor'+'1'+$main::lg{dbwr_mon}^
 casc_command^0^1^dbwr_lru_ltch^$main::current_db->show_sql^'dbwr_lru_latch'+'1'+$main::lg{dbwr_lru_ltch}^
 cascade^lgwr^

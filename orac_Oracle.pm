@@ -102,7 +102,7 @@ sub tune_wait {
    # Works out if anything is waiting in the database
 
    $self->show_sql( 'tune_wait', '1' , $main::lg{sess_wt_stats} );
-   $self->about_orac('txt/Oracle/tune_wait.1.txt');
+   $self->about_orac("$FindBin::RealBin/txt/Oracle/tune_wait.1.txt");
 
 }
 
@@ -236,7 +236,7 @@ sub all_stf {
 
    $i = 0;
    my $ls;
-   while($i < 20000){
+   while($i < 100000){
       $ls = scalar $self->{Database_conn}->func('dbms_output_get');
       if ((!defined($ls)) || (length($ls) == 0)){
          last;
@@ -265,7 +265,7 @@ sub orac_create_db {
    my $j = 0;
    my $full_list;
 
-   while($j < 10000){
+   while($j < 100000){
       $full_list = scalar $self->{Database_conn}->func('dbms_output_get');
       if ((!defined($full_list))|| (length($full_list) == 0)){
          last;
@@ -1383,7 +1383,7 @@ sub errors_orac {
          my(@err_lay) = qw/-side top -padx 5 -expand no -fill both/;
 
          my $err_menu = $main::swc{errors_orac}->Frame->pack(@err_lay);
-         my $orac_li = $main::swc{errors_orac}->Photo(-file=>'img/orac.gif');
+         my $orac_li = $main::swc{errors_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
          $err_menu->Label(-image=>$orac_li,
                           -borderwidth=>2,
@@ -1471,7 +1471,7 @@ sub dbas_orac {
          my(@dba_lay) = qw/-side top -padx 5 -expand no -fill both/;
 
          my $dba_menu = $main::swc{dbas_orac}->Frame->pack(@dba_lay);
-         my $orac_li = $main::swc{dbas_orac}->Photo(-file=>'img/orac.gif');
+         my $orac_li = $main::swc{dbas_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
          $dba_menu->Label(-image=>$orac_li,
                           -borderwidth=>2,
@@ -1568,7 +1568,7 @@ sub addr_orac {
 
          my(@adr_lay) = qw/-side top -padx 5 -expand no -fill both/;
          my $addr_menu = $main::swc{addr_orac}->Frame->pack(@adr_lay);
-         my $orac_li = $main::swc{addr_orac}->Photo(-file=>'img/orac.gif');
+         my $orac_li = $main::swc{addr_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
 
          $addr_menu->Label( -image=>$orac_li,
@@ -1670,7 +1670,7 @@ sub sids_orac {
 
          my(@sid_lay) = qw/-side top -padx 5 -expand no -fill both/;
          my $sid_menu = $main::swc{sids_orac}->Frame->pack(@sid_lay);
-         my $orac_li = $main::swc{sids_orac}->Photo(-file=>'img/orac.gif');
+         my $orac_li = $main::swc{sids_orac}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
          $sid_menu->Label(
                            -image=>$orac_li,
@@ -1813,7 +1813,7 @@ sub explain_plan {
    my(@exp_lay) = qw/-side top -padx 5 -expand no -fill both/;
    my $dmb = $main::swc{explain_plan}->Frame->pack(@exp_lay);
 
-   my $orac_li = $main::swc{explain_plan}->Photo(-file=>'img/orac.gif');
+   my $orac_li = $main::swc{explain_plan}->Photo(-file=>"$FindBin::RealBin/img/orac.gif");
 
    $dmb->Label( -image=>$orac_li,
                 -borderwidth=>2,
@@ -2437,15 +2437,20 @@ sub do_a_generic {
    my $j = 0;
    my $full_list;
 
-   while($j < 10000){
+   my $consec_empty = 0;
+
+   while($j < 100000){
       $full_list = scalar $self->{Database_conn}->func('dbms_output_get');
-      if(!defined($full_list)){
+      if ((!defined($full_list)) || (length($full_list) == 0)){
+         $consec_empty++;
+      }
+      else {
+         $consec_empty = 0;
+         print L_TEXT "$full_list\n";
+      }
+      if ($consec_empty > 100){
          last;
       }
-      if((length($full_list)) == 0){
-         last;
-      }
-      print L_TEXT "$full_list\n";
       $j++;
    }
    print L_TEXT "\n\n  ";
