@@ -654,9 +654,9 @@ sub generic_hlist
                            )->pack('-fill'   => 'both',
                                    '-expand' => 'both');
 
-   $open_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('openfolder.xbm'));
-   $closed_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('folder.xbm'));
-   $file_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('file.xbm'));
+   $open_folder_bitmap = $g_mw->Photo(-file=>'img/folder.open.gif');
+   $closed_folder_bitmap = $g_mw->Photo(-file=>'img/folder.gif');
+   $file_bitmap = $g_mw->Photo(-file=>'img/clipbrd.gif');
 
    my $cm = $self->f_str( $g_hlst ,'1');
    print STDERR "prepare1: $cm\n" if ($main::debug > 0);
@@ -695,11 +695,15 @@ sub show_or_hide
    my $self = shift;
    my ($path) = @_;
    my $next_entry = $hlist->info('next', $path);
-   #print STDERR "path=$path   next_entry=$next_entry\n" if ($main::debug > 0);
+   print STDERR "path=>$path<   next_entry=$next_entry\n" if ($main::debug > 0);
 
    # Is there another level?
    my $x = $path;
+
+   print STDERR "before x=>$x<\n" if ($main::debug > 0);
    $x =~ s/[^.$gen_sep]//ge;
+   print STDERR "after  x=>$x<\n" if ($main::debug > 0);
+
    $g_hlvl = length($x) + 1;
    my $another_level = sql_file_exists($self->{Database_type},$g_hlst, $g_hlvl + 1);
    if (!$another_level)

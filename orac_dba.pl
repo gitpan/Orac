@@ -53,7 +53,7 @@ main::read_language();
 
 main::pick_up_defaults();
 
-$main::orac_version = '1.1.10';
+$main::orac_version = '1.1.11';
 
 $main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
