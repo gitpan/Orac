@@ -29,6 +29,8 @@ BruceA     990831               DBD::ODBC + DBD::Proxy support of existing
 BruceA     990831               Document orac_dba.pl
 KevinB     990903               Document orac_Base variable/flags,
                                 e.g. dont_need_ps, etc.
+BruceA     990921               Add an input for refresh interval to
+                                live_update()
 
 
 Then we have the wish list.  These are also things we'd like done, but aren't

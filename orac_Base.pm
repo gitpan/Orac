@@ -1,6 +1,7 @@
 package orac_Base;
 use Exporter;
 use Tk::Balloon;
+use File::Basename;
 
 =head1 NAME
 
@@ -46,6 +47,7 @@ inherited and used as is.
  &post_process_sql()
  &print_lines()
  &print_stack()
+ &see_gif()
  &see_plsql()
  &see_sql()
  &show_or_hide()
@@ -61,7 +63,7 @@ inherited and used as is.
 @EXPORT = qw( new Dump init1 init2 show_sql get_lines print_lines do_query
               do_query_fetch_all db_check_error print_stack live_update
               stop_live_update f_str get_frm f_clr must_f_clr see_plsql
-              see_sql about_orac gf_str need_sys need_ps generic_hlist
+              see_sql see_gif about_orac gf_str need_sys need_ps generic_hlist
               show_or_hide add_contents post_process_sql do_a_generic
               do_query_fetch1 create_button_bar window_exit_button
               double_click_message create_balloon_bars top_left_message
@@ -555,6 +557,10 @@ sub f_str {
                  '/' . 
                  sprintf("%s.%s.sql",$sub,$number);
 
+      my $dirname = File::Basename::dirname($file);
+      my $basename = File::Basename::basename($file);
+      $file = File::Spec->join($dirname, $basename);
+
       #print STDERR "f_str: file >$file<\n" if ($main::debug > 0);
 
 	  local ($/) = (undef); # make the line delimiter empty to read in file in one call
@@ -647,14 +653,48 @@ sub see_plsql {
    $self->{Text_var}->insert('end', "\n\n");
 }
 
-sub see_sql {
+sub see_gif {
 
    my $self = shift;
+
+   my ($file, ) = @_;
 
    # Produce the box that contains the viewable SQL
 
    my $window = $self->{Main_window}->Toplevel();
-   $window->title($main::ssq);
+   $window->title( $file );
+
+   my $loc_menu;
+   $self->create_button_bar(\$loc_menu, \$window );
+   $self->window_exit_button(\$loc_menu, \$window );
+
+   my $image = $window->Photo( -file => $file );
+
+   my $l = $window->Label( 
+                        -relief=>'flat',
+                        -image => $image,
+                         );
+
+   $l->pack(-expand=>1,-fill=>'both');
+
+   main::iconize( $window );
+
+}
+sub see_sql {
+
+   my $self = shift;
+
+   my ($ins_window, $ins_text, $title) = @_;
+
+   if (!defined($title) || (length($title) < 1) )
+   {
+      $title = $main::ssq;
+   }
+   # Produce the box that contains the viewable SQL
+
+   my $window = $self->{Main_window}->Toplevel();
+
+   $window->title( $title );
 
    my $loc_menu;
    $self->create_button_bar(\$loc_menu, \$window );
@@ -664,16 +704,14 @@ sub see_sql {
                                           -height=>16,
                                           -width=>60,
                                           -wrap=>'none',
-                                          -cursor=>undef,
                                           -setgrid=>1,
                                           -font=>$main::font{name},
                                           -foreground=>$main::fc,
                                           -background=>$main::bc
                                       );
 
+   $window->{text}->insert('end', $ins_text, );
    $window->{text}->pack(-expand=>1,-fill=>'both');
-   tie (*THIS_TEXT,'Tk::Text',$window->{text});
-   print THIS_TEXT "$_[1]\n";
 
    main::iconize( $window );
 

@@ -151,11 +151,22 @@ sub orac_printer {
 
       my $d = $self->{win}->DialogBox(-title=>$main::lg{print_sel}); 
 
+      my $command = $main::print{command} . ' ' . $filename;
+
+      # The dreaded system command
+
+# !!! KEEP OUT !!! RESTRICTED AREA !!! POLICE LINE !!! DO NOT CROSS !!!
+
+#######################################################################
+      system($command);                                               #
+#######################################################################
+
+# !!! KEEP OUT !!! RESTRICTED AREA !!! POLICE LINE !!! DO NOT CROSS !!!
+
       $d->Label(  
 
          -text=> 'File sent to Printer using command:' . "\n\n" .
-                 $main::print{command} . ' ' . $filename . "\n\n" .
-                 '(not yet - in development)'
+                 $command
 
                 )->pack(-side=>'top');
       $d->Show;
@@ -253,8 +264,7 @@ sub orac_printer {
    $rotate_but->pack(-side => 'left');
    $balloon->attach($rotate_but, -msg => 'Portrait/Landscape Switch' );
 
-   my $paper_type = $f0->BrowseEntry(-cursor=>undef,
-                                     -state=>'readonly',
+   my $paper_type = $f0->BrowseEntry(-state=>'readonly',
                                      -variable=>\$main::print{paper},
                                      -foreground=>$main::fc,
                                      -background=>$main::ec,
@@ -268,8 +278,7 @@ sub orac_printer {
 
    # Command Type
 
-   my $command_but = $f0->Entry( -cursor=>undef,
-                                 -textvariable=>\$main::print{command},
+   my $command_but = $f0->Entry( -textvariable=>\$main::print{command},
                                  -foreground=>$main::fc,
                                  -background=>$main::ec,
                                  -width=>20,
@@ -304,8 +313,10 @@ sub orac_printer {
    $help_but->configure( -image => $help_img,
                          -command => sub {
 
-      $self->f_clr($main::v_clr);
-      $self->about_orac("$FindBin::RealBin/help/PrintSetup.txt");
+      $self->see_sql( $self->{win},
+                      $self->gf_str("$FindBin::RealBin/help/PrintSetup.txt"),
+                      $main::lg{help},
+                    );
 
                                          },
                        );

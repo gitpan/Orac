@@ -123,8 +123,7 @@ workstation.  There may be incompatibilities on your workstation, which may
 need a little source code tinkering.  Our apologies.  Please mail us if this 
 is the case.  Even better, email us the coded up solution :-)
 
-Orac is named after the original Universal Computer, 'Orac' from Blakes' Seven. 
-It is a Perl/Tk tool written in order to store many different and hopefully 
+Orac is a Perl/Tk tool written in order to store many different and hopefully 
 useful SQL scripts within one central easy-to-use interface repository.  
 It is a Read-Only 'as is' GUI tool (ie: no DDL, DML, transactions, commits or 
 rollbacks, only selects)* and will be updated continuously to improve its 
@@ -287,6 +286,19 @@ Orac-1.1.16 Private releases of 1.1.15 tidied up, and put together
             for this public release.
 Orac-1.1.17 private: Further changes to orac_Shell, new orac_Sybase,
             brand new orac_FileSelect module.
+Orac-1.1.18 -
+Orac-1.1.25 Many incremental private releases making as many windows
+            as possible independent, adding Font abilities, limited
+            Print options and a generalised File viewer.  Also
+            much more use of icons to ease use of program.  Functionally
+            not much different from 1.1.16 but hopefully a lot easier,
+            and a lot more pleasant to use.
+Orac-1.1.26 First public release of 'new-look' iconized, independent
+            windowed Orac.  Hope you like it!  :-)  (I do)
+Orac-1.1.27 -
+Orac-1.1.30 Incremental early development of Monitoring + bug fixes,
+            + other bits
+Orac-1.1.31 Public Release of OracMonitor.
        
 EXTRA NOTES FOR LINUX USERS:
 

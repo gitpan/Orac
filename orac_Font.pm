@@ -164,8 +164,7 @@ sub orac_fonter {
                                -anchor=>'e',
                                -justify=>'right');
 
-      $entrys[$i] = $f1->BrowseEntry(-cursor=>undef,
-                                     -state=>'readonly',
+      $entrys[$i] = $f1->BrowseEntry(-state=>'readonly',
                                      -variable=>\$values[$i],
                                      -foreground=>$main::fc,
                                      -background=>$main::ec,

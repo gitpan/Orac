@@ -51,6 +51,7 @@ db_change_mess^Changing DB without correct DBI will cause failure report^
 db_crt^Create Database^
 db_files^Database Files^
 db_info^Database Info^
+db_mon^Database Monitor^
 db_recr_sql^Database Recreation SQL^
 db_type^Database Type^
 dba_views^DBA Tables Viewer^
@@ -132,6 +133,7 @@ lcks_held^Locks Currently Held^
 lgwr^Log Writer^
 lgwr_mon^LGWR Monitor^
 lgwr_redo_ltchs^LGWR Redo Buffer Latches^
+lines^Prefix each line with the Line Number^
 ln_nums^Line Numbers^
 lnks^Links^
 logdon_usrs^Current Logged on Users^
@@ -307,6 +309,8 @@ user_summ^User Activity Summary^
 user_upd_db^Any Users Updating on Database?^
 usergrant^UserGrants^
 users^Users^
+v1^Version 1^
+v2^Version 2^
 vers_info^Version Info^
 views^Views^
 what_sql^What SQL^

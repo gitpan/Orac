@@ -41,6 +41,7 @@ use Cwd;
 use Time::Local;
 use DBI;
 use File::Copy;
+use File::Basename;
 use FindBin;
 use lib $FindBin::RealBin;
 
@@ -61,10 +62,7 @@ use orac_Shell;
 use orac_FileSelect;
 use orac_Font;
 use orac_Print;
-
-use orac_Oracle;
-use orac_Informix;
-use orac_Sybase;
+use orac_Monitor;
 
 # Bring up the main "Worksheet" window
 
@@ -77,14 +75,18 @@ main::read_language();
 
 # Some hard-coded defaults
 
-$main::orac_version = '1.1.26';
+$main::orac_version = '1.1.31';
 
-$main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
 $main::ec = $main::lg{def_fill_fld_col};
 $main::fc = $main::lg{def_fg_col};
 
+# Sybase warnings special variable
+
+undef $main::store_msgs;
+
 # Added by Alex Shnir to support color change in Create Table(Sybase)
+undef $main::sc;
 $main::sc = $main::lg{def_bg_col};
 
 # Debugging flag for developers?
@@ -142,7 +144,6 @@ my $text_box = $main::mw->Frame->pack(-side => 'bottom',
 
 $main::v_text = $text_box->Scrolled(  'Text',
                                       -wrap=>'none',
-                                      -cursor=>undef,
                                    );
 
 # Apparently, we don't need this tying code anymore.
@@ -186,10 +187,16 @@ $file_mb->separator();
 $file_mb->command(-label=>$main::lg{about_orac},
                   -command=>
                       sub{ 
-                 main::bz();
-                 $main::current_db->f_clr($main::v_clr);
-                 $main::current_db->about_orac("$FindBin::RealBin/README");
-                 main::ubz()
+
+   main::bz();
+   $main::current_db->f_clr($main::v_clr);
+   $main::current_db->see_sql( $main::mw,
+                               $main::current_db->gf_str( 
+                                             "$FindBin::RealBin/README"
+                                                        ),
+                               'README',
+                             );
+   main::ubz()
                          }
                  );
 
@@ -211,6 +218,11 @@ foreach my $key (@file_viewers)
    {
       $startdir = $startdir . '/' . $key;
    }
+
+   my $dirname = File::Basename::dirname($startdir);
+   my $basename = File::Basename::basename($startdir);
+   $startdir = File::Spec->join($dirname, $basename);
+
    $main::fileselect{$key}->{startdir} = $startdir;
 }
 
@@ -313,6 +325,25 @@ my $b = $bb->Button(-image=>$b_image,
                    )->pack(side=>'left');
 
 $balloon->attach($b, -msg => $main::lg{reconn});
+
+# The Monitor Button
+
+$b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/monitor.gif");
+
+$b = $bb->Button(-image=>$b_image,
+                 -command=>sub{
+
+      main::bz();
+      my $monitor = orac_Monitor->new( $main::mw,
+                                       $main::v_text,
+                                       $main::lg{db_mon},
+                                 );
+      $monitor->orac_monitor();
+      main::ubz()}
+
+                )->pack(side=>'left');
+
+$balloon->attach($b, -msg => $main::lg{db_mon});
 
 # The Font Button
 
@@ -520,7 +551,9 @@ sub fill_defaults {
 
    my($db_typ, $dba, $loc_bc, $db) = @_;
 
-   open(DB_FIL,">$main::orac_home/what_db.txt");
+   my $filename = File::Spec->join($main::orac_home, 'what_db.txt');
+
+   open(DB_FIL,">$filename");
 
    print DB_FIL $db_typ . 
                 '^' . 
@@ -536,7 +569,9 @@ sub fill_defaults {
 
    # Now deal with fonts.
 
-   open(FONT_FIL,">$main::orac_home/what_font.txt");
+   $filename = File::Spec->join($main::orac_home, 'what_font.txt');
+
+   open(FONT_FIL,">$filename");
 
    print FONT_FIL $main::font{family} . 
                   '^' . 
@@ -552,7 +587,9 @@ sub fill_defaults {
 
    # Now deal with printing options.
 
-   open(PRINT_FIL,">$main::orac_home/what_print.txt");
+   $filename = File::Spec->join($main::orac_home, 'what_print.txt');
+
+   open(PRINT_FIL,">$filename");
 
    print PRINT_FIL $main::print{rotate} . 
                   '^' . 
@@ -606,6 +643,7 @@ sub get_connected {
 
          print STDERR "New Oracle object\n" if ($main::debug > 0);
 
+         require db::orac_Oracle;
          $main::current_db = orac_Oracle->new( $main::mw, 
                                                $main::v_text,
                                                $main::orac_version );
@@ -613,6 +651,7 @@ sub get_connected {
       }
       elsif($main::orac_curr_db_typ eq 'Informix'){
 
+         require db::orac_Informix;
          $main::current_db = orac_Informix->new( $main::mw, 
                                                  $main::v_text,
                                                  $main::orac_version );
@@ -620,9 +659,10 @@ sub get_connected {
       }
       elsif($main::orac_curr_db_typ eq 'Sybase'){
  
-          $main::current_db = orac_Sybase->new( $main::mw, 
-                                                $main::v_text,
-                                                $main::orac_version );
+         require db::orac_Sybase;
+         $main::current_db = orac_Sybase->new( $main::mw, 
+                                               $main::v_text,
+                                               $main::orac_version );
  
       }
       else {
@@ -649,8 +689,7 @@ sub get_connected {
                            -justify=>'right');
 
       my $db_list = 
-                 $c_d->BrowseEntry(-cursor=>undef,
-                                   -variable=>\$main::v_db,
+                 $c_d->BrowseEntry(-variable=>\$main::v_db,
                                    -foreground=>$main::fc,
                                    -background=>$main::ec);
       my %ls_db;
@@ -668,12 +707,18 @@ sub get_connected {
          $ic = @ic;
          $ls_db{$ic[($ic - 1)]} = 101;
       }
-      
+ 
       # Supplement these, with stored database to which they've
       # successfully connected in the past 
 
-      if ( open(DBFILE, "$main::orac_home/txt/$main::orac_curr_db_typ" . 
-                         "/orac_db_list.txt") )
+      my $open_dbfile = "$main::orac_home/txt/$main::orac_curr_db_typ" . 
+                        "/orac_db_list.txt";
+
+      my $dirname = File::Basename::dirname($open_dbfile);
+      my $basename = File::Basename::basename($open_dbfile);
+      $open_dbfile = File::Spec->join($dirname, $basename);
+
+      if ( open(DBFILE, "$open_dbfile" ) )
       {
          while(<DBFILE>){
             chomp;
@@ -704,7 +749,6 @@ sub get_connected {
                            -justify=>'right');
 
       $ps_u = $c_d->add("Entry",
-                        -cursor=>undef,
                         -textvariable=>\$main::sys_user,
                         -foreground=>$main::fc,
                         -background=>$main::ec
@@ -715,7 +759,6 @@ sub get_connected {
                            -justify=>'right');
 
       $ps_e = $c_d->add("Entry",
-                        -cursor=>undef,
                         -show=>'*',
                         -foreground=>$main::fc,
                         -background=>$main::ec
@@ -869,11 +912,19 @@ sub get_connected {
                      # database, store this fact, and put it 
                      # in the browse option for later use
 
-                     my $dir = "$main::orac_home/txt/$main::orac_curr_db_typ";
-                     mkdir ("$main::orac_home/txt", 0755) 
-                        unless -d "$main::orac_home/txt";
+                     my $dirname = "$main::orac_home/txt/" .
+                               "$main::orac_curr_db_typ/dummy";
+
+                     my $dir = File::Basename::dirname($dirname);
+                     my $txt_dir = File::Basename::dirname($dir);
+
+                     mkdir ($txt_dir, 0755) 
+                        unless -d $txt_dir;
+
                      mkdir ($dir, 0755) unless -d $dir;
-                     my $file = "$dir/orac_db_list.txt";
+
+                     my $file = File::Spec->join($dir, 'orac_db_list.txt');
+
                      if (open(DBFILE, ">>$file")) {
                         print DBFILE "$main::v_db\n";
                         close(DBFILE);
@@ -969,8 +1020,7 @@ sub select_dbtyp {
                          -justify=>'right'
                         );
 
-      my $b_d = $d->BrowseEntry(-cursor=>undef,
-                                -state=>'readonly',
+      my $b_d = $d->BrowseEntry(-state=>'readonly',
                                 -variable=>\$loc_db,
                                 -foreground=>$main::fc,
                                 -background=>$main::ec,
@@ -979,8 +1029,13 @@ sub select_dbtyp {
    
       # Check out which DBs we're currently allowed to pick from
 
-      open(DB_FIL,"$main::orac_home/all_dbs.txt") ||
-		open(DB_FIL, "$FindBin::RealBin/config/all_dbs.txt");
+      my $first_place = File::Spec->join($main::orac_home, 'all_dbs.txt');
+      my $second_place = File::Spec->join($FindBin::RealBin, 'config');
+      $second_place = File::Spec->join($second_place, 'all_dbs.txt');
+
+      open(DB_FIL, $first_place ) ||
+		open(DB_FIL, $second_place );
+
       my $i = 0;
       while(<DB_FIL>){
          my @hold = split(/\^/, $_);
@@ -1036,8 +1091,12 @@ sub get_dba_user {
 
    # Picks up the typical DBA user for the particular database
 
-   open(DB_FIL,"$main::orac_home/all_dbs.txt") ||
-	 open(DB_FIL, "$FindBin::RealBin/config/all_dbs.txt");
+   my $first_place = File::Spec->join($main::orac_home, 'all_dbs.txt');
+   my $second_place = File::Spec->join($FindBin::RealBin, 'config');
+   $second_place = File::Spec->join($second_place, 'all_dbs.txt');
+
+   open(DB_FIL, $first_place ) ||
+	 open(DB_FIL, $second_place );
 
    while(<DB_FIL>){
       my @hold = split(/\^/, $_);
@@ -1106,13 +1165,25 @@ sub mes {
    # Produce the box that contains viewable Error
 
    my $d = $_[0]->DialogBox();
-   my $t = $d->Scrolled( 'Text',
-                         -cursor=>undef,
-						 -setgrid => 1,
-                         -height=>10,
-                       );
-   $t->pack(-expand=>1,-fill=>'both');
-   $t->insert('end', $_[1]);
+
+   my $displayer;
+
+   if (length($_[1]) > 200)
+   {
+      $displayer = $d->Scrolled( 'Text',
+			         -setgrid => 1,
+                                 -height=>10,
+                               );
+      $displayer->pack(-expand=>1,-fill=>'both');
+      $displayer->insert('end', $_[1]);
+   }
+   else
+   { 
+      $displayer = $d->Label(-text=>$_[1],
+                             -relief=>'flat',
+                            );
+      $displayer->pack(-expand=>1,-fill=>'both');
+   }
    $d->Show;
 }
 
@@ -1416,10 +1487,10 @@ sub Jareds_tools {
           ' -menuitems=> ' . "\n" .
           ' [[Button=>$main::lg{help_with_tools},' .
           ' -command=>sub{main::bz();' . "\n" .
-          ' $main::current_db->f_clr($main::v_clr);' . "\n" .
-          ' $main::current_db->about_orac' .
-             '("$FindBin::RealBin/help/HelpTools.txt");' . 
-          "\n" .
+          ' $main::current_db->see_sql' .
+          '($main::mw,$main::current_db->gf_str(' .
+          '"$FindBin::RealBin/help/HelpTools.txt"),' .
+          '$main::lg{help_with_tools});' . "\n" .
           ' main::ubz()}], ' . "\n" .
           '  [Cascade=>$main::lg{config_tools},-menuitems => ' . "\n" .
           '   [[Button=>$main::lg{config_add_casc},' . "\n" .
@@ -1456,7 +1527,9 @@ sub Jareds_tools {
           '  ], ' . "\n" .
           '  [Separator=>\'\'], ' . "\n";
 
-      if(open(JT_CASC,"$main::orac_home/config.tools")){
+      my $jt_casc_file = File::Spec->join($main::orac_home, 'config.tools');
+
+      if(open(JT_CASC, $jt_casc_file )){
          while(<JT_CASC>){
             my @jt_casc = split(/\^/, $_);
             if ($jt_casc[0] eq 'C'){
@@ -1466,7 +1539,10 @@ sub Jareds_tools {
                            $jt_casc[2] . 
                            '\',-menuitems => [ ' . "\n";
 
-               open(JT_CASC_BUTTS,"$main::orac_home/config.tools");
+               my $jt_casc_butts_file = 
+                     File::Spec->join($main::orac_home, 'config.tools');
+
+               open(JT_CASC_BUTTS, $jt_casc_butts_file );
                while(<JT_CASC_BUTTS>){
                   my @jt_casc_butts = split(/\^/, $_);
                   if (($jt_casc_butts[0] eq 'B') && 
@@ -1515,6 +1591,11 @@ sub save_sql {
    # save it into the appropriate file
 
    my($txt_ref, $filename) = @_;
+
+   my $dirname = File::Basename::dirname($filename);
+   my $basename = File::Basename::basename($filename);
+   $filename = File::Spec->join($dirname, $basename);
+
    copy($filename,"${filename}.old");
 
    open(SAV_SQL,">$filename");
@@ -1538,7 +1619,11 @@ sub ed_butt {
 
    my($casc,$butt) = @_;
    my $ed_fl_txt = main::get_butt_text($casc,$butt);
+
    my $sql_file = $main::orac_home.'/sql/tools/' . $casc . '.' . $butt . '.sql';
+   my $dirname = File::Basename::dirname($sql_file);
+   my $basename = File::Basename::basename($sql_file);
+   $sql_file = File::Spec->join($dirname, $basename);
    
    my $window = $main::mw->Toplevel();
 
@@ -1556,7 +1641,6 @@ sub ed_butt {
    $window->{text} = 
       $window->Scrolled( 'Text',
                          -wrap=>'none',
-                         -cursor=>undef,
                          -font=>$main::font{name},
                          -foreground=>$main::fc,
                          -background=>$main::bc
@@ -1676,7 +1760,11 @@ sub config_Jared_tools {
 
          my @inp_value;
          my $inp_count = 0;
-         if(open(JT_CONFIG,"$main::orac_home/config.tools")){
+
+         my $jt_config_file = 
+               File::Spec->join($main::orac_home, 'config.tools');
+
+         if(open(JT_CONFIG, $jt_config_file )){
             while(<JT_CONFIG>){
                my @hold = split(/\^/, $_);
 
@@ -1738,7 +1826,10 @@ sub config_Jared_tools {
       if(($param == 69)||
          ($param == 49)){
 
-         open(JT_CONFIG_READ,"$main::orac_home/config.tools");
+         my $jt_config_read_file = 
+               File::Spec->join($main::orac_home, 'config.tools');
+
+         open(JT_CONFIG_READ, $jt_config_read_file );
 
          while(<JT_CONFIG_READ>){
 
@@ -1766,7 +1857,6 @@ sub config_Jared_tools {
 
       my $cs = $d->add("Entry",
                        -textvariable=>\$inp_text,
-                       -cursor=>undef,
                        -foreground=>$main::fc,
                        -background=>$main::ec,
                        -width=>40
@@ -1786,7 +1876,10 @@ sub config_Jared_tools {
                return (1,$inp_text);
             } else {
 
-               open(JT_CONFIG_APPEND,">>$main::orac_home/config.tools");
+               my $jt_config_append_file = 
+                     File::Spec->join($main::orac_home, 'config.tools');
+
+               open(JT_CONFIG_APPEND,">>$jt_config_append_file");
                if($param == 1){
 
                   print JT_CONFIG_APPEND $main_check . 
@@ -1811,7 +1904,15 @@ sub config_Jared_tools {
                }
                close(JT_CONFIG_APPEND);
 
-               main::sort_Jareds_file();
+               my $sort1 = 
+                  File::Spec->join($main::orac_home, 'config.tools');
+
+               my $sort2 = 
+                  File::Spec->join($main::orac_home, 'config.tools.sort');
+
+               main::sort_this_file( $sort1,
+                                     $sort2, 
+                                   );
 
                if($param == 99){
                   main::ed_butt($loc_casc,$main_inp_value);
@@ -1908,7 +2009,9 @@ sub config_Jared_tools {
 
       my $i_count = 0;
 
-      if(open(JT_CONFIG,"$main::orac_home/config.tools")){
+      my $jt_config_file = File::Spec->join($main::orac_home, 'config.tools');
+
+      if(open(JT_CONFIG, $jt_config_file )){
 
          while(<JT_CONFIG>){
             my @hold = split(/\^/, $_);
@@ -1964,8 +2067,7 @@ sub config_Jared_tools {
 
                $d_inp = $casc2[$i_count];
 
-               $b_d = $d->BrowseEntry( -cursor=>undef,
-                                       -state=>'readonly',
+               $b_d = $d->BrowseEntry( -state=>'readonly',
                                        -variable=>\$d_inp,
                                        -foreground=>$main::fc,
                                        -background=>$main::ec,
@@ -2036,11 +2138,18 @@ sub config_Jared_tools {
                       (length($safe_flag)) && 
                       ($safe_flag == 1)){
 
-                    copy("$main::orac_home/config.tools",
-                                     "$main::orac_home/config.tools.old");
+                    my $new_file = File::Spec->join($main::orac_home, 
+                                                    'config.tools');
 
-                     open(JT_CONFIG_READ,"$main::orac_home/config.tools.old");
-                     open(JT_CONFIG_WRITE,">$main::orac_home/config.tools");
+                    my $old_file = File::Spec->join($main::orac_home, 
+                                                    'config.tools.old');
+
+                    copy(  $new_file,
+                           $old_file,
+                        );
+
+                     open(JT_CONFIG_READ, $old_file );
+                     open(JT_CONFIG_WRITE,">$new_file");
 
                      while(<JT_CONFIG_READ>){
                         chomp;
@@ -2100,12 +2209,21 @@ sub config_Jared_tools {
                      }
                      close(JT_CONFIG_READ);
                      close(JT_CONFIG_WRITE);
-                     main::sort_Jareds_file();
+
+                     my $sort1 = File::Spec->join($main::orac_home, 
+                                                  'config.tools');
+                     my $sort2 = File::Spec->join($main::orac_home, 
+                                                  'config.tools.sort');
+
+                     main::sort_this_file(
+                                           $sort1,
+                                           $sort2,
+                                         );
                   }
 
                } elsif($param == 3) {
 
-                  main::config_Jared_tools(99,$fin_inp);
+                  main::config_Jared_tools(99, $fin_inp);
 
                } elsif($param == 5) {
 
@@ -2118,6 +2236,10 @@ sub config_Jared_tools {
                                  '.' . 
                                  $fin_inp . 
                                  '.sql';
+
+                  my $dirname = File::Basename::dirname($filename);
+                  my $basename = File::Basename::basename($filename);
+                  $filename = File::Spec->join($dirname, $basename);
 
                   main::ed_butt($loc_casc,$fin_inp);
 
@@ -2147,33 +2269,40 @@ sub config_Jared_tools {
    main::Jareds_tools();
 }
 
-=head2 sort_Jareds_file 
+=head2 sort_this_file 
 
 Configures and sorts the users generated SQL reports buttons.
 
 =cut 
 
-sub sort_Jareds_file {
-   copy("$main::orac_home/config.tools","$main::orac_home/config.tools.sort");
-   open(JT_CONFIG_READ,"$main::orac_home/config.tools.sort");
-   my @file_read;
-   my @file_write;
-   my $i_count = 0;
-   while(<JT_CONFIG_READ>){
-      chomp;
-      $file_read[$i_count] = $_;
-      $i_count++;
-   }
-   close(JT_CONFIG_READ);
+sub sort_this_file {
 
-   open(JT_CONFIG_WRITE,">$main::orac_home/config.tools");
-   @file_write = sort @file_read;
-   $i_count = 0;
-   foreach(@file_write){
-      print JT_CONFIG_WRITE "$file_write[$i_count]\n";
+   my ($file_new, $file_old, ) = @_;
+
+   copy($file_new, $file_old, );
+
+   open(THIS_OLD, $file_old);
+   my @file_old;
+   my @file_new;
+   my $i_count = 0;
+   while(<THIS_OLD>){
+      chomp;
+      $file_old[$i_count] = $_;
       $i_count++;
    }
-   close(JT_CONFIG_WRITE);
+   close(THIS_OLD);
+
+   open(THIS_NEW,">$file_new");
+   @file_new = sort @file_old;
+   $i_count = 0;
+   foreach(@file_new){
+      print THIS_NEW "$file_new[$i_count]\n";
+      $i_count++;
+   }
+   close(THIS_NEW);
+
+   return;
+
 }
 =head2 get_butt_text
 
@@ -2187,7 +2316,10 @@ sub get_butt_text {
 
    my($casc,$butt) = @_;
    my $title = '';
-   open(JARED_FILE,"$main::orac_home/config.tools");
+
+   my $jared_file = File::Spec->join($main::orac_home, 'config.tools');
+
+   open(JARED_FILE,"$jared_file");
    while(<JARED_FILE>){
       my @hold = split(/\^/, $_);
       if(($hold[0] eq 'B') && ($hold[1] eq $casc) && ($hold[2] eq $butt)){
@@ -2303,6 +2435,10 @@ sub pick_up_defaults {
 	 $main::orac_home = $ENV{HOME} . "/.orac";
    }
 
+   my $dirname = File::Basename::dirname($main::orac_home);
+   my $basename = File::Basename::basename($main::orac_home);
+   $main::orac_home = File::Spec->join($dirname, $basename);
+
    die "Please set environment variable ORAC_HOME to a " .
        "directory for user customization and rerun.\n" 
       unless $main::orac_home;
@@ -2311,14 +2447,23 @@ sub pick_up_defaults {
    {
 	 die "Unable to create ORAC_HOME: $!\n" 
             unless mkdir($main::orac_home, 0700);
+
+         my $sql = File::Spec->join($main::orac_home, 'sql');
+
 	 die "Unable to create ORAC_HOME/sql: $!\n" 
-            unless mkdir("$main::orac_home/sql", 0700);
+            unless mkdir( $sql, 0700);
+
+         my $tools = File::Spec->join($sql, 'tools');
+
 	 die "Unable to create ORAC_HOME/sql/tools: $!\n" 
-            unless mkdir("$main::orac_home/sql/tools", 0700);
+            unless mkdir( $tools, 0700);
    }
 
+   my $what_db = File::Spec->join($main::orac_home, 'what_db.txt');
+
    my $i = 0;
-   my $file = "$main::orac_home/what_db.txt";
+   my $file = $what_db;
+
    if(-e $file){
       open(DB_FIL,$file);
       while(<DB_FIL>){
@@ -2334,7 +2479,8 @@ sub pick_up_defaults {
 
    # Now deal with fonts
 
-   $file = "$main::orac_home/what_font.txt";
+   my $what_font = File::Spec->join($main::orac_home, 'what_font.txt');
+   $file = $what_font;
 
    if(-e $file){
       open(FONT_FIL,$file);
@@ -2387,7 +2533,8 @@ sub pick_up_defaults {
 
    # Now deal with printing options
 
-   $file = "$main::orac_home/what_print.txt";
+   my $what_print = File::Spec->join($main::orac_home, 'what_print.txt');
+   $file = $what_print;
 
    if(-e $file){
       open(PRINT_FIL,$file);

@@ -251,7 +251,6 @@ sub all_stf {
    }
 
    $self->see_plsql($cm);
-
 }
 
 =head2 orac_create_db
@@ -366,8 +365,8 @@ sub univ_form {
    $univ_form_win->{text} = 
       $univ_form_win->Scrolled( 'Text',
                                 -height=>16,
-                                -wrap=>'none',
                                 -cursor=>undef,
+                                -wrap=>'none',
                                 -foreground=>$main::fc,
                                 -background=>$main::bc,
                                 -font=>$main::font{name},
@@ -402,7 +401,6 @@ sub univ_form {
          $w = $univ_form_win->{text}->Entry( 
 
                               -textvariable=>\$entry_bubbles[$i],
-                              -cursor=>undef,
                                            );
          if ($i == 3)
          {
@@ -445,7 +443,6 @@ sub univ_form {
       $w = $univ_form_win->{text}->Entry(
 
                   -textvariable=>\$column_tabs[$index_win_cnt],
-                  -cursor=>undef,
                   -width=>16,
 
                                         );
@@ -459,7 +456,6 @@ sub univ_form {
          $w = $univ_form_win->{text}->Entry( 
 
                              -textvariable=>\$sql_entry[$index_win_cnt],
-                             -cursor=>undef,
                              -foreground=>$main::fc,
                              -background=>$main::ec,
                              -width=>16,
@@ -480,7 +476,6 @@ sub univ_form {
       $w = $univ_form_win->{text}->Entry( 
 
                              -textvariable=>\$title_tabs[$index_win_cnt],
-                             -cursor=>undef,
                              -width=>16,
 
                                         );
@@ -717,9 +712,9 @@ sub and_finally {
       $out_screen->{text} = 
             $top_frame->Scrolled('Text',
                                  -height=>16,
+                                 -cursor=>undef,
                                  -width=>80,
                                  -wrap=>'none',
-                                 -cursor=>undef,
                                  -foreground=>$main::fc,
                                  -background=>$main::bc,
                                  -font=>$main::font{name},
@@ -732,13 +727,11 @@ sub and_finally {
          $output[$i] = "";
 
          $w = $out_screen->{text}->Entry(-textvariable=>\$entries[$i],
-                                         -cursor=>undef,
                                         );
 
          $out_screen->{text}->windowCreate('end',-window=>$w);
    
          $w = $out_screen->{text}->Entry(-textvariable=>\$output[$i],
-                        -cursor=>undef,
                         -foreground=>$main::fc,
                         -background=>$main::ec,
                         -width=>30);
@@ -1014,9 +1007,9 @@ sub now_build_ord {
               )->pack(-side=>'top');
 
    my $t = $b_d->Scrolled('Text',
+                          -cursor=>undef,
                           -height=>16,
                           -wrap=>'none',
-                          -cursor=>undef,
                           -foreground=>$main::fc,
                           -background=>$main::bc);
 
@@ -1035,7 +1028,6 @@ sub now_build_ord {
 
       $ind_name = 'INDEX_NAME';
       $w = $t->Entry(-textvariable=>\$ind_name,
-                     -cursor=>undef,
                      -foreground=>$main::fc,
                      -background=>$main::ec);
       $t->windowCreate('end',-window=>$w);
@@ -1050,10 +1042,10 @@ sub now_build_ord {
       $t->windowCreate('end',-window=>$w);
 
       $t_n = "TABSPACE_NAME";
-      my $t_l = $t->BrowseEntry(-cursor=>undef,
-                             -variable=>\$t_n,
-                             -foreground=>$main::fc,
-                             -background=>$main::ec);
+      my $t_l = $t->BrowseEntry( -variable=>\$t_n,
+                                 -foreground=>$main::fc,
+                                 -background=>$main::ec,
+                               );
 
       $t->windowCreate('end',-window=>$t_l);
       $t->insert('end', "\n");
@@ -1147,7 +1139,6 @@ sub now_build_ord {
             if ($j_col == ($$total_r + 1)){
 
                $w = $t->Entry( -textvariable=>\$index_arr_r->[$j_row],
-                               -cursor=>undef,
                                -foreground=>$main::fc,
                                -background=>$main::ec
                              );
@@ -1202,8 +1193,8 @@ sub really_build_index {
                               );
 
    $d->{text} = $d->Scrolled( 'Text',
-                              -wrap=>'none',
                               -cursor=>undef,
+                              -wrap=>'none',
                               -foreground=>$main::fc,
                               -background=>$main::bc,
                               -font=>$main::font{name},
@@ -1429,7 +1420,7 @@ sub add_item {
          $Free_Mg,
          $Use_Pct) = @_;
 
-   my $old_length;
+   my $old_length = 0;
    my $tab_str;
 
    unless($i == 0){
@@ -1460,7 +1451,7 @@ sub add_item {
                  '0.4c',
                  "$y_end" . 'c'),
 
-               -fill=>$main::hc
+               -fill=>$main::lg{bar_col},
 
              );
   
@@ -1683,7 +1674,7 @@ sub dbwr_print_fileio {
                        "$y_end" . 'c'
                     ),
 
-                    -fill=>$main::hc
+                    -fill=>$main::lg{bar_col},
 
                 );
 
@@ -2190,8 +2181,8 @@ sub explain_plan {
 
    $window->{text} = 
       $top_slice->Scrolled(  'Text',
-                             -wrap=>'none',
                              -cursor=>undef,
+                             -wrap=>'none',
                              -height=>($l_entry_height + $num_cols + 3),
                              -width=>($l_entry_width + $l_label_width + 5),
                              -font=>$main::font{name},
@@ -2209,7 +2200,6 @@ sub explain_plan {
       $w_holders[$i] = '';
       $w_explain[$i] = $window->{text}->Entry( 
                               -textvariable=>\$w_titles[$i],
-                              -cursor=>undef,
                               -width=>$l_label_width
                                                   );
       $window->{text}->windowCreate('end',
@@ -2220,7 +2210,6 @@ sub explain_plan {
          $w_explain[$i] = 
             $window->{text}->Scrolled( 
                                         'Text',
-                                        -cursor=>undef,
                                         -height=>$l_entry_height,
                                         -width=>$l_entry_width,
                                         -font=>$main::font{name},
@@ -2232,7 +2221,6 @@ sub explain_plan {
          $w_explain[$i] = 
               $window->{text}->Entry( 
                                  -textvariable=>\$w_holders[$i],
-                                 -cursor=>undef,
                                  -width=>$l_entry_width
                                                       );
       }
@@ -2771,21 +2759,33 @@ sub do_a_generic {
         ($l_hlst eq 'Indexes') ||
         ($l_hlst eq 'Views') )
    {
-      foreach my $bit ('sizeindex', 
-                      'form', 
-                      'freespace',
-                      'index',
-                      'constraint',
-                      'trig',
-                      'comment',
+      foreach my $bit ( 'form', 
+                        'freespace',
+                        'index',
+                        'sizeindex',
+                        'constraint',
+                        'trig',
+                        'comment',
                      )
       {
          $b_images{$bit} = $window->Photo( 
             -file => "$FindBin::RealBin/img/${bit}.gif" );
       }
    }
+ 
+   # An image for the 'See SQL' button
+
    $b_images{sql} = $window->Photo( 
       -file => "$FindBin::RealBin/img/sql.gif" );
+   
+   # An image for the 'Lines' button
+   # Also, store the final variable here, which
+   # is used to store the text
+
+   my $text_lines = '';
+
+   $b_images{lines} = $window->Photo( 
+      -file => "$FindBin::RealBin/img/lines.gif" );
    
    my $label_text;
 
@@ -2803,7 +2803,6 @@ sub do_a_generic {
                          'Text',
                          -height=>16,
                          -wrap=>'none',
-                         -cursor=>undef,
                          -font=>$main::font{name},
                          -foreground=>$main::fc,
                          -background=>$main::bc
@@ -2823,14 +2822,17 @@ sub do_a_generic {
       }
       else {
          $consec_empty = 0;
-         print L_TEXT "$full_list\n";
+         $text_lines = $text_lines . "$full_list\n";
       }
       if ($consec_empty > 100){
          last;
       }
       $j++;
    }
-   print L_TEXT "\n\n  ";
+
+   # Finally, pump out the monkey
+
+   $window->{text}->insert('end', $text_lines);
 
    my $b = $menu_bar->Button(-image=>$b_images{sql},
 
@@ -2845,6 +2847,37 @@ sub do_a_generic {
                              )->pack(-side=>'left');
 
    $balloon->attach($b, -msg => $main::ssq );
+
+   $b = $menu_bar->Button(-image=>$b_images{lines},
+
+                             -command=> sub{
+
+                         $window->Busy;
+
+                         my @lines_of_txt = split(/^/, $text_lines);
+
+                         my $line_counter = 1;
+                         my $final_txt = '';
+
+                         foreach my $line (@lines_of_txt)
+                         {
+                            $final_txt = 
+                               $final_txt . 
+                               sprintf(  "%5d: %s", 
+                                         $line_counter,
+                                         $lines_of_txt[($line_counter - 1)]
+                                      );
+                            $line_counter++;
+                         }
+
+                         $self->see_sql($window,$final_txt,$label_text);
+                         $window->Unbusy;
+
+                                           }
+
+                             )->pack(-side=>'left');
+
+   $balloon->attach($b, -msg => $main::lg{lines} );
 
    if ( ($l_hlst eq 'Tables') || ($l_hlst eq 'Indexes') ){
 
@@ -2889,13 +2922,13 @@ sub do_a_generic {
 
       if ($l_hlst eq 'Tables') {
 
-         @tablist = ('Tab_FreeSpace', 
-                     'Tab_Indexes',
+         @tablist = ('Tab_Inedexes', 
+                     'Tab_FreeSpace',
                      'Tab_Constraints',
                      'Triggers',
                      'Comments');
-         @tablist_2 = ('freespace', 
-                       'index',
+         @tablist_2 = ('index', 
+                       'freespace',
                        'constraint',
                        'trig',
                        'comment');
@@ -2961,7 +2994,7 @@ sub tab_det_orac {
    # Produces simple graphical representations of complex
    # percentage style reports.
 
-   my ( $title, $func ) = @_;
+   my ( $title, $func, $file_number ) = @_;
 
    my $d = $self->{Main_window}->Toplevel();
    $d->title("$title: $main::v_db ($main::lg{blk_siz} $Block_Size)");
@@ -2983,7 +3016,7 @@ sub tab_det_orac {
 
    $keep_tablespace = 'XXXXXXXXXXXXXXXXX';
 
-   my $cm = $self->f_str($func,'1');
+   my $cm = $self->f_str($func, $file_number, );
 
    my $sth = $self->{Database_conn}->prepare( $cm ) || 
                 die $self->{Database_conn}->errstr; 

@@ -1,12 +1,12 @@
 Menubutton^struct^
-command^0^0^summ_tabsp^$main::current_db->tab_det_orac^$main::lg{summ_tabsp}+'tabspace_diag'^
-command^0^0^det_tab_datafil^$main::current_db->tab_det_orac^$main::lg{det_tab_datafil}+'tab_det_orac'^
+command^0^0^summ_tabsp^$main::current_db->tab_det_orac^$main::lg{summ_tabsp}+'tabspace_diag'+1^
+command^0^0^det_tab_datafil^$main::current_db->tab_det_orac^$main::lg{det_tab_datafil}+'tab_det_orac'+1^
 command^0^1^tabsp_txt^$main::current_db->show_sql^'kkspace'+'1'+$main::lg{tabsp_txt}^
 separator^
 command^0^1^db_files^$main::current_db->show_sql^'datafile_orac'+'1'+$main::lg{db_files}^
 command^0^1^ext_rep^$main::current_db->show_sql^'ext_orac'+'1'+$main::lg{ext_rep}^
 command^0^1^max_exts_free^$main::current_db->show_sql^'max_ext_orac'+'1'+$main::lg{max_exts_free}+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()^
-command^dbas_orac^0^dba_views^$main::current_db->dbas_orac^^
+command^0^0^dba_views^$main::current_db->dbas_orac^^
 Menubutton^obj^
 cascade^data_obj^
 casc_command^0^0^tabs^$main::current_db->generic_hlist^'Tables'+'.'^
@@ -41,6 +41,7 @@ cascade^sql_crt_states^
 casc_command^0^1^constrnts^$main::current_db->all_stf^'Constraints'+'99'+2^
 casc_command^0^1^usergrant^$main::current_db->all_stf^'UserGrants'+'99'+2^
 casc_command^0^1^synyms^$main::current_db->all_stf^'Synonyms'+'99'+2^
+casc_command^0^1^views^$main::current_db->all_stf^'Views'+'99'+2^
 cascade^db_recr_sql^
 casc_command^0^1^recrt_base_sql^$main::current_db->orac_create_db^^
 casc_command^0^1^raw_db_sql^$main::current_db->show_sql^'steps'+'1'+$main::lg{raw_db_sql}^
@@ -72,7 +73,9 @@ command^0^1^rollbk_lcks^$main::current_db->show_sql^'rollback_locks'+'1'+$main::
 command^0^1^sess_wt_stats^$main::current_db->tune_wait^^
 command^0^1^gh_summ_sess^$main::current_db->show_sql^'gh_summ_sess'+'1'+$main::lg{gh_summ_sess}^
 Menubutton^tune^
-command^0^0^hits^$main::current_db->tab_det_orac^$main::lg{hits}+'tune_health'^
+cascade^hits^
+casc_command^0^0^v1^$main::current_db->tab_det_orac^$main::lg{v1}+'tune_health'+1^
+casc_command^0^0^v2^$main::current_db->tab_det_orac^$main::lg{v2}+'tune_health'+2^
 command^explain_plan^0^explain_plan^$main::current_db->explain_plan^^
 cascade^shared_pool_sql^
 casc_command^0^1^mem_hogs1^$main::current_db->tune_pigs^1^

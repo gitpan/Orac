@@ -231,32 +231,13 @@ sub display_file {
 
    if ($suffix =~ /\.gif$/i)
    {
-      # This is a GIF file
-
-      $main::current_db->f_clr($main::v_clr);
-
-      my $image = 
-         $main::v_text->Photo( -file => $ffile );
-
-      my $l = $main::v_text->Label( 
-                        -background => $main::bc,
-                        -relief=>'flat',
-                        -image => $image,
-                                  );
-
-      # Now slap up the button
-
-      $main::v_text->insert('end', "\n\n  ");
-      $main::v_text->window('create','end', -window=>$l);
-      $main::v_text->insert('end', "\n\n");
-
+      $self->see_gif( $ffile,
+                    );
    }
    elsif ($suffix =~ m/p[lm]$|pod$/i)
    {
       # This is a Perl file.  Do they want to 
       # POD it?
-
-      $main::current_db->f_clr($main::v_clr);
 
       #
       # Pod2text doesn't appear to handle tied objects.
@@ -281,32 +262,22 @@ sub display_file {
         # Now re-open local file, fill the screen,
         # then remove the temporary Pod file.
 
-	open( INFILE, "$tmp_file" ) or warn;
-        my $checker = 0;
-        while(<INFILE>)
-        {
-           $checker = 1;
-           $main::v_text->insert('end', $_ );
-        }
-	close(INFILE);
+        $self->see_sql( $self->{window},
+                        $self->gf_str( $tmp_file ),
+                        $ffile,
+                      );
 
         # Remove the temporary file
 
 	unlink( "$tmp_file" );
 
-        # If no Pod defined, then no output will have
-        # been produced, therefore it may look like the program's
-        # failed, therefore put out a "warmy feely".
-
-        if ($checker == 0)
-        {
-           $main::v_text->insert('end', $main::lg{no_pod} );
-        }
-
       }
       else
       {
-         $main::current_db->about_orac( $ffile );
+         $self->see_sql( $self->{window},
+                         $self->gf_str( $ffile ),
+                         $ffile,
+                       );
       }
 
    }
@@ -314,8 +285,10 @@ sub display_file {
    {
       # Just slap it out onto the old main screen.
 
-      $main::current_db->f_clr($main::v_clr);
-      $main::current_db->about_orac( $ffile );
+      $self->see_sql( $self->{window},
+                      $self->gf_str( $ffile ),
+                      $ffile,
+                    );
 
    }
    return;

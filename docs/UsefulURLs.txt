@@ -9,3 +9,6 @@ http://www.geocities.com/~bzking
 
 Oracletool
 http://www.oracletool.com/
+
+PostGres Mailing Lists
+http://www.postgresql.org/lists/all-lists.html

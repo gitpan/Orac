@@ -2,8 +2,8 @@ declare
    cursor view_cursor is
       select owner,view_name,text
       from sys.dba_views
-      where owner = ?
-      and view_name = ?
+      where owner like ?
+      and view_name like ?
       order by owner,view_name;
    l_owner sys.dba_views.owner%TYPE;
    l_view_name sys.dba_views.view_name%TYPE;

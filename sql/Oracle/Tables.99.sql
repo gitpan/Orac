@@ -54,8 +54,8 @@ begin
          if ccr.column_id <> 1 then
             dbms_output.put_line(',');
          end if;
-         dbms_output.put(rpad((chr(34)||lower(ccr.colname)||chr(34)),40));
-         dbms_output.put(' '||lower(ccr.datatype));
+         dbms_output.put(rpad((upper(ccr.colname)),40));
+         dbms_output.put(' '||upper(ccr.datatype));
          if ccr.datatype = 'CHAR' or
             ccr.datatype = 'VARCHAR2' or
             ccr.datatype = 'RAW' then
@@ -74,24 +74,24 @@ begin
             dbms_output.put_line(' default '||ccr.data_default);
          end if;
          if ccr.nullable = 'N' then
-            dbms_output.put(' not null');
+            dbms_output.put(' NOT NULL');
          end if;
       end loop;
       close ccc;
       dbms_output.put_line(')'||chr(10));
-      dbms_output.put_line(' pctfree    '||to_char(ctr.pct_free));
-      dbms_output.put_line(' pctused    '||to_char(ctr.pct_used));
-      dbms_output.put_line(' initrans   '||to_char(ctr.initrans));
-      dbms_output.put_line(' maxtrans   '||to_char(ctr.maxtrans));
-      dbms_output.put_line(' tablespace '||ctr.tablespace_name);
-      dbms_output.put_line(chr(10)||'storage (');
-      dbms_output.put_line('initial         '||orac_1024(ctr.initial_extent));
-      dbms_output.put_line('next            '||orac_1024(ctr.next_extent));
-      dbms_output.put_line('minextents      '||to_char(ctr.min_extents));
-      dbms_output.put_line('maxextents      '||to_char(ctr.max_extents));
-      dbms_output.put_line('pctincrease     '||to_char(ctr.pct_increase));
-      dbms_output.put_line('freelists       '||to_char(ctr.freelists));
-      dbms_output.put_line('freelist groups '||to_char(ctr.freelist_groups));
+      dbms_output.put_line(' PCTFREE    '||to_char(ctr.pct_free));
+      dbms_output.put_line(' PCTUSED    '||to_char(ctr.pct_used));
+      dbms_output.put_line(' INITRANS   '||to_char(ctr.initrans));
+      dbms_output.put_line(' MAXTRANS   '||to_char(ctr.maxtrans));
+      dbms_output.put_line(' TABLESPACE '||ctr.tablespace_name);
+      dbms_output.put_line(chr(10)||'STORAGE (');
+      dbms_output.put_line('INITIAL         '||orac_1024(ctr.initial_extent));
+      dbms_output.put_line('NEXT            '||orac_1024(ctr.next_extent));
+      dbms_output.put_line('MINEXTENTS      '||to_char(ctr.min_extents));
+      dbms_output.put_line('MAXEXTENTS      '||to_char(ctr.max_extents));
+      dbms_output.put_line('PCTINCREASE     '||to_char(ctr.pct_increase));
+      dbms_output.put_line('FREELISTS       '||to_char(ctr.freelists));
+      dbms_output.put_line('FREELIST GROUPS '||to_char(ctr.freelist_groups));
       dbms_output.put_line(');');
    end loop;
    close ctc;
