@@ -227,6 +227,7 @@ raw_db_sql^Raw Database Component SQL^
 rec_of^Record of^
 reconn^Reconnect^
 recrt_base_sql^Recreation SQL for svrmgrl^
+refresh_grps^Refresh Groups^
 reg_usrs^Registered Users on Database^
 rem_srv_crt^Create Remote Server^
 rep^Report^
@@ -260,7 +261,7 @@ sh_prms^Show Parameters^
 shared_pool_sql^Shared Pool & SQL^
 shell^Shell^
 sizeindex^Work out the Size of any Required Index^
-snap_logs^SnapshotLogs^
+snap_logs^Snapshot Logs^
 snaps^Snapshots^
 sort_mon^Sort Monitor^
 sorts^Sorts^

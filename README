@@ -1,31 +1,21 @@
-Orac --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
+Orac  --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
 
-   Copyright (c) 1998,1999  Andy Duncan, England
+   Copyright (c) 1998,1999,2000 Andy Duncan, England
 
    email:         andy_j_duncan@yahoo.com
    CPAN id:       CPAN/authors/id/A/AN/ANDYDUNC
 
 =+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+
-STOP-PRESS: Orac now runs over the *Web* using a Netscape Perl/Tk Plug-In
-            created by Frank Holt.  Please run up Orac, and go to Help
-            information for more details (help/WebPlugIn.txt).
+        Orac runs over the *Web* using a Netscape Perl/Tk Plug-In
+        created by Frank Holt.  Please run up Orac, and go to Help
+        information for more details (help/WebPlugIn.txt).
 =+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+-=+
 
 NB: This README file does not contain all of the information within
 the Orac distribution.  For more specialised information, please go
 to our "docs" or "help" directories.
 
-################################################################################
-# The next stable version of Orac will be Orac-1.2.0, which we hope to release
-# before the end of the year, however,this is a very flexible date.
-#
-# However, as the Orac-1.1.z series progresses, it should hopefully gather
-# stability and functionality.  To try out all new Orac functionality, keep
-# coming back regularly, and downloading new developmental versions.  Living on
-# the bleeding edge can be fun ;-)
-#
-# We plan to make releases every few days, if not sooner.
-################################################################################
+Orac-1.2.0 is the latest stable version of Orac.
 
 Orac WEB PAGE:
 
@@ -331,6 +321,18 @@ Orac-1.1.46 Final Beta release of Tom's Shell program + addition of
 Orac-1.1.47 Mix-up on Beta module versions, should now be sorted out.
 Orac-1.1.48 Change on Oracle curr_users_orac.1.sql script by Andre Seesink
             +other code changes by Andre marked in files :-)
+Orac-1.1.49 Last Andre Seesink and Duncan Lawie upgrades, plus bug fix
+            by DCL :-)
+Orac-1.1.50 Slight changes, + more commenting and switching within the
+            orac_Monitor module, which, after a consensus vote, will be kept
+            within the distribution for later improvement despite problems.
+            If you'd like to make this 100% kosher, please write and let
+            us know :)
+Orac-1.1.51 Heck and blast, a typo on my part.  Whoops, sorry fellas! :-)
+Orac-1.2.0  After no adverse reports on 1.1.51, this is that release
+            with this README file name and the program's version number
+            changed.  Thanks to everyone who's helped us get this far.
+            We ain't finished yet.
 
 EXTRA NOTES FOR LINUX USERS:
 

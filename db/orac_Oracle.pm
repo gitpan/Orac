@@ -1917,6 +1917,7 @@ sub addr_orac {
          my $balloon;
          $self->create_balloon_bars(\$addr_menu, \$balloon, \$window, );
          $self->window_exit_button(\$addr_menu, \$window, 1, \$balloon, );
+         $self->see_sql_but(\$addr_menu, \$window, \$cm, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my(@adr_lay) = qw/-side top -padx 5 -expand yes -fill both/;
@@ -1994,6 +1995,7 @@ sub sids_orac {
          my $balloon;
          $self->create_balloon_bars(\$sid_menu, \$balloon, \$window, );
          $self->window_exit_button(\$sid_menu, \$window, 1, \$balloon, );
+         $self->see_sql_but(\$sid_menu, \$window, \$cm, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my(@sid_lay) = qw/-side top -padx 5 -expand yes -fill both/;
@@ -2024,12 +2026,16 @@ sub sids_orac {
          sub { $window->Busy(-recurse=>1);
 
                $self->f_clr( $main::v_clr );
-               my $sid_param = $window->{text}->get('active');
-               $self->show_sql( 'sel_sid' , '1',
-                                $main::lg{sel_sid} . ': ' . $sid_param,
-                                $sid_param );
 
-               $window->Unbusy}
+               # 5 jan 2000, Andre Seesink <Andre.Seesink@CreXX.nl>
+               # Now we get sid and username
+
+               my ($sid, $username) = split(' ',$window->{text}->get('active'));
+               $self->show_sql( 'sel_sid' , '1',
+                                $main::lg{sel_sid} . ': ' . $sid,
+                                $sid );
+               $window->Unbusy
+             }
                                      );
    }
 }

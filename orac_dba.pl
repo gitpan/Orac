@@ -49,7 +49,7 @@ main::splash_screen(0);
 # before the main loop.
 
 use DBI '1.13';
-$VERSION = '1.148';
+$VERSION = '1.200';
 
 # Now enter strict mode
 use strict;
@@ -63,8 +63,7 @@ use File::Basename;
 # Thanks to Sean Kamath :-)
 use File::Spec;
 
-# A hunky clundgy kinda-of-a-thing
-# to handle screen resizing
+# A hunky clundgy kinda-of-a-thing to handle screen resizing
 
 use Tk::DialogBox;
 use Tk::Balloon;
@@ -509,11 +508,15 @@ if ((!defined($main::orac_curr_db_typ)) ||
    $main::orac_curr_db_typ = main::select_dbtyp(1);
 }
 
+# 1.1.50 Change for Tom, to prevent splash screen interfering with login.
+
+main::destroy_splash();
+
+# Now we go to Login, and get the required database
+
 main::get_db();
 
 # Here we go, lights, cameras, action!
-
-main::destroy_splash();
 
 MainLoop();
 

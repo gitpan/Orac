@@ -37,6 +37,7 @@ casc_command^0^0^comments^$main::current_db->generic_hlist^'Comments'+'.'^
 cascade^snaps^
 casc_command^0^0^snaps^$main::current_db->generic_hlist^'Snapshots'+'.'^
 casc_command^0^0^snap_logs^$main::current_db->generic_hlist^'SnapshotLogs'+'.'^
+#casc_command^0^0^refresh_grps^$main::current_db->generic_hlist^'Refreshgroups'+'.'^
 separator^
 cascade^sql_crt_states^
 casc_command^0^1^constrnts^$main::current_db->all_stf^'Constraints'+'99'+2^
