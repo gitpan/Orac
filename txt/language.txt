@@ -44,6 +44,7 @@ db_info^Database Info^
 db_recr_sql^Database Recreation SQL^
 db_type^Database Type^
 dba_views^DBA Tables Viewer^
+dbish^On-the-fly SQL Execution^
 dbwr^Database Writer^
 dbwr_io_rp^DBWR I/O Report^
 dbwr_lgwr^DBWR & LGWR^
@@ -72,7 +73,6 @@ execute_sql^Execute SQL^
 exit^Exit^
 explain^Explain^
 explain_plan^SQL Browser/Explain Plan^
-dbish^On-the-fly SQL Execution^
 ext_rep^Extents Report^
 file^File^
 file_io^File I/O^
@@ -143,6 +143,7 @@ oi_extents_report^Extent report^
 oi_grants^Grants^
 oi_indices^Indices^
 oi_io_profile^I/O profile^
+oi_io_profile_title^Chunk IO Profile^
 oi_log_rep^Log report^
 oi_logical_log^Display logical log^
 oi_onconfig_params^Onconfig parameters^
@@ -209,6 +210,7 @@ sql_menu^SQL^
 sql_quest^sql?^
 stat^Stat^
 statis^Statistic#^
+stop^Stop^
 struct^Structure^
 summ_tabsp^Summary Chart by Tablespace^
 synyms^Synonyms^
@@ -223,12 +225,12 @@ tabsp_tune^Tablespace Tuning^
 tabsp_txt^Tablespace Text Report^
 tot_sess_uga^Total Session UGA^
 trggrs^Triggers^
-tune^Tuning^
+tune^Tune^
 upd^Update^
 upd_butt_text^Button for Update^
 upd_button^Update Button^
 upd_cascade^Update Cascade^
-use_utlxplan^Please use utlxplan.sql to create PLAN_TABLE for this user.^
+use_utlxplan^Please run utlxplan.sql to create user's PLAN_TABLE, for 'Explain Plan' option.^
 user^User^
 user_please^Please enter a DBA user with at least main 'Select' privileges^
 user_proc_io^Any User Processes Performing I/O?^

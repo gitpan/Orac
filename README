@@ -246,10 +246,11 @@ Orac-1.1.0  First of new Developmental 1.1.z Series
             More help files, comments in code,
             More modularity,
             +whatever else you'd like us to add?
-Orac-1.1.1  For Oracle
-            ==========
-            Neater 'Explain Plan' utility, On-the-fly SQL execution utility
-            Tidied a few 'uninitialized variable bugs'
+Orac-1.1.1  (Oracle) Neater 'Explain Plan' utility, On-the-fly SQL execution 
+            utility.  Tidied a few 'uninitialized variable bugs'.
+Orac-1.1.2  (Informix) More functionality added. (Oracle) More tidying, plus 
+            better/quicker use of config files, and use of SQL Browser without 
+            PLAN_TABLE in db.
 
 
 EXTRA NOTES FOR LINUX USERS:

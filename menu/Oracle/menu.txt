@@ -67,6 +67,8 @@ command^0^1^sess_wt_stats^orac_Oracle::tune_wait^^
 command^0^1^gh_summ_sess^main::prp_lp^$lg{gh_summ_sess}+'gh_summ_sess'+'1'+$rfm{r2_wait}+0^
 command^0^1^mem_hogs^orac_Oracle::tune_pigs^^
 Menubutton^tune^
+command^explain_plan^0^explain_plan^orac_Oracle::explain_plan^^
+separator^
 command^0^0^hits^orac_Oracle::tab_det_orac^$lg{hits}+'tune_health'^
 command^0^1^pool_frag^orac_Oracle::gh_pool_frag^^
 separator^
@@ -108,6 +110,3 @@ casc_command^0^1^lt_wtrs^main::prp_lp^$lg{lt_wtrs}+'act_latch_hit_ratio'+'1'+$rf
 cascade^tabsp_tune^
 casc_command^0^1^tabsp_frag^main::prp_lp^$lg{tabsp_frag}+'defragger'+'1'+$rfm{r8_bits}+0^
 casc_command^0^1^tabsp_sp_shorts^main::prp_lp^$lg{tabsp_sp_shorts}+'tab_shortage'+'1'+$rfm{r6_opt9}+0+$Block_Size+$Block_Size^
-Menubutton^sql_menu^
-command^explain_plan^0^explain_plan^orac_Oracle::explain_plan^^
-command^dbish^0^dbish^orac_Shell::dbish^^

@@ -1,6 +1,9 @@
 package orac_Sybase;
 
 sub init1_orac_Sybase {
+   # Does nothing in Oracle yet
+}
+sub init1_orac_Sybase {
    package main;
 
    # Place here whatever environmental variables are needed

@@ -28,7 +28,11 @@ use Tk::Pretty;
 use Tk::HList;
 require Tk::BrowseEntry;
 
-# Pick up our specialised modules.
+# Pick up our specialised modules, plus some special
+# flags for various database use.
+
+$dont_need_sys = 0;
+$dont_need_ps = 0;
 
 use orac_Oracle;
 use orac_Informix;
@@ -44,11 +48,16 @@ main::read_language();
 # Set up a few defaults, such as the lovely Steelblue2
 # for the background colour
 
-$bc = main::get_backgr($lg{def_backgr_col});
+main::pick_up_defaults();
+
 $hc = $lg{bar_col};
 $ssq = $lg{see_sql};
 $ec = $lg{def_fill_fld_col};
 $fc = $lg{def_fg_col};
+
+# Debugging flag for developers?
+# for kevinb :)
+$debug = exists($ENV{ORAC_DEBUG}) ? int($ENV{ORAC_DEBUG}) : 0;
 
 # Bring up the main "Worksheet" window
 
@@ -108,18 +117,24 @@ $file_mb->command(-label=>$lg{exit},-command=>sub{main::back_orac()});
 
 $l_top_t = $lg{not_conn};
 $mb->Label(-textvariable=>\$l_top_t,-relief=>'flat')->pack(-side=>'right',-anchor=>'e');
-$v_text = $mw->Scrolled('Text',-wrap=>'none',-cursor=>undef,-foreground=>$fc,-background=>$bc);
+
+(@layout_mb) = qw/-side top -expand yes -fill both/;
+$middle_box = $mw->Frame->pack(@layout_mb);
+
+$v_text = $middle_box->Scrolled('Text',-wrap=>'none',-cursor=>undef,-foreground=>$fc,-background=>$bc);
 $v_text->pack(-expand=>1,-fil=>'both');
 tie (*TEXT,'Tk::Text',$v_text);
 
 # Sort out the options to clear the screen on
 # each report
 
-$mw->Button(-text=>$lg{clear},-command=>sub{main::bz();main::must_f_clr();main::ubz()})->pack(side=>'left');
+$bb = $mw->Frame->pack(-side=>'bottom',-padx=>5,-expand=>'no',-fill=>'both',-anchor=>'s',-before=>$middle_box);
+
+$bb->Button(-text=>$lg{clear},-command=>sub{main::bz();main::must_f_clr();main::ubz()})->pack(side=>'left');
 $v_clr = 'Y';
-$mw->Radiobutton(variable=>\$v_clr,text=>$lg{man_clear},value=>'N')->pack (side=>'left');
-$mw->Radiobutton ( variable=>\$v_clr,text=>$lg{auto_clear},value=>'Y')->pack (side=>'left');
-$mw->Button(-text=>$lg{reconn},-command=>sub{main::bz();main::get_db();main::ubz()})->pack(side=>'right');
+$bb->Radiobutton(variable=>\$v_clr,text=>$lg{man_clear},value=>'N')->pack (side=>'left');
+$bb->Radiobutton ( variable=>\$v_clr,text=>$lg{auto_clear},value=>'Y')->pack (side=>'left');
+$bb->Button(-text=>$lg{reconn},-command=>sub{main::bz();main::get_db();main::ubz()})->pack(side=>'right');
 
 # Set main window title and set window icon
 
@@ -131,7 +146,13 @@ main::iconize($mw);
 # Once this is done, connect to a database.
 
 $orac_orig_db = 'XXXXXXXXXX';
-main::set_curr_db();
+
+# If no default database type selected,
+# pick it up.
+if ((!defined($orac_curr_db_typ)) || (length($orac_curr_db_typ) == 0)){
+   $orac_curr_db_typ = main::select_dbtyp(1);
+}
+
 $val_con = 0;
 main::get_db();
 
@@ -175,17 +196,17 @@ sub back_orac {
    if ($val_con){
       $rc  = $dbh->disconnect;
    }
-   main::fill_defaults($orac_curr_db, $sys_user, $bc, $v_db);
+   main::fill_defaults($orac_curr_db_typ, $sys_user, $bc, $v_db);
    exit 0;
 }
 sub fill_defaults {
 
    # Make sure defaults the way the user likes 'em.
 
-   my($db_typ, $dba, $bc, $db) = @_;
+   my($db_typ, $dba, $loc_bc, $db) = @_;
 
    open(DB_FIL,'>config/what_db.txt');
-   print DB_FIL $db_typ . '^' . $dba . '^' . $bc . '^' . $db . '^' . "\n";
+   print DB_FIL $db_typ . '^' . $dba . '^' . $loc_bc . '^' . $db . '^' . "\n";
    close(DB_FIL);
 }
 sub get_connected {
@@ -215,7 +236,7 @@ sub get_connected {
       # Pick up all the databases currently available to this user
       # directly from here
 
-      my @h = DBI->data_sources('dbi:' . $orac_curr_db . ':');
+      my @h = DBI->data_sources('dbi:' . $orac_curr_db_typ . ':');
       my $h = @h;
       my @ic;
       my $ic;
@@ -228,7 +249,7 @@ sub get_connected {
       # Supplement these, with stored database to which they've
       # successfully connected in the past 
 
-      open(DBFILE,"txt/" . $orac_curr_db . "/orac_db_list.txt");
+      open(DBFILE,"txt/" . $orac_curr_db_typ . "/orac_db_list.txt");
       while(<DBFILE>){
          chomp;
          $ls_db{$_} = 102;
@@ -262,7 +283,7 @@ sub get_connected {
                         -background=>$ec)->pack(side=>'right');
 
       my $l4 = $c_d->Label(-text=>$lg{db_type} . ':',-anchor=>'e',-justify=>'right');
-      my $l4a = $c_d->Label(-text=>$orac_curr_db,-anchor=>'w',-justify=>'left');
+      my $l4a = $c_d->Label(-text=>$orac_curr_db_typ,-anchor=>'w',-justify=>'left');
 
       # Go Grid crazy!  Assign the widgets to starting 
       # racetrack postitions
@@ -282,19 +303,28 @@ sub get_connected {
       $db_list->focusForce;
       $mn_b = $c_d->Show;
 
+      # Read Asimov's 'Foundation & Earth' or 'Aurora' series?  
+      # Then you'll know about the zeroth law.  Here we have
+      # an initial, initialising database function.
+
+      my $db_init_command;
+      $db_init_command = 'orac_' . $orac_curr_db_typ . '::' . 
+                         'init0_orac_' . $orac_curr_db_typ . '()';
+      eval $db_init_command ; warn $@ if $@;
+
       # Now verify all input and attempt connection to chosen database
 
       if ($mn_b eq $lg{connect}) {
          $v_sys = $ps_u->get;
-         if (defined($v_sys) && length($v_sys)){
+         if ($dont_need_sys || (defined($v_sys) && length($v_sys))){
             my $v_ps = $ps_e->get;
-            if (defined($v_ps) && length($v_ps)){
+            if ($dont_need_ps || (defined($v_ps) && length($v_ps))){
 
                # Build up Primary database independent initialisation
                # and set all environmental variables required for this database type
 
                my $db_init_command;
-               $db_init_command = 'orac_' . $orac_curr_db . '::' . 'init1_orac_' . $orac_curr_db . '()';
+               $db_init_command = 'orac_' . $orac_curr_db_typ . '::' . 'init1_orac_' . $orac_curr_db_typ . '()';
                eval $db_init_command ; warn $@ if $@;
 
                # Now attempt connection, first tell user what we're doing
@@ -308,8 +338,8 @@ sub get_connected {
                # except on the last one.  Try the full connection
                # option first, the one needed for NT.
 
-               $data_source_1 = 'dbi:' . $orac_curr_db . ':';
-               $data_source_2 = 'dbi:' . $orac_curr_db . ':' . $v_db;
+               $data_source_1 = 'dbi:' . $orac_curr_db_typ . ':';
+               $data_source_2 = 'dbi:' . $orac_curr_db_typ . ':' . $v_db;
 
                $conn_comm_flag = 1;
 
@@ -333,7 +363,7 @@ sub get_connected {
                      # If we connected successfully to a new database, store
                      # this fact, and put it in the browse option for later use
 
-                     open(DBFILE,">>txt/" . $orac_curr_db . "/orac_db_list.txt");
+                     open(DBFILE,">>txt/" . $orac_curr_db_typ . "/orac_db_list.txt");
                      print DBFILE "$v_db\n";
                      close(DBFILE);
                   }
@@ -355,7 +385,7 @@ sub get_connected {
          
          # User may have decided to change database type 
 
-         $orac_curr_db = main::select_dbtyp(2);
+         $orac_curr_db_typ = main::select_dbtyp(2);
       } else {
          $dn = 1;
       }
@@ -364,6 +394,7 @@ sub get_connected {
    # Ok, we're done here.  Now Orac can start work.  Stand by your beds.
 }
 sub connector {
+   print STDERR "connecting: $_[0], $_[1], $_[2]\n" if ($main::debug > 0);
    $dbh = DBI->connect($_[0], $_[1], $_[2]);
 }
 sub select_dbtyp {
@@ -382,7 +413,7 @@ sub select_dbtyp {
    } else {
       $mess = $lg{db_change_mess};
       $tit = $lg{change_dbtyp};
-      $loc_db = $orac_curr_db;
+      $loc_db = $orac_curr_db_typ;
    }
    my $dn = 0;
    do {
@@ -463,11 +494,11 @@ sub get_db {
    # Build up 2nd database independent initialisation
 
    my $db_init_command;
-   $db_init_command = 'orac_' . $orac_curr_db . '::' . 'init2_orac_' . $orac_curr_db . '()';
+   $db_init_command = 'orac_' . $orac_curr_db_typ . '::' . 'init2_orac_' . $orac_curr_db_typ . '()';
    eval $db_init_command ; warn $@ if $@;
 
    # Now sort out Jared's tools and configurable menus
-   if ($orac_orig_db ne $orac_curr_db){
+   if ($orac_orig_db ne $orac_curr_db_typ){
 
       # We do this, if either we're into the program for the first time,
       # or the user has changed the database type
@@ -476,7 +507,7 @@ sub get_db {
       main::config_menu();
       main::Jareds_tools();
       main::read_format();
-      $orac_orig_db = $orac_curr_db;
+      $orac_orig_db = $orac_curr_db_typ;
    }
 }
 sub see_plsql {
@@ -555,7 +586,7 @@ sub f_str {
 
    if(defined($sub) && defined($number)){
       my $file = sprintf("%s.%s.sql",$sub,$number);
-      open(SQL,"sql/$orac_curr_db/$file");
+      open(SQL,"sql/$orac_curr_db_typ/$file");
       while(<SQL>){
          $rt = $rt . $_;
       }
@@ -671,8 +702,8 @@ sub cr_prt {
          # Now build up command, and execute.
 
          my $db_init_command;
-         $db_init_command = 'orac_' . $orac_curr_db . '::' . 
-                            'init4_orac_' . $orac_curr_db . 
+         $db_init_command = 'orac_' . $orac_curr_db_typ . '::' . 
+                            'init4_orac_' . $orac_curr_db_typ . 
                             '($flag,' . $bit_string . ')';
          eval $db_init_command ; warn $@ if $@;
       }
@@ -735,14 +766,15 @@ sub prp_lp {
    # to be a bit different.
 
    my $db_init_command;
-   $db_init_command = '($cm,$frm) = orac_' . $orac_curr_db . 
-                                    '::' . 'init3_orac_' . $orac_curr_db . 
+   $db_init_command = '($cm,$frm) = orac_' . $orac_curr_db_typ . 
+                                    '::' . 'init3_orac_' . $orac_curr_db_typ . 
                                     '($cm,$sub,$frm)';
    eval $db_init_command ; warn $@ if $@;
 
    # Now prepare the SQL.  If approriate, bind in the calling
    # parameters
 
+   print STDERR "prp_lp:prepare($cm)\n" if ($main::debug > 0);
    my $sth = $dbh->prepare($cm) || die $dbh->errstr; 
 
    if ($num_bind > 0){
@@ -824,9 +856,11 @@ sub rep_tit {
 sub get_frm {
 
    # We may occasionally wish to generate formats on-the-fly.
-   # If this is required, this is where we do it.
+   # If this is required, this is where we do it...
 
    my($cm,$min_len) = @_;
+   print STDERR "get_frm:prepare($cm)\n" if ($main::debug > 0);
+
    my $sth = $dbh->prepare($cm) || die $dbh->errstr; 
    $sth->execute;
    my $ret;
@@ -922,7 +956,7 @@ sub read_format {
    # Pick up the database dependent configurable 
    # report formats, and load into variables
 
-   open(FRM_F, "txt/$orac_curr_db/format.txt");
+   open(FRM_F, "txt/$orac_curr_db_typ/format.txt");
    my $lhand;
    my $rhand;
    while(<FRM_F>){
@@ -960,7 +994,7 @@ sub config_menu {
    # Initialize variables to prevent
    # warnings
 
-   my $file = "menu/$orac_curr_db/menu.txt";
+   my $file = "menu/$orac_curr_db_typ/menu.txt";
    open(MENU_F, $file);
    while(<MENU_F>){
       chomp;
@@ -1031,13 +1065,25 @@ sub config_menu {
 
    # Here we go!  Slap up those menus.
 
+   print STDERR "config_menu: menu_command >\n$menu_command\n<\n" if ($main::debug > 0);
    eval $menu_command ; warn $@ if $@;
+
+   $tm_but_ct++;
+   $tm_but[$tm_but_ct] = $mb->Menubutton(-text=>$lg{sql_menu},
+                                         -relief=>'raised')->pack(-side=>'left',-padx=>2);
+   $swc{dbish} = $global_sub_win_count;
+   $sw_flg[$global_sub_win_count] =
+         $tm_but[$tm_but_ct]->command(-label=>$lg{dbish},
+                                      -command=>sub{main::bz();orac_Shell::dbish();main::ubz()});
+   $global_sub_win_count++;
+   return;
 }
 sub Jareds_tools {
 
    # Build up the 'My Tools' menu option.
 
    if(!defined($jt)){
+
       $comm_str = 
           ' $jt = $mb->Menubutton(-text=>$lg{my_tools},-relief=>\'raised\',-borderwidth=>2,-menuitems=> ' . "\n" .
      ' [[Button=>$lg{help_with_tools},' .
@@ -1053,7 +1099,7 @@ sub Jareds_tools {
      '    [Separator=>\'\'], ' . "\n" .
      '    [Button=>$lg{config_edit_sql},-command=>sub{main::bz();main::config_Jared_tools(5);main::ubz()},],], ' . "\n" .
      '  ], ' . "\n" .
-     ' [Separator=>\'\'], ' . "\n";
+     '  [Separator=>\'\'], ' . "\n";
 
       if(open(JT_CASC,'tools/config.tools')){
          while(<JT_CASC>){
@@ -1066,7 +1112,9 @@ sub Jareds_tools {
                   if (($jt_casc_butts[0] eq 'B') && ($jt_casc_butts[1] eq $jt_casc[1])){
                      $comm_str = $comm_str . 
                         ' [Button=>\'' . $jt_casc_butts[3] . '\',-command=>sub{main::bz(); main::f_clr(); ' . "\n" .
-                        ' main::run_Jareds_tool(\'' . $jt_casc[1] . '\',\'' . $jt_casc_butts[2] . '\');main::ubz()}], ' . "\n";
+                        ' main::run_Jareds_tool(\'' . $jt_casc[1] . '\',\'' . 
+                        $jt_casc_butts[2] . 
+                        '\');main::ubz()}], ' . "\n";
                   }
                }
                close(JT_CASC_BUTTS);
@@ -1379,19 +1427,26 @@ sub config_Jared_tools {
                               print JT_CONFIG_WRITE "$_\n";
                            }
                         } elsif($param == 6){
-                           unless (($hold[0] eq $main_check) && ($hold[1] eq $fin_inp)){
+                           unless (($hold[0] eq $main_check) && 
+                                   ($hold[1] eq $fin_inp)){
                               print JT_CONFIG_WRITE "$_\n";
                            } else {
-                              print JT_CONFIG_WRITE $hold[0] . '^' . $hold[1] . '^' . $ed_txt . '^' . "\n";
+                              print JT_CONFIG_WRITE $hold[0] . '^' . $hold[1] . '^' . 
+                                                    $ed_txt . '^' . "\n";
                            }
                         } elsif($param == 7){
-                           unless (($hold[0] eq $sec_check) && ($hold[1] eq $fin_inp) && ($hold[2] eq $sec_inp)){
+                           unless (($hold[0] eq $sec_check) && 
+                                   ($hold[1] eq $fin_inp) && 
+                                   ($hold[2] eq $sec_inp)){
                               print JT_CONFIG_WRITE "$_\n";
                            } else {
-                              print JT_CONFIG_WRITE $hold[0] . '^' . $hold[1] . '^' . $hold[2] . '^' . $ed_txt . '^' . "\n";
+                              print JT_CONFIG_WRITE $hold[0] . '^' . $hold[1] . '^' . 
+                                                    $hold[2] . '^' . $ed_txt . '^' . "\n";
                            }
                         } else {
-                           unless (($hold[0] eq $main_check) && ($hold[1] eq $loc_casc) && ($hold[2] eq $fin_inp)){ 
+                           unless (($hold[0] eq $main_check) && 
+                                   ($hold[1] eq $loc_casc) && 
+                                   ($hold[2] eq $fin_inp)){ 
                               print JT_CONFIG_WRITE "$_\n";
                            }
                         }
@@ -1511,9 +1566,14 @@ sub iconize {
    my $icon_img = $w->Photo('-file' => 'img/orac_med.gif');
    $w->Icon('-image' => $icon_img);
 }
-sub set_curr_db {
+sub pick_up_defaults {
 
    # This allows user to select main database type.
+   # Also allows selection of pre-defined background
+   # colour.  Assign some pre-defined values in case
+   # the config file not yet available.
+
+   $bc = $lg{def_backgr_col};
 
    my $i = 0;
    my $file = 'config/what_db.txt';
@@ -1521,34 +1581,15 @@ sub set_curr_db {
       open(DB_FIL,$file);
       while(<DB_FIL>){
          my @hold = split(/\^/, $_);
-         $orac_curr_db = $hold[0];
+         $orac_curr_db_typ = $hold[0];
          $sys_user = $hold[1];
+         $bc = $hold[2];
          $v_db = $hold[3];
          $i = 1;
       }
       close(DB_FIL);
    }
-   if ($i == 0){
-      $orac_curr_db = main::select_dbtyp(1);
-   }
-}
-sub get_backgr {
-   my($col) = @_;
-
-   # Find out the default colour.  If they're isn't one,
-   # assign the one already given.
-
-   my $file = 'config/what_db.txt';
-
-   if(-e $file){
-      open(DB_FIL, $file);
-      while(<DB_FIL>){
-         my @hold = split(/\^/, $_);
-         $col = $hold[2];
-      }
-      close(DB_FIL);
-   }
-   return $col;
+   return;
 }
 BEGIN {
 

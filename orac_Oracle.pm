@@ -1,5 +1,8 @@
 package orac_Oracle;
 
+sub init0_orac_Oracle {
+   # Does nothing in Oracle yet
+}
 sub init1_orac_Oracle {
    package main;
 
@@ -447,12 +450,17 @@ sub and_finally {
       $t->configure(-state=>'disabled');
       $t->pack(@lb);
 
-      (@lb) = qw/-side bottom -expand no/;
-      $c_br = $c_d->Frame->pack(@lb);
+      $c_br = $c_d->Frame->pack(-before=>$top_frame,
+                                -side=>'bottom',
+                                -expand=>'no');
    
-      $gen_sc = $c_br->Scale( -orient=>'horizontal',-label=>"$lg{rec_of} " . $max_row,-length=>400,
-                              -sliderrelief=>'raised',-from=>1,-to=>$max_row,-tickinterval=>($max_row/8),
-                              -command=>[ sub {orac_Oracle::calc_scale_record($gen_sc->get())} ])->pack(side=>'left');
+      $gen_sc = $c_br->Scale( -orient=>'horizontal',-label=>"$lg{rec_of} " . $max_row,
+                              -length=>400,
+                              -sliderrelief=>'raised',
+                              -from=>1,-to=>$max_row,
+                              -tickinterval=>($max_row/8),
+                              -command=>[ sub {orac_Oracle::calc_scale_record($gen_sc->get())} ]
+                            )->pack(side=>'left');
       $c_br->Button(-text=>$ssq,-command=>sub{main::see_sql($c_d,$l_sel_str)}
                    )->pack(side=>'right');
       orac_Oracle::go_for_gold();
@@ -1203,12 +1211,23 @@ sub errors_orac {
                        sub{$sw[$swc{errors_orac}]->withdraw();$sw_flg[$swc{errors_orac}]->configure(-state=>'active')}
              )->pack(-side=>'left');
 
-         (@err_lay) = qw/-side top -padx 5 -expand yes -fill both/;
-         $err_top = $sw[$swc{errors_orac}]->Frame->pack(@err_lay);
+         $err_top = $sw[$swc{errors_orac}]->Frame->pack(-side=>'top',
+                                                        -padx=>5,
+                                                        -expand=>'yes',
+                                                        -fill=>'both');
 
-         $sw_hand[$swc{errors_orac}] = $err_top->ScrlListbox(-width=>50,-background=>$bc,
-                                                 -foreground=>$fc)->pack(-expand=>'yes',-fill=>'both');
-         $err_top->Label( text  =>$lg{doub_click}, anchor=>'s', relief=>'groove')->pack(-expand=>'no');
+         $sw_hand[$swc{errors_orac}] = 
+             $err_top->ScrlListbox(-width=>50,
+                                   -background=>$bc,
+                                   -foreground=>$fc
+                                  )->pack(-side=>'top',-expand=>'yes',-fill=>'both');
+
+         $err_top->Label(-text=>$lg{doub_click},
+                         -anchor=>'s',
+                         -relief=>'groove'
+                        )->pack(-side=>'bottom',
+                                -before=>$sw_hand[$swc{errors_orac}],
+                                -expand=>'no');
          main::iconize($sw[$swc{errors_orac}]);
       }
       $sw_hand[$swc{errors_orac}]->insert('end', @res);
@@ -1254,9 +1273,19 @@ sub dbas_orac {
          (@err_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          $dba_top = $sw[$swc{dbas_orac}]->Frame->pack(@err_lay);
 
-         $sw_hand[$swc{dbas_orac}] = $dba_top->ScrlListbox(-width=>50,-background=>$bc,
-                                                 -foreground=>$fc)->pack(-expand=>'yes',-fill=>'both');
-         $dba_top->Label( text  =>$lg{doub_click}, anchor=>'s', relief=>'groove')->pack(-expand=>'no');
+         $sw_hand[$swc{dbas_orac}] = 
+            $dba_top->ScrlListbox(-width=>50,
+                                  -background=>$bc,
+                                  -foreground=>$fc
+                                 )->pack(-expand=>'yes',-fill=>'both');
+
+         $dba_top->Label(-text=>$lg{doub_click},
+                         -anchor=>'s',
+                         -relief=>'groove'
+                        )->pack(-expand=>'no',
+                                -side=>'bottom',
+                                -before=>$sw_hand[$swc{dbas_orac}]);
+
          main::iconize($sw[$swc{dbas_orac}]);
       }
       $sw_hand[$swc{dbas_orac}]->insert('end', @res);
@@ -1302,9 +1331,19 @@ sub addr_orac {
          (@adr_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          $adr_top = $sw[$swc{addr_orac}]->Frame->pack(@adr_lay);
 
-         $sw_hand[$swc{addr_orac}] = $adr_top->ScrlListbox(-width=>20,-background=>$bc,
-                                                 -foreground=>$fc)->pack(-expand=>'yes',-fill=>'both');
-         $adr_top->Label( text =>$lg{doub_click}, anchor=>'s', relief=>'groove')->pack(-expand=>'no');
+         $sw_hand[$swc{addr_orac}] = 
+            $adr_top->ScrlListbox(-width=>20,
+                                  -background=>$bc,
+                                  -foreground=>$fc
+                                 )->pack(-expand=>'yes',-fill=>'both');
+
+         $adr_top->Label(-text=>$lg{doub_click},
+                         -anchor=>'s',
+                         -relief=>'groove'
+                        )->pack(-expand=>'no',
+                                -side=>'bottom',
+                                -before=>$sw_hand[$swc{addr_orac}]);
+
          main::iconize($sw[$swc{addr_orac}]);
       }
       $sw_hand[$swc{addr_orac}]->insert('end', @res);
@@ -1350,9 +1389,19 @@ sub sids_orac {
          (@sid_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          $sid_top = $sw[$swc{sids_orac}]->Frame->pack(@sid_lay);
 
-         $sw_hand[$swc{sids_orac}] = $sid_top->ScrlListbox(-width=>20,-background=>$bc,
-                                                 -foreground=>$fc)->pack(-expand=>'yes',-fill=>'both');
-         $sid_top->Label( text =>$lg{doub_click}, anchor=>'s', relief=>'groove')->pack(-expand=>'no');
+         $sw_hand[$swc{sids_orac}] = 
+            $sid_top->ScrlListbox(-width=>20,
+                                  -background=>$bc,
+                                  -foreground=>$fc
+                                 )->pack(-expand=>'yes',-fill=>'both');
+
+         $sid_top->Label(-text=>$lg{doub_click},
+                         -anchor=>'s',
+                         -relief=>'groove'
+                        )->pack(-expand=>'no',
+                                -side=>'bottom',
+                                -before=>$sw_hand[$swc{sids_orac}]);
+
          main::iconize($sw[$swc{sids_orac}]);
       }
       $sw_hand[$swc{sids_orac}]->insert('end', @res);
@@ -1410,9 +1459,11 @@ sub explain_plan {
    # First of all, check if we have the correct PLAN_TABLE
    # on board?
 
+   my $explain_ok = 0;
    if (orac_Oracle::check_exp_plan() == 0){
       main::mes($mw,$lg{use_utlxplan});
-      return;
+   } else {
+      $explain_ok = 1;
    }
    if(!defined($swc{explain_plan})){
       $swc{explain_plan} = $global_sub_win_count;
@@ -1430,19 +1481,23 @@ sub explain_plan {
    # Add buttons.  Add a holder for the actual explain plan
    # button so we can enable/disable it later
 
-   $expl_butt = $dmb->Button(-text=>$lg{explain},-command=>sub{ orac_Oracle::explain_it() }
-               )->pack(side=>'left');
+   if($explain_ok){
+      $expl_butt = $dmb->Button(-text=>$lg{explain},
+                                -command=>sub{ orac_Oracle::explain_it() }
+                               )->pack(side=>'left');
 
-   $dmb->Button(-text=>$lg{clear},-command=>sub{
-                      $sw[$swc{explain_plan}]->Busy;
-                      $sql_txt->delete('1.0','end');
-                      $w_user_name = $v_sys;
-                      $expl_butt->configure(-state=>'normal');
-                      $sw[$swc{explain_plan}]->Unbusy;
-                                               }
-               )->pack(side=>'left');
+      $dmb->Button(-text=>$lg{clear},-command=>sub{
+                         $sw[$swc{explain_plan}]->Busy;
+                         $sql_txt->delete('1.0','end');
+                         $w_user_name = $v_sys;
+                         $expl_butt->configure(-state=>'normal');
+                         $sw[$swc{explain_plan}]->Unbusy;
+                                                  }
+                  )->pack(side=>'left');
+   }
 
-   $dmb->Button(-text=>$lg{exit},-command=> sub{
+   $dmb->Button(-text=>$lg{exit},
+                -command=> sub{
                       $sw[$swc{explain_plan}]->withdraw();
                       $sw_flg[$swc{explain_plan}]->configure(-state=>'active');
                       undef $sql_browse_arr} 
@@ -1453,10 +1508,14 @@ sub explain_plan {
    $top_slice = $sw[$swc{explain_plan}]->Frame->pack(@exp_lay);
 
    my $sql_txt_width = 50;
-   my $sql_txt_height = 15;
-   $sw_hand[$swc{explain_plan}] = $top_slice->Scrolled('Text',-wrap=>'none',-cursor=>undef,
-                                                       -height=>($sql_txt_height + 3),-width=>($sql_txt_width + 2),
-                                                       -foreground=>$fc,-background=>$bc);
+   my $sql_txt_height = 13;
+   $sw_hand[$swc{explain_plan}] = $top_slice->Scrolled('Text',
+                                                       -wrap=>'none',
+                                                       -cursor=>undef,
+                                                       -height=>($sql_txt_height + 4),
+                                                       -width=>($sql_txt_width + 4),
+                                                       -foreground=>$fc,
+                                                       -background=>$bc);
 
    # Set the holding variables
 
@@ -1468,9 +1527,12 @@ sub explain_plan {
    $sw_hand[$swc{explain_plan}]->windowCreate('end',-window=>$w_user_id);
    $sw_hand[$swc{explain_plan}]->insert('end', "\n");
    
-   $sql_txt = $sw_hand[$swc{explain_plan}]->Scrolled('Text',-wrap=>'none',-cursor=>undef,
-                                                     -height=>$sql_txt_height,-width=>$sql_txt_width,
-                                                     -foreground=>$fc,-background=>$ec);
+   $sql_txt = $sw_hand[$swc{explain_plan}]->Scrolled('Text',-wrap=>'none',
+                                                     -cursor=>undef,
+                                                     -height=>$sql_txt_height,
+                                                     -width=>$sql_txt_width,
+                                                     -foreground=>$fc,
+                                                     -background=>$ec);
    tie (*SQL_TXT, 'Tk::Text', $sql_txt);
 
    $sw_hand[$swc{explain_plan}]->windowCreate('end',-window=>$sql_txt);
@@ -1487,18 +1549,30 @@ sub explain_plan {
    $sql_max_row = @$sql_browse_arr;
    unless ($sql_max_row == 0){
       $sql_row_count = $sql_min_row;
+
       # Build up scale slider button, and splatt onto window.
 
-      (@exp_lay) = qw/-side top -padx 5 -expand no -fill both/;
-      $bot_slice = $sw[$swc{explain_plan}]->Frame->pack(@exp_lay);
+      $bot_slice = $sw[$swc{explain_plan}]->Frame->pack(-before=>$top_slice,
+                                                        -side=>'bottom',
+                                                        -padx=>5,
+                                                        -expand=>'no',
+                                                        -fill=>'both');
 
-      $sql_slider = $bot_slice->Scale( -orient=>'horizontal',-label=>"$lg{rec_of} " . $sql_max_row,-length=>400,
-                           -sliderrelief=>'raised',-from=>1,-to=>$sql_max_row,-tickinterval=>($sql_max_row/8),
-                          -command=>[ sub {orac_Oracle::calc_scale_sql($sql_txt_width,
-                                                                       $sql_slider->get())} ])->pack(side=>'left');
-      $bot_slice->Button(-text=>$ssq,-command=>sub{main::see_sql($sw[$swc{explain_plan}],$cm)}
+      $sql_slider = $bot_slice->Scale( -orient=>'horizontal',
+                                       -label=>"$lg{rec_of} " . $sql_max_row,
+                                       -length=>400,
+                                       -sliderrelief=>'raised',
+                                       -from=>1,
+                                       -to=>$sql_max_row,
+                                       -tickinterval=>($sql_max_row/8),
+                                       -command=>[ sub {orac_Oracle::calc_scale_sql($sql_txt_width,
+                                                                       $sql_slider->get(),
+                                                                       $explain_ok)} ]
+                                      )->pack(side=>'left');
+      $bot_slice->Button(-text=>$ssq,
+                         -command=>sub{main::see_sql($sw[$swc{explain_plan}],$cm)}
                  )->pack(side=>'right');
-      orac_Oracle::pick_up_sql($sql_txt_width);
+      orac_Oracle::pick_up_sql($sql_txt_width,$explain_ok);
 
    } else {
       # There are no rows (very unlikely) so blatt out memory
@@ -1560,14 +1634,14 @@ sub calc_scale_sql {
    # Whizz backwards and forwards through the 
    # v$sqlarea records
 
-   my($width,$sv) = @_;
+   my($width,$sv,$expl_ok) = @_;
    $sql_row_count = $sv - 1;
-   orac_Oracle::pick_up_sql($width);
+   orac_Oracle::pick_up_sql($width,$expl_ok);
 }
 sub pick_up_sql {
    package main;
 
-   my($width) = @_;
+   my($width,$expln_ok) = @_;
 
    # Work out which row of information to display,
    # and then display it.
@@ -1599,12 +1673,13 @@ sub pick_up_sql {
    # Enable the 'Explain Plan' button, if the logged on
    # user, is the same as the SQL's user
 
-   if($v_sys eq $w_user_name){
-      $expl_butt->configure(-state => 'normal');
-   } else {
-      $expl_butt->configure(-state => 'disabled');
+   if($expln_ok){
+      if($v_sys eq $w_user_name){
+         $expl_butt->configure(-state => 'normal');
+      } else {
+         $expl_butt->configure(-state => 'disabled');
+      }
    }
-
    return;
 }
 sub check_exp_plan {

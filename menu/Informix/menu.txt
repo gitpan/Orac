@@ -1,4 +1,5 @@
 Menubutton^struct^
+command^0^0^db_info^orac_Informix::onstat_databases^^
 command^0^0^oi_dbspaces^orac_Informix::onstat_dbspaces^^
 command^0^0^oi_chunks^orac_Informix::onstat_chunks^^
 command^0^0^oi_onconfig_params^orac_Informix::onstat_onconfig_params^^
@@ -37,3 +38,4 @@ command^0^0^oi_curr_sql^orac_Informix::onstat_curr_sql^^
 command^0^0^oi_expl_err^orac_Informix::finderr_num^^
 Menubutton^tune^
 command^0^0^oi_io_profile^orac_Informix::onstat_io_profile^^
+command^0^0^lcks_held^orac_Informix::onstat_locks_held^^
