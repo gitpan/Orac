@@ -1,6 +1,10 @@
 Orac  --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
 
-   Copyright (c) 1998,1999,2000 Andy Duncan, England
+THIS IS A [B]LEADING EDGE DEVELOPMENT, IN AN ATTEMPT TO ADD ORACLE 
+DEVELOPMENT TOOLS TO ORAC, AS WELL AS DBA ONES.  FOR STABLE USAGE,
+UNTIL FURTHER NOTICE, USE THE Orac-1.2.0 download.
+
+   Copyright (c) 1998,1999,2000,2001 Andy Duncan, England
 
    email:         andy_j_duncan@yahoo.com
    CPAN id:       CPAN/authors/id/A/AN/ANDYDUNC
@@ -15,21 +19,9 @@ NB: This README file does not contain all of the information within
 the Orac distribution.  For more specialised information, please go
 to our "docs" or "help" directories.
 
-Orac-1.2.0 is the latest stable version of Orac.
-
-Orac WEB PAGE:
-
-You can usually find our web page at:
-
-=> http://www.kkitts.com/orac-dba/
-
-We also have a mirror at:
-
-=> http://www.tux.org/orac-dba/ 
-
-This is managed by Kevin Kitts.  Please go here for the latest information,
-on Orac.
-
+Orac-1.2.0 is the latest stable version of Orac.  You may wish
+to download this if you have any problems with these later development
+versions.
 
 TERMS AND CONDITIONS OF USE:
 
@@ -71,6 +63,15 @@ PREREQUISITES (For Everybody)
              DBI-1.13
              Tk800.015
              Latest relevant DBD database driver for DBI-1.13
+
+   Oracle developers will also require Richard Sutherland's DDL::Oracle
+   module.  We are using:
+
+             DDL-Oracle-1.04.tar.gz 
+
+   This (or the latest version) is available from:
+
+   http://www.perl.com/CPAN-local/modules/by-authors/id/R/RV/RVSUTHERL/
 
 LINUX USERS:
 
@@ -333,15 +334,14 @@ Orac-1.2.0  After no adverse reports on 1.1.51, this is that release
             with this README file name and the program's version number
             changed.  Thanks to everyone who's helped us get this far.
             We ain't finished yet.
+Orac-1.2.1  Yep, it HAS been a while, but let's get this monkey running
+            again.  The VERY early beginnings of developer support
+            for Oracle developers using Richard Sutherland's DDL option.
+            Thanks to Andy Campbell, Sun employee and DBA genius! :-)
 
 EXTRA NOTES FOR LINUX USERS:
 
-The following summarised notes have been taken from
-Kevin Kitts' Orac home page:
-
-=> http://www.kkitts.com/orac-dba/
-
-If you'd like any more detail, please go there first.
+Originally provided by Kevin Kitts.
 
 Requirements for Running Orac (under Linux)
 -----------------------------------------------
@@ -432,14 +432,9 @@ You may find problems with Win32-TieRegistry errors.  If
 this is the case, you may also need to install the Win32-TieRegistry
 package, also from packages/zips.
 
-
 Download
 --------
 You can download the latest Orac via:
-
-=> http://www.kkitts.com/
-
-or you can download directly from the master CPAN site, here:
 
 => ftp://ftp.funet.fi/pub/languages/perl/CPAN/authors/id/A/AN/ANDYDUNC/
 
@@ -449,21 +444,5 @@ boxes to connect remotely.  If you still cannot connect
 remotely, you may have to slightly change the DBI->connect
 statements to give DBI the right configuration for your
 remote database connection.
-
-Orac Users Mailing List
------------------------
-Please use the following mailing list resources to find out more about Orac:
-
-For information on the installation, configuration and use of Orac you can
-subscribe to the Orac User's mailing list by sending an empty e-mail (with the
-word subscribe on the subject line) to:
-
-manage-orac-dba-users-subscribe@listserv.kkitts.com
-
-For those interested in following the developer discussion (or perhaps even
-developing for Orac!) a developers list is available. Please send an empty
-e-mail (with the word subscribe on the subject line) to:
-
-manage-orac-dba-developers-subscribe@listserv.kkitts.com
 
 EOF

@@ -49,7 +49,7 @@ main::splash_screen(0);
 # before the main loop.
 
 use DBI '1.13';
-$VERSION = '1.200';
+$VERSION = '1.210';
 
 # Now enter strict mode
 use strict;
@@ -1072,7 +1072,7 @@ sub select_dbtyp {
 
    # A successful connection means we store the variable for later
 
-   # Pick up the standard DBA user for the particular database
+   # Pick up the standard user for the particular database
    ($main::sys_user,$main::v_db) = get_dba_user($loc_db);
    main::fill_defaults($loc_db, 
                        $main::sys_user, 
@@ -1087,7 +1087,7 @@ sub select_dbtyp {
 
 =head2 get_dba_user
 
-Picks up the typical DBA user for the particular database.
+Picks up the typical user for the particular database.
 
 =cut
 
@@ -1097,7 +1097,7 @@ sub get_dba_user {
    my $dba_user;
    my $new_db;
 
-   # Picks up the typical DBA user for the particular database
+   # Picks up the typical user for the particular database
 
    my $first_place = File::Spec->catfile($main::orac_home, 'all_dbs.txt');
    my $second_place = File::Spec->catfile($FindBin::RealBin, 'config');
@@ -1356,7 +1356,14 @@ sub config_menu {
    # Initialize variables to prevent
    # warnings
 
-   my $file = "$FindBin::RealBin/menu/$main::orac_curr_db_typ/menu.txt";
+   my $menu_file_name = "menu.txt";
+   if ($main::orac_curr_db_typ eq "Oracle"){
+      if (!$main::current_db->dba_user){
+         $menu_file_name = "menu_dev.txt";
+      }
+   }
+   my $file = "$FindBin::RealBin/menu/$main::orac_curr_db_typ/" .
+              $menu_file_name;
    open(MENU_F, $file) or warn qq{Unable to open $file $!};;
    while(<MENU_F>){
 

@@ -144,7 +144,7 @@ logdon_usrs^Current Logged on Users^
 logical_struct^Logical Structures^
 login_crt^Create Server Login^
 login_rev^Reverse Engineer Login Creation^
-login_txt^DBA User Connection^
+login_txt^User Connection^
 ls_all^List All Objects in Current Database^
 lt_wtrs^Latch Waiters^
 ltchs^Latches^
@@ -279,10 +279,10 @@ stop^Stop^
 struct^Structure^
 summ_tabsp^Summary Chart by Tablespace^
 synyms^Synonyms^
-sys_pass^DBA User Password^
-sys_user^DBA User^
+sys_pass^User Password^
+sys_user^User^
 systabs^System Tables^
-system_please^Please enter a DBA user password^
+system_please^Please enter a user password^
 tabs^Tables^
 tabsp^Tablespace^
 tabsp_frag^Tablespace Fragmentation^
@@ -306,7 +306,7 @@ use_utlxplan^Please run utlxplan.sql to create user's PLAN_TABLE, for 'Explain P
 user^User^
 user_access^User Access^
 user_obj^User Objects^
-user_please^Please enter a DBA user with at least main 'Select' privileges^
+user_please^Please enter a user with at least main 'Select' privileges^
 user_proc_io^Any User Processes Performing I/O?^
 user_process^User Processess^
 user_record^User Records^

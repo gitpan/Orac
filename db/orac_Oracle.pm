@@ -4,6 +4,7 @@ use strict;
 @orac_Oracle::ISA = qw{orac_Base};
 
 my $Block_Size;
+my $Oracle_Version;
 
 my $sql_slider;
 my $sql_row_count;
@@ -25,6 +26,8 @@ my @w_holders;
 my @w_titles;
 my @w_explain;
 
+my $oracle_dba_user;
+
 =head1 NAME
 
 orac_Oracle.pm - the Oracle module to the Orac tool
@@ -41,6 +44,7 @@ inherited and used as is.
 &new()
 &init1()
 &init2()
+&dba_user()
 
 =cut
 
@@ -114,22 +118,86 @@ sub init2 {
    $self->{Database_conn} = $_[0];
    $self->Dump;
 
-   # Get the block size, as soon as we
-   # logon to a database.  Saves us having to
-   # continually find it out again, and again.
+   my $dn = 0;
+   do {
+      my $d = $main::mw->DialogBox(-title=>"Oracle User Type",
+                                   -buttons=>[ "DBA", "Developer","Exit"]
+                                  );
+      my $button = $d->Show;
+   
+      if ($button eq "DBA"){
+         $oracle_dba_user = 1;
+      } elsif ($button eq "Developer"){
+         $oracle_dba_user = 0;
+      } else {
+         main::back_orac();
+      }
+   
+      if ($oracle_dba_user){
+   
+         # Get the block size, as soon as we
+         # logon to a database.  Saves us having to
+         # continually find it out again, and again.
+   
+         my $cm = $self->f_str('get_db','1');
 
-   my $cm = $self->f_str('get_db','1');
+         eval {
+            my $sth = $self->{Database_conn}->prepare( $cm ); 
+            $sth->execute;
+            ($Block_Size) = $sth->fetchrow;
+            $sth->finish;
+         };
+         if ($@) {
+            warn $@;
+            main::mes($main::mw,"This DBA User does not appear to have\n" .
+                                "the right permissions for reading DBA\n" .
+                                "tables.  You may wish to choose the\n" .
+                                "\"Developer\" option instead");
+         } else {
+            $dn = 1;
+         }
+      } else {
+         eval {
+            require DDL::Oracle;
+         };
+         if ($@) {
+            warn $@;
+            main::mes($main::mw,
+                         "Oracle Development usage requires\n" .
+                         "Richard Sutherland's DDL-Oracle module.\n" .
+                         "You can get hold of this here:\n\n" .
+                         "http://www.perl.com/CPAN-local/modules/" .
+                         "by-authors/id/R/RV/RVSUTHERL/"
+                     );
+         } else {
+            my $cm = $self->f_str('get_user_db','1');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) ||
-                die $self->{Database_connector}->errstr;
-   $sth->execute;
-   ($Block_Size) = $sth->fetchrow;
-   $sth->finish;
+            my $sth = $self->{Database_conn}->prepare( $cm ); 
+            $sth->execute;
+            ($Block_Size) = $sth->fetchrow;
+            $sth->finish;
+
+            $cm = $self->f_str('get_version','1');
+
+            $sth = $self->{Database_conn}->prepare( $cm ); 
+            $sth->execute;
+            ($Oracle_Version) = $sth->fetchrow;
+            $sth->finish;
+
+            $dn = 1;
+         }
+      }
+   } until $dn;
 
    # Enable the PL/SQL memory area, for this
    # database connection
-
+   
    $self->{Database_conn}->func(1000000,'dbms_output_enable');
+}
+
+sub dba_user {
+   my $self = shift;
+   return $oracle_dba_user;
 }
 
 ################ Database dependent code functions below here ##################
@@ -3195,6 +3263,174 @@ sub tab_det_orac {
 
    main::iconize( $d );
 
+}
+
+######################## Development ###########################################
+
+=head2 dev_tables
+
+Creates DBA Viewer window, for selecting various DBA_XXXX tables,
+which can then be selected upon.
+
+=cut
+
+sub dev_tables {
+   my $self = shift;
+
+   # Creates Tables Viewer window
+
+   my $cm = $self->f_str('dev_tables','1');
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
+   $sth->execute;
+   my $detected = 0;
+
+   my @res;
+   my $window;
+
+   my $resize = 0;
+   my $heading = 0;
+   my $action = 'create';
+
+   while (@res = $sth->fetchrow) {
+      $detected++;
+
+      if($detected == 1){
+
+         $window = $self->{Main_window}->Toplevel();
+         $window->title("Tables DDL");
+
+         my $dev_menu;
+         my $balloon;
+         $self->create_balloon_bars(\$dev_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$dev_menu, \$window, 1, \$balloon, );
+
+         my $dev_2_menu;
+         my $balloon2;
+         $self->create_balloon_bars(\$dev_2_menu, \$balloon2, \$window, );
+
+         $self->double_click_message(\$window);
+
+         $dev_menu->Radiobutton(variable=>\$resize,
+                                text=>"Resize Off",
+                                value=>0
+                               )->pack (-side=>'left',
+                                        -anchor=>'w');
+
+         $dev_menu->Radiobutton(variable=>\$resize,
+                                text=>"Resize On",
+                                value=>1
+                               )->pack (-side=>'left',
+                                        -anchor=>'w');
+
+         $dev_menu->Radiobutton(variable=>\$heading,
+                                text=>"Heading Off",
+                                value=>0
+                               )->pack (-side=>'left',
+                                        -anchor=>'w');
+
+         $dev_menu->Radiobutton(variable=>\$heading,
+                                text=>"Heading On",
+                                value=>1
+                               )->pack (-side=>'left',
+                                        -anchor=>'w');
+
+         $dev_2_menu->Radiobutton(variable=>\$action,
+                                  text=>"Table",
+                                  value=>'create'
+                                 )->pack (-side=>'left',
+                                          -anchor=>'w');
+
+         $dev_2_menu->Radiobutton(variable=>\$action,
+                                  text=>"Drop",
+                                  value=>'drop'
+                                 )->pack (-side=>'left',
+                                          -anchor=>'w');
+
+         my $resize_state = 'disabled';
+
+         if ($Oracle_Version =~ /^8/){
+            $resize_state = 'normal';
+         }
+
+         $dev_2_menu->Radiobutton(variable=>\$action,
+                                  text=>"Resize (Oracle 8)",
+                                  value=>'resize',
+                                  state=>$resize_state
+                                 )->pack (-side=>'left',
+                                          -anchor=>'w');
+
+         my(@dev_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+         my $dev_top = $window->Frame->pack(@dev_lay);
+
+         $window->{text} =
+            $dev_top->ScrlListbox(-width=>50,
+                                  -font=>$main::font{name},
+                                  -background=>$main::bc,
+                                  -foreground=>$main::fc
+                                 )->pack(-expand=>'yes',-fill=>'both');
+
+         main::iconize($window);
+      }
+      $window->{text}->insert('end', @res);
+   }
+   $sth->finish;
+   if($detected == 0){
+      $self->{Main_window}->Busy(-recurse=>1);
+      main::mes($self->{Main_window},$main::lg{no_rows_found});
+      $self->{Main_window}->Unbusy;
+   } else {
+
+      $window->{text}->pack();
+
+      $window->{text}->bind(
+         '<Double-1>',
+         sub{
+              $window->Busy(-recurse=>1);
+              $self->{Main_window}->Busy(-recurse=>1);
+
+              DDL::Oracle->configure( 
+                        dbh      => $self->{Database_conn},
+                        resize   => $resize,
+                        view     => 'user',
+                        heading  => $heading,
+                        blksize  => $Block_Size,
+                        version  => $Oracle_Version
+                      );
+
+              my $type = "TABLE";
+
+              my $obj = DDL::Oracle->new(
+                            type  => $type,
+                            list  => [
+                                       [
+                                         $main::v_sys,
+                                         $window->{text}->get('active'),
+                                       ]
+                                     ]
+                                        );
+
+              my $sql;
+
+              if ( $action eq "drop" ){
+                  $sql = $obj->drop;
+              }
+              elsif ( $action eq "create" ){
+                  $sql = $obj->create;
+              }
+              elsif ( $action eq "resize" ){
+                  $sql = $obj->resize;
+              }
+
+              $self->f_clr( $main::v_clr );
+              $self->{Text_var}->insert('end', $sql);
+
+              $self->{Main_window}->Unbusy;
+              $window->Unbusy;
+            }
+
+                                   );
+   }
 }
 
 1;
