@@ -1,0 +1,8 @@
+
+
+If the same process shows up time and time again as holding
+the latch named, and the wait ratio is high for that latch,
+then there could be a problem with an event causing a wait
+on the system.
+
+

@@ -1,0 +1,25 @@
+
+
+If # Shrink is low:
+    If AvShr is low:
+        If Avgsz Activ is much smaller than Opt Mb:
+            Reduce OPTIMAL (since not many shrinks occur).
+    If AvShr is high:
+        Good value for OPTIMAL.
+If # Shrink is high:
+    If AvShr is low:
+        Too many shrinks being performed,since OPTIMAL is
+        somewhat (but not hugely) too small.
+    If AvShr is high:
+        Increase OPTIMAL until # of Shrnk decreases.  Periodic
+        long transactions are probably causing this.
+
+A high value in the #Ext column indicates dynamic extension,in which case
+you should consider increasing your rollback segment size.  (Also,increase
+it if you get a "Shapshot too old" error).  A high value in the # Extend
+and # Shrink columns indicate allocation and deallocation of extents, due
+to rollback segments with a smaller optimal size.  It also may be due to
+a batch processing transaction assigned to a smaller rollback segment.
+Consider increasing OPTIMAL.
+
+
