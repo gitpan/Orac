@@ -19,7 +19,7 @@ examine files.
 
 =cut
 
-use vars qw( $pod $upBtn $updirImage $folderImage $fileImage $imageImage 
+use vars qw( $pod $upBtn $updirImage $folderImage $fileImage $imageImage
              $pImage $start_directory %pod_txt_img $pod_txt_but
            );
 
@@ -44,9 +44,9 @@ sub new
 
    my ($l_window, $l_text, $l_screen_title) = @_;
 
-   my $self  = orac_Base->new("FileSelect", 
-                               $l_window, 
-                               $l_text, 
+   my $self  = orac_Base->new("FileSelect",
+                               $l_window,
+                               $l_text,
                                $l_screen_title
                              );
 
@@ -89,8 +89,8 @@ sub req_filebox {
    $self->{selectPath} = $start_directory;
 
    $self->top_left_message( \$filsel_menu, $main::lg{doub_click } );
-   $self->top_right_ball_message( \$filsel_menu, 
-                                  \$self->{selectPath}, 
+   $self->top_right_ball_message( \$filsel_menu,
+                                  \$self->{selectPath},
                                   \$self->{window}
                                 );
 
@@ -101,35 +101,27 @@ sub req_filebox {
 
    my $f0 = $self->{window}->Frame(-relief=>'ridge',
                                    -bd=>2,
-                                  )->pack( -side=>'top', 
-                                           -expand => 'n', 
+                                  )->pack( -side=>'top',
+                                           -expand => 'n',
                                            -fill => 'both'
                                          );
-
-   $upBtn = $f0->Button;
 
    # The back.gif is a typical Browser style "back" directional
    # arrow
 
-   $updirImage = 
-      $self->{window}->Photo(-file=>"$FindBin::RealBin/img/back.gif");
+   $self->get_img( \$self->{window}, \$updirImage, 'back');
+   $self->get_img( \$self->{window}, \$pod_txt_img{0}, 'landscape' );
+   $self->get_img( \$self->{window}, \$pod_txt_img{1}, 'pod' );
 
-   $pod_txt_img{0} = 
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/landscape.gif" );
-
-   $pod_txt_img{1} = 
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/pod.gif" );
-
-   $upBtn->configure(-image => $updirImage);
-   $upBtn->configure(-command => sub { $self->UpDirCmd(@_); } );
-   $upBtn->pack(-side => 'left', -padx => 4, -fill => 'both');
+   $upBtn = $f0->Button(-image => $updirImage,
+                        -command => sub { $self->UpDirCmd(@_); },
+                       )->pack(-side => 'left', -padx => 4, -fill => 'both');
 
    $balloon->attach($upBtn, -msg => $main::lg{back_dir});
 
    $pod = 1;
-   $pod_txt_but = $f0->Button;
-   $pod_txt_but->configure(-image => $pod_txt_img{ $pod },
-                           -command => sub {  
+   $pod_txt_but = $f0->Button(-image => $pod_txt_img{ $pod },
+                              -command => sub {
 
       if ( $pod == 1 )
       {
@@ -143,14 +135,14 @@ sub req_filebox {
       }
       $pod_txt_but->configure(-image => $pod_txt_img{ $pod } );
 
-                                           } 
-                        );
+                                           }
 
-   $pod_txt_but->pack( -side => 'left' );
+                             )->pack( -side => 'left' );
+
    $balloon->attach($pod_txt_but, -msg => $main::lg{pod} );
 
    $self->orac_image_label(\$f0, \$self->{window}, );
-   $self->window_exit_button(\$f0, \$self->{window}, );
+   $self->window_exit_button(\$f0, \$self->{window}, 1, \$balloon, );
 
    # Now the original work
 
@@ -227,7 +219,7 @@ sub display_file {
 
    my($ffile) = @_;
 
-   my ($file, $path, $suffix) = fileparse( $ffile, q{.\w+$} ); 
+   my ($file, $path, $suffix) = fileparse( $ffile, q{.\w+$} );
 
    if ($suffix =~ /\.gif$/i)
    {
@@ -236,7 +228,7 @@ sub display_file {
    }
    elsif ($suffix =~ m/p[lm]$|pod$/i)
    {
-      # This is a Perl file.  Do they want to 
+      # This is a Perl file.  Do they want to
       # POD it?
 
       #
@@ -325,26 +317,11 @@ sub Update {
    # This proc may be called within an idle handler. Make sure that the
    # window has not been destroyed before this proc is called
 
-   $folderImage = 
-      $self->{window}->{text}->Photo(
-                    -file=>"$FindBin::RealBin/img/folder.gif"
-                                       );
+   $self->get_img( \$self->{window}->{text}, \$folderImage, 'folder');
+   $self->get_img( \$self->{window}->{text}, \$fileImage, 'text');
+   $self->get_img( \$self->{window}->{text}, \$imageImage, 'image');
+   $self->get_img( \$self->{window}->{text}, \$pImage, 'p');
 
-   $fileImage = 
-      $self->{window}->{text}->Photo(
-                    -file=>"$FindBin::RealBin/img/text.gif"
-                                       );
-
-   $imageImage = 
-      $self->{window}->{text}->Photo(
-                    -file=>"$FindBin::RealBin/img/image.gif"
-                                       );
-
-   $pImage = 
-      $self->{window}->{text}->Photo(
-                    -file=>"$FindBin::RealBin/img/p.gif"
-                                       );
-    
    my $appPWD = Cwd::cwd();
 
    if ($self->{selectPath} eq $start_directory)
@@ -363,7 +340,7 @@ sub Update {
       # we normally won't come to here. Anyways, give an error and abort
       # action.
 
-      main::mes($self->{window}, 
+      main::mes($self->{window},
                 qq{Cannot change to the directory }  .
                 $self->{selectPath} . qq{\. \nPermission denied?}
 	);
@@ -371,13 +348,13 @@ sub Update {
       return;
    }
 
-   # Turn on the busy cursor. 
-   
+   # Turn on the busy cursor.
+
    $self->{window}->Busy;
    $self->{window}->idletasks;
-   
+
    $self->{window}->{text}->DeleteAll;
-   
+
    # Make the dir list
 
    my %hasDoneDir;
@@ -401,7 +378,7 @@ sub Update {
       if (-f "./$ffile" and not exists $hasDoneFile{$ffile}) {
 
          my $image;
-         my ($file, $path, $suffix) = fileparse( $ffile, q{.\w+$} ); 
+         my ($file, $path, $suffix) = fileparse( $ffile, q{.\w+$} );
 
          if ($suffix =~ /\.gif$/i)
          {

@@ -1,2 +1,4 @@
-select distinct blocksize
-from sys.ts$
+/* Thanks to Edmund Mergl */
+select value blocksize
+from v$parameter
+where name = 'db_block_size'

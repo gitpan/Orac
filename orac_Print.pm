@@ -29,7 +29,7 @@ Gets the text item ready for printing.
 # Some standard paper sizes
 #
 my @papers = qw( Letter Legal Ledger Tabloid A0 A1 A2 A3 A4 A5 A6 A7 A8
-                 A9 B0 B1 B2 B3 B4 B5 B6 B7 B8 B9 Envelope10 EnvelopeC5 
+                 A9 B0 B1 B2 B3 B4 B5 B6 B7 B8 B9 Envelope10 EnvelopeC5
                  EnvelopeDL Folio Executive );
 
 # Dimensions of standard papers
@@ -45,7 +45,7 @@ my %width = (  Letter => 612,     Legal => 612,
                B2 => 1460,        B3 => 1032,
                B4 => 729,         B5 => 516,
                B6 => 363,         B7 => 258,
-               B8 => 181,         B9 => 127, 
+               B8 => 181,         B9 => 127,
                B10 => 91,         Envelope10 => 297,
                EnvelopeC5 => 461, EnvelopeDL => 312,
                Folio => 595,      Executive => 522
@@ -62,7 +62,7 @@ my %height = ( Letter => 792,  Legal => 1008,
                B2 => 2064,        B3 => 1460,
                B4 => 1032,        B5 => 729,
                B6 => 516,         B7 => 363,
-               B8 => 258,         B9 => 181, 
+               B8 => 258,         B9 => 181,
                B10 => 127,        Envelope10 => 684,
                EnvelopeC5 => 648, EnvelopeDL => 624,
                Folio => 935,      Executive => 756
@@ -106,12 +106,12 @@ sub orac_printer {
    my $pre_filename = File::Spec->join($dirname, $basename);
    my $filename = File::Spec->join($pre_filename, 'orac.ps');
 
-   $self->top_left_message( \$printsel_menu, 
-                            'Setup Printer Requirements' 
+   $self->top_left_message( \$printsel_menu,
+                            'Setup Printer Requirements'
                           );
 
-   $self->top_right_ball_message( \$printsel_menu, 
-                                  \$filename, 
+   $self->top_right_ball_message( \$printsel_menu,
+                                  \$filename,
                                   \$self->{win},
                                 );
 
@@ -122,8 +122,8 @@ sub orac_printer {
 
    my $f0 = $self->{win}->Frame(-relief=>'ridge',
                                    -bd=>2,
-                                  )->pack( -side=>'top', 
-                                           -expand => 'n', 
+                                  )->pack( -side=>'top',
+                                           -expand => 'n',
                                            -fill => 'both'
                                          );
 
@@ -132,15 +132,15 @@ sub orac_printer {
 
    # Do the main print button
 
-   my $print_img = 
-      $self->{win}->Photo( -file => "$FindBin::RealBin/img/print.gif" );
+   my $print_img;
+   $self->get_img( \$self->{win}, \$print_img, 'print' );
 
    my $print_but = $f0->Button;
    $print_but->configure( -image => $print_img );
 
    # Set up the print command postscript button
 
-   $print_but->configure(-command => sub {  
+   $print_but->configure(-command => sub {
 
       $self->create_print_file( $x1,
                                 $x2,
@@ -149,7 +149,7 @@ sub orac_printer {
                                 $filename,
                               );
 
-      my $d = $self->{win}->DialogBox(-title=>$main::lg{print_sel}); 
+      my $d = $self->{win}->DialogBox(-title=>$main::lg{print_sel});
 
       my $command = $main::print{command} . ' ' . $filename;
 
@@ -163,7 +163,7 @@ sub orac_printer {
 
 # !!! KEEP OUT !!! RESTRICTED AREA !!! POLICE LINE !!! DO NOT CROSS !!!
 
-      $d->Label(  
+      $d->Label(
 
          -text=> 'File sent to Printer using command:' . "\n\n" .
                  $command
@@ -171,16 +171,16 @@ sub orac_printer {
                 )->pack(-side=>'top');
       $d->Show;
 
-                                         } 
+                                         }
                         );
 
    $print_but->pack(-side => 'left');
-   $balloon->attach( $print_but, 
+   $balloon->attach( $print_but,
                      -msg => 'Print Text - ' .
                              'Requires Valid System Printer Command',
                    );
 
-   if ( (!defined($main::print{command})) || 
+   if ( (!defined($main::print{command})) ||
         (length($main::print{command}) < 1) )
    {
       $print_but->configure(-state => 'disabled');
@@ -188,15 +188,10 @@ sub orac_printer {
 
    # Do the main PostScript file creation button
 
-   my $ps_img = 
-      $self->{win}->Photo( -file => "$FindBin::RealBin/img/ps.gif" );
+   $self->get_img( \$self->{win}, \$print_img, 'ps' );
 
-   my $ps_but = $f0->Button;
-   $ps_but->configure(-image => $ps_img );
-
-   # Set up the file command postscript button
-
-   $ps_but->configure(-command => sub {  
+   my $ps_but = $f0->Button(-image => $print_img,
+                            -command => sub {
 
       $self->create_print_file( $x1,
                                 $x2,
@@ -205,48 +200,36 @@ sub orac_printer {
                                 $filename,
                               );
 
-      my $d = $self->{win}->DialogBox(-title=>$main::lg{print_sel}); 
+      my $d = $self->{win}->DialogBox(-title=>$main::lg{print_sel});
 
-      $d->Label(  
-
-           -text => 'PostScript File created:' . 
-                    "\n\n" .
-                    $filename
-
+      $d->Label(-text => "PostScript File created:\n\n" . $filename
                )->pack(-side=>'top');
       $d->Show;
-
-                                         } 
-                        );
+                                             }
+                            );
 
    $ps_but->pack(-side => 'left');
-   $balloon->attach($ps_but, 
+   $balloon->attach($ps_but,
                     -msg => 'Create PostScript File ' .
                             ' - to Print later via System PostScript Tool'
                    );
 
-   if ((!defined($main::print{command})) || 
+   if ((!defined($main::print{command})) ||
        (length($main::print{command}) < 1) )
    {
       $print_but->configure(-state => 'disabled');
    }
 
    # Now paper orientation
-
-   my $rotate_but = $f0->Button;
-
-   my %rotate_img;
-
    # 0 is portrait, 1 is landscape
 
-   $rotate_img{0} = 
-      $self->{win}->Photo( -file => "$FindBin::RealBin/img/portrait.gif" );
+   $self->get_img( \$self->{win}, \$self->{rot_img}->{0}, 'portrait');
+   $self->get_img( \$self->{win}, \$self->{rot_img}->{1}, 'landscape');
 
-   $rotate_img{1} = 
-      $self->{win}->Photo( -file => "$FindBin::RealBin/img/landscape.gif" );
-
-   $rotate_but->configure(-image => $rotate_img{ $main::print{rotate} } );
-   $rotate_but->configure(-command => sub {  
+   my $rot_but;
+   $rot_but = $f0->Button(
+         -image => $self->{rot_img}->{ $main::print{rotate} },
+         -command => sub {
 
       if ($main::print{rotate})
       {
@@ -256,13 +239,12 @@ sub orac_printer {
       {
          $main::print{rotate} = 1;
       }
-      $rotate_but->configure(-image => $rotate_img{ $main::print{rotate} } );
+      $rot_but->configure(-image => $self->{rot_img}->{$main::print{rotate}} );
 
-                                           } 
-                        );
+                         }
+                         )->pack(-side => 'left');
 
-   $rotate_but->pack(-side => 'left');
-   $balloon->attach($rotate_but, -msg => 'Portrait/Landscape Switch' );
+   $balloon->attach($rot_but, -msg => 'Portrait/Landscape Switch' );
 
    my $paper_type = $f0->BrowseEntry(-state=>'readonly',
                                      -variable=>\$main::print{paper},
@@ -270,10 +252,9 @@ sub orac_printer {
                                      -background=>$main::ec,
                                      -width=>10,
                                      -choices=>\@papers,
-     
-                                    );
 
-   $paper_type->pack(-side => 'left');
+                                    )->pack(-side => 'left');
+
    $balloon->attach($paper_type, -msg => 'Preferred Printer Paper Size' );
 
    # Command Type
@@ -283,13 +264,13 @@ sub orac_printer {
                                  -background=>$main::ec,
                                  -width=>20,
                                );
-   
+
    # Bind in 'Leave' Event to sort out the print button
 
-   $command_but->bind( q{<Leave>}, 
+   $command_but->bind( q{<Leave>},
                        sub {
 
-      if ((!defined($main::print{command})) || 
+      if ((!defined($main::print{command})) ||
           (length($main::print{command}) < 1) )
       {
          $print_but->configure(-state => 'disabled');
@@ -306,11 +287,10 @@ sub orac_printer {
 
    # Help Button
 
-   my $help_img = 
-      $self->{win}->Photo( -file => "$FindBin::RealBin/img/help.gif" );
+   $self->get_img( \$self->{win}, \$print_img, 'help' );
 
    my $help_but = $f0->Button;
-   $help_but->configure( -image => $help_img,
+   $help_but->configure( -image => $print_img,
                          -command => sub {
 
       $self->see_sql( $self->{win},
@@ -328,7 +308,7 @@ sub orac_printer {
    # Now the other side of the menu bar
 
    $self->orac_image_label(\$f0, \$self->{win}, );
-   $self->window_exit_button(\$f0, \$self->{win}, );
+   $self->window_exit_button(\$f0, \$self->{win}, 1, \$balloon,);
 
    # Now we can do the original frame work
 
@@ -345,7 +325,7 @@ sub orac_printer {
 
    my $print_text = $self->{Text_var}->get( '1.0', 'end' );
 
-   my $text_id = $self->{win}->{text}->createText( 
+   my $text_id = $self->{win}->{text}->createText(
                                            0,
                                            0,
                                            -text=>$print_text,
@@ -389,12 +369,12 @@ sub create_print_file {
 
    if (  $main::print{rotate}  )
    {
-      $page_ratio = $width{ $main::print{paper} }/ 
+      $page_ratio = $width{ $main::print{paper} }/
                     $height{ $main::print{paper} } ;
    }
-   else 
+   else
    {
-      $page_ratio = $height{ $main::print{paper} }/ 
+      $page_ratio = $height{ $main::print{paper} }/
                     $width{ $main::print{paper} } ;
    }
 

@@ -144,17 +144,13 @@ sub new
 	 # Checkmark for results window
 	 $color_ball{checkmark}= $self->{mw}->Photo( 
 	 	-file => "$FindBin::RealBin/img/tick.gif");
-	 	#-file => "$FindBin::RealBin/img/smChekmark.gif");
 
    $color_ball{exec}= $self->{mw}->Photo( 
 	 	-file => "$FindBin::RealBin/img/exec_tick.gif");
-	 	#-file => "$FindBin::RealBin/img/exec.gif");
    $color_ball{execall}= $self->{mw}->Photo( 
-	 	#-file => "$FindBin::RealBin/img/execall.gif");
 	 	-file => "$FindBin::RealBin/img/exec_all.gif");
    $color_ball{clear}= $self->{mw}->Photo( 
 	 	-file => "$FindBin::RealBin/img/eraser.gif");
-	 	#-file => "$FindBin::RealBin/img/clear.gif");
 
    $color_ball{commit}= $self->{mw}->Photo( 
 	 	-file => "$FindBin::RealBin/img/th_up.gif");

@@ -10,11 +10,11 @@ the Orac distribution.  For more specialised information, please go
 to our "docs" directory.
 
 ################################################################################
-# The next stable version of Orac will be Orac-1.2.0, which we hope to release 
+# The next stable version of Orac will be Orac-1.2.0, which we hope to release
 # before the end of summer, however,this is a very flexible date.
 #
-# However, as the Orac-1.1.z series progresses, it should hopefully gather 
-# stability and functionality.  To try out all new Orac functionality, keep 
+# However, as the Orac-1.1.z series progresses, it should hopefully gather
+# stability and functionality.  To try out all new Orac functionality, keep
 # coming back regularly, and downloading new developmental versions.  Living on
 # the bleeding edge can be fun ;-)
 #
@@ -111,35 +111,35 @@ Users no longer have to cd into the Orac distribution directory.  On
 Unix systems, you could have a symbolic link from
 /usr/local/bin/orac_dba.pl to the Orac distribution directory.  On
 Windows machines, you could have a shortcut to the Orac_dba.pl
-(although this doesn't work from the command line).  $ORAC_HOME can be 
+(although this doesn't work from the command line).  $ORAC_HOME can be
 set to a shared directory if users want to share their user
 customisations.
 
 
 ABOUT Orac:
 
-Preamble: This tool was originally developed on an Ultra-5 Sun Solaris 2.6 Sun 
-workstation.  There may be incompatibilities on your workstation, which may 
-need a little source code tinkering.  Our apologies.  Please mail us if this 
+Preamble: This tool was originally developed on an Ultra-5 Sun Solaris 2.6 Sun
+workstation.  There may be incompatibilities on your workstation, which may
+need a little source code tinkering.  Our apologies.  Please mail us if this
 is the case.  Even better, email us the coded up solution :-)
 
-Orac is a Perl/Tk tool written in order to store many different and hopefully 
-useful SQL scripts within one central easy-to-use interface repository.  
-It is a Read-Only 'as is' GUI tool (ie: no DDL, DML, transactions, commits or 
-rollbacks, only selects)* and will be updated continuously to improve its 
-functionality and GUI-ness simplicity.  If you have any useful SQL scripts, 
-which you would like to be included within Orac, or requirements which you 
-think may be useful to others, please mail them to me and we'll try and embed 
-them in the next release. 
+Orac is a Perl/Tk tool written in order to store many different and hopefully
+useful SQL scripts within one central easy-to-use interface repository.
+It is a Read-Only 'as is' GUI tool (ie: no DDL, DML, transactions, commits or
+rollbacks, only selects)* and will be updated continuously to improve its
+functionality and GUI-ness simplicity.  If you have any useful SQL scripts,
+which you would like to be included within Orac, or requirements which you
+think may be useful to others, please mail them to me and we'll try and embed
+them in the next release.
 
 If you read through the revision history below, you'll see many such ideas
 have been taken up, and are now integral parts of the main Orac tool.
 
-Simple graphical ideas for turning difficult-to-read database information 
-into useful pictures are particularly welcomed, as is functionality 
-not currently supplied within other GUI tools.  General ideas for improving 
-Orac (which began life as a SQL script for killing rogue Oracle processes) 
-are always welcomed.  
+Simple graphical ideas for turning difficult-to-read database information
+into useful pictures are particularly welcomed, as is functionality
+not currently supplied within other GUI tools.  General ideas for improving
+Orac (which began life as a SQL script for killing rogue Oracle processes)
+are always welcomed.
 
 We hope you both enjoy using Orac, and save yourself some time by using it.
 
@@ -184,17 +184,17 @@ REVISION HISTORY:
 Vers Date   Comment
 ---- ----   -------
 0.01 Jan 99
-0.02 Jan 99 Original code revised to make more stable on other platforms.  
-            Removed all '-font' usage and wrapped some statements in 'eval' 
-            statements to prevent premature shutdowns.  Also took all SQL 
-            out of program and placed in flat files to be called 
+0.02 Jan 99 Original code revised to make more stable on other platforms.
+            Removed all '-font' usage and wrapped some statements in 'eval'
+            statements to prevent premature shutdowns.  Also took all SQL
+            out of program and placed in flat files to be called
             as-and-when necessary (also allows for easier SQL modification).
 0.03 Feb 99 After further comments, radical revision carried out to
             shrink Orac into 1 Perl script, rather than numerous heavy
-            modules.  Also revised Orac to use Tk4 partly to remove errors 
-            for people using Tk4, and because the new 'Learning Perl/Tk' 
-            manual recommends G. Sarathy's Win32 binary executable, which 
-            currently uses Tk4.  Preparing code for first port away from 
+            modules.  Also revised Orac to use Tk4 partly to remove errors
+            for people using Tk4, and because the new 'Learning Perl/Tk'
+            manual recommends G. Sarathy's Win32 binary executable, which
+            currently uses Tk4.  Preparing code for first port away from
             Solaris 2.6 UNIX.
             Thanks to Tim Bunce for constructive criticism.
 0.04 Apr 99 Adjustments after first DBI-Users release.
@@ -205,7 +205,7 @@ Vers Date   Comment
             Orac ran "out-of-the-box", also NT and my mind do not fit
             together.  Also, must add more functionality.
             Tasklist this time, resizing of windows should be better.
-            Hit Ratios values should be clearer.  
+            Hit Ratios values should be clearer.
             Thanks especially to Kevin Kitts.
 0.07 May 99 More Buggette cleaning, and better screen resizing on Form.
             MTS support, under the Tuning button (thanks to Steve Shaw).
@@ -213,14 +213,14 @@ Vers Date   Comment
             under File option.
             Language Independence added, edit the txt/language.txt file
             to change all Orac Menus, buttons etc, to your own text.
-            New 'My Tools' menu Option created to add your own SQL 
+            New 'My Tools' menu Option created to add your own SQL
             reports on-the-fly.
             (thanks to Jared Still for the inspiration on this one)
             Addition of 'User' field on main database connection
             screen to allow DBAs to use secure system-like users,
             with more security conscious permissions.
             (Thanks to Kevin Kitts for this one).
-Orac-1.0.0  New numbering system.  This is a rename of ORAC-DBA-0.07, 
+Orac-1.0.0  New numbering system.  This is a rename of ORAC-DBA-0.07,
             and the latest totally 'stable' version.
             We are now using an Orac-x.y.z numbering system such that:
                x is the major version number
@@ -253,15 +253,15 @@ Orac-1.1.0  First of new Developmental 1.1.z Series
             More help files, comments in code,
             More modularity,
             +whatever else you'd like us to add?
-Orac-1.1.1  (Oracle) Neater 'Explain Plan' utility, On-the-fly SQL execution 
+Orac-1.1.1  (Oracle) Neater 'Explain Plan' utility, On-the-fly SQL execution
             utility.  Tidied a few 'uninitialized variable bugs'.
-Orac-1.1.2  (Informix) More functionality added. (Oracle) More tidying, plus 
-            better/quicker use of config files, and use of SQL Browser without 
+Orac-1.1.2  (Informix) More functionality added. (Oracle) More tidying, plus
+            better/quicker use of config files, and use of SQL Browser without
             PLAN_TABLE in db.
 Orac-1.1.3  A lot of file tidying for Oracle, and further Informix additions.
             May be a little flaky, and tidied up in the 1.1.4 release.
 Orac-1.1.4 -
-Orac-1.1.7  Private releases changing code from 'structured' 
+Orac-1.1.7  Private releases changing code from 'structured'
             - ok, spaghetti  :) - to the beginnings of object-oriented code.
             one known bug, under Oracle, the special buttons on 'MTS
             statistics', and 'whos locking who' screens, not working
@@ -299,10 +299,14 @@ Orac-1.1.27 -
 Orac-1.1.30 Incremental early development of Monitoring + bug fixes,
             + other bits
 Orac-1.1.31 Public Release of OracMonitor.
-       
+Orac-1.1.32 -
+Orac-1.1.33 Tidying, fixing etc,etc - thanks to Sean Kamath - and
+            attempts at code reduction.  Thanks to Edmund Mergl for
+            initial 8i fix.  More to be found I'm sure.
+
 EXTRA NOTES FOR LINUX USERS:
 
-The following summarised notes have been taken from 
+The following summarised notes have been taken from
 Kevin Kitts' Orac home page:
 
 => http://www.kkitts.com/orac-dba/
@@ -311,23 +315,23 @@ If you'd like any more detail, please go there first.
 
 Requirements for Running Orac (under Linux)
 -----------------------------------------------
-perl 5.05 
-Tk 800_015 perl module (www.cpan.org) 
-DBI/DBD perl modules (www.hermetica.com) 
+perl 5.05
+Tk 800_015 perl module (www.cpan.org)
+DBI/DBD perl modules (www.hermetica.com)
 Orac Download the latest stable version (or
 development version if looking for latest functionality)
 
-Using Orac under Linux 
+Using Orac under Linux
 --------------------------
-I've found a number of problems running Orac under RedHat 5.2. In order 
-to get things to work it was necessary to get the latest *source* rpm for 
-perl and rebuild perl. The man pages for rpm will explain how to do this 
-rebuild - it is very straightforward. Also, the latest version of the 
-perl Tk module (800_015) will be required as well. Lastly, you'll need 
-to get the DBI/DBD modules and compile them. 
+I've found a number of problems running Orac under RedHat 5.2. In order
+to get things to work it was necessary to get the latest *source* rpm for
+perl and rebuild perl. The man pages for rpm will explain how to do this
+rebuild - it is very straightforward. Also, the latest version of the
+perl Tk module (800_015) will be required as well. Lastly, you'll need
+to get the DBI/DBD modules and compile them.
 
-Make sure that you can get sql*plus to work first. If that works, make sure 
-that the DBI/DBD make tests pass. If all of the above condtions hold true 
+Make sure that you can get sql*plus to work first. If that works, make sure
+that the DBI/DBD make tests pass. If all of the above condtions hold true
 you should have no problem running Orac.
 
 
@@ -348,29 +352,29 @@ Packages on top:
 *. Tk
 *. Win32-TieRegistry
 
-The above environment was created under the following 
+The above environment was created under the following
 operating system conditions:
 
 NT 4.0 Enterprise Edition (SP 3, no compiler)
 ---------------------------------------------
-Nothing special is needed for the installation, 
+Nothing special is needed for the installation,
 which should run smoothly using these instructions:
 
-*. Install the ActivePerl binary distribution 
+*. Install the ActivePerl binary distribution
 from ActiveState.com
 
-*. Then download and install the binaries for the 
-various modules (Tk, DBI, DBD-Oracle, etc) 
+*. Then download and install the binaries for the
+various modules (Tk, DBI, DBD-Oracle, etc)
 from ActiveState's ftp site.
 
-All the modules come with working install scripts, 
-so installation is just a matter of running 
+All the modules come with working install scripts,
+so installation is just a matter of running
 package manager script which comes with ActivePerl.
 
 Then download Orac-x.y.z, install and run.
 (probably always best to use latest version)
 
-(The above instructions have also been tried on a 
+(The above instructions have also been tried on a
 Win98 box with complete success)
 
 The ActiveState URLs are:
@@ -407,18 +411,18 @@ remote database connection.
 
 Orac Users Mailing List
 -----------------------
-Please use the following mailing list resources to find out more about Orac: 
+Please use the following mailing list resources to find out more about Orac:
 
 For information on the installation, configuration and use of Orac you can
 subscribe to the Orac User's mailing list by sending an empty e-mail (with the
-word subscribe on the subject line) to: 
+word subscribe on the subject line) to:
 
-manage-orac-dba-users-subscribe@listserv.kkitts.com 
+manage-orac-dba-users-subscribe@listserv.kkitts.com
 
 For those interested in following the developer discussion (or perhaps even
-developing for Orac!) a developers list is available. Please send an empty 
-e-mail (with the word subscribe on the subject line) to: 
+developing for Orac!) a developers list is available. Please send an empty
+e-mail (with the word subscribe on the subject line) to:
 
-manage-orac-dba-developers-subscribe@listserv.kkitts.com 
+manage-orac-dba-developers-subscribe@listserv.kkitts.com
 
 EOF

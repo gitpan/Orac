@@ -34,6 +34,7 @@ inherited and used as is.
  &f_str()
  &generic_hlist()
  &get_frm()
+ &get_img()
  &get_lines()
  &gf_str()
  &init1()
@@ -50,6 +51,7 @@ inherited and used as is.
  &see_gif()
  &see_plsql()
  &see_sql()
+ &see_sql_but()
  &show_or_hide()
  &show_sql()
  &stop_live_update()
@@ -67,7 +69,7 @@ inherited and used as is.
               show_or_hide add_contents post_process_sql do_a_generic
               do_query_fetch1 create_button_bar window_exit_button
               double_click_message create_balloon_bars top_left_message
-              balloon_bar orac_image_label
+              balloon_bar orac_image_label see_sql_but get_img
             );
 use strict;
 
@@ -192,18 +194,18 @@ sub show_sql
 
 # support func for show_sql
 
-sub report_title 
+sub report_title
 {
    my $self = shift;
 
    my($title) = @_;
-   $self->{Text_var}->insert('end', "$main::lg{report} $title ($main::v_db " . 
-                                     $self->get_time(1) . 
+   $self->{Text_var}->insert('end', "$main::lg{report} $title ($main::v_db " .
+                                     $self->get_time(1) .
                                      "):\n"
                             );
 }
 
-sub get_time 
+sub get_time
 {
    my $self = shift;
 
@@ -245,7 +247,7 @@ sub get_lines
 
    $self->post_process_sql($sql_name, $sql_num, $tar, \@bindees);
 
-   # as this is new, how do I know if the user's version has 
+   # as this is new, how do I know if the user's version has
    # this before I use it?
 
    my @types;
@@ -260,7 +262,7 @@ sub get_lines
       # default justify to the left and hope for the best!
       $just = '-';
 
-      # as this is new, how do I know if the user's version 
+      # as this is new, how do I know if the user's version
       # has this before I use it?
 
       if (exists($sth->{TYPE}) && defined(DBI::SQL_INTEGER))
@@ -551,10 +553,10 @@ sub f_str {
    my $rt = "";
 
    if(defined($sub) && defined($number)){
-      my $file = ($self->{Database_type} eq "tools" ? $main::orac_home : $FindBin::RealBin) . 
-		         '/sql/' . 
-                 $self->{Database_type} . 
-                 '/' . 
+      my $file = ($self->{Database_type} eq "tools" ? $main::orac_home : $FindBin::RealBin) .
+		         '/sql/' .
+                 $self->{Database_type} .
+                 '/' .
                  sprintf("%s.%s.sql",$sub,$number);
 
       my $dirname = File::Basename::dirname($file);
@@ -581,7 +583,7 @@ sub get_frm {
    my($l_dbh,$cm,$min_len) = @_;
    #print STDERR "get_frm:prepare($cm)\n" if ($main::debug > 0);
 
-   my $sth = $l_dbh->prepare($cm) || die $l_dbh->errstr; 
+   my $sth = $l_dbh->prepare($cm) || die $l_dbh->errstr;
    $sth->execute;
    my $ret;
    my @res;
@@ -591,7 +593,7 @@ sub get_frm {
       for($i = 0;$i < $sth->{NUM_OF_FIELDS};$i++){
          $str = $sth->{NAME}->[$i];
          my $l = length($str);
-         if ($l < $min_len){ 
+         if ($l < $min_len){
             $l = $min_len;
          }
          if($i == 0){
@@ -606,7 +608,7 @@ sub get_frm {
 }
 
 # Various sub-functions to clear screen, exit program
-# cleanly etc 
+# cleanly etc
 
 sub f_clr {
    my $self = shift;
@@ -614,7 +616,7 @@ sub f_clr {
    my($l_clr) = @_;
 
    # Check out what clearing option has
-   # been chosen, and then clear the 
+   # been chosen, and then clear the
    # screen if appropriate
 
    if($l_clr eq 'Y'){
@@ -632,25 +634,34 @@ sub must_f_clr {
    $self->{Text_var}->delete('1.0','end');
 }
 sub see_plsql {
- 
+
    my $self = shift;
 
-   # Helps put up a button on the page, so that the generative 
+   # Helps put up a button on the page, so that the generative
    # SQL code can be viewed for validation purposes
 
    my ($res,$dum) = @_;
-   my $b = $self->{Text_var}->Button( 
-                        -text=>$main::ssq,
+
+   my $img;
+   $self->get_img( \$self->{Main_window}, \$img, 'sql' );
+
+   my $b = $self->{Text_var}->Button(
+                        -image=>$img,
+                        -cursor=>'hand2',
                         -command=>
                            sub{ $self->see_sql( $self->{Main_window},
                                                 $res) }
                                   );
+
+   $main::balloon->attach( $b, -msg => $main::ssq, );
 
    # Now slap up the button
 
    $self->{Text_var}->insert('end', "\n\n  ");
    $self->{Text_var}->window('create','end', -window=>$b);
    $self->{Text_var}->insert('end', "\n\n");
+
+   return;
 }
 
 sub see_gif {
@@ -665,17 +676,16 @@ sub see_gif {
    $window->title( $file );
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$window );
-   $self->window_exit_button(\$loc_menu, \$window );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$window );
+   $self->window_exit_button(\$loc_menu, \$window, 1, \$balloon, );
 
    my $image = $window->Photo( -file => $file );
 
-   my $l = $window->Label( 
+   my $l = $window->Label(
                         -relief=>'flat',
                         -image => $image,
-                         );
-
-   $l->pack(-expand=>1,-fill=>'both');
+                         )->pack(-expand=>1,-fill=>'both');
 
    main::iconize( $window );
 
@@ -697,8 +707,9 @@ sub see_sql {
    $window->title( $title );
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$window );
-   $self->window_exit_button(\$loc_menu, \$window );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$window, );
+   $self->window_exit_button(\$loc_menu, \$window, 1, \$balloon, );
 
    $window->{text} = $window->Scrolled(   'Text',
                                           -height=>16,
@@ -715,6 +726,9 @@ sub see_sql {
 
    main::iconize( $window );
 
+   # Just in case people want to do further manipulation
+
+   return (\$loc_menu, \$balloon, \$window, );
 }
 sub about_orac {
 
@@ -824,17 +838,18 @@ sub generic_hlist
    $g_hlvl = 1;
 
    my $save_cb = $self->{Database_conn}->{ChopBlanks};
-                                          
+
    my $window = $self->{Main_window}->Toplevel();
    $window->title("$g_hlst");
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$window );
-   $self->window_exit_button(\$loc_menu, \$window );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$window, );
+   $self->window_exit_button(\$loc_menu, \$window, 1, \$balloon, );
 
-   $window->{text} = 
-      $window->Scrolled('HList', 
-                      -drawbranch=> 1, 
+   $window->{text} =
+      $window->Scrolled('HList',
+                      -drawbranch=> 1,
                       -separator=> $gen_sep,
                       -indent=> 50,
                       -width=> 80,
@@ -855,21 +870,16 @@ sub generic_hlist
                              -expand=>'both'
                             );
 
-   $open_folder_bitmap = 
-      $window->Photo(-file=>"$FindBin::RealBin/img/folder.open.gif");
-
-   $closed_folder_bitmap = 
-      $window->Photo(-file=>"$FindBin::RealBin/img/folder.gif");
-
-   $file_bitmap = 
-      $window->Photo(-file=>"$FindBin::RealBin/img/text.gif");
+   $self->get_img( \$window, \$open_folder_bitmap, 'folder.open' );
+   $self->get_img( \$window, \$closed_folder_bitmap, 'folder' );
+   $self->get_img( \$window, \$file_bitmap, 'text' );
 
    my $cm = $self->f_str( $g_hlst ,'1');
    #print STDERR "prepare1: $cm\n" if ($main::debug > 0);
    my $sth = $self->{Database_conn}->prepare( $cm )
-             or die $self->{Database_conn}->errstr; 
+             or die $self->{Database_conn}->errstr;
    $sth->execute;
-   
+
    my $bitmap = (sql_file_exists($self->{Database_type}, $g_hlst, 2)
                 ? $closed_folder_bitmap
                 : $file_bitmap);
@@ -906,7 +916,7 @@ sub show_or_hide
    my (  $path,
          $win,
          $text,
- 
+
       ) = @_;
 
    my $next_entry = $text->info('next', $path);
@@ -935,13 +945,13 @@ sub show_or_hide
       # No. open it
       #print "NO!\n";
 
-      $text->entryconfigure( $path, 
+      $text->entryconfigure( $path,
                                          '-image' => $open_folder_bitmap
                                        );
 
       #print STDERR "show_or_hid:  path>$path<\n" if ($main::debug > 0);
 
-      $self->add_contents( $path, 
+      $self->add_contents( $path,
                            $text,
                          );
    }
@@ -950,7 +960,7 @@ sub show_or_hide
       # Yes. Close it by changing the icon, and deleting its subnode.
       #print "YES!\n";
 
-      $text->entryconfigure( $path, 
+      $text->entryconfigure( $path,
                                          '-image' => $closed_folder_bitmap
                                        );
 
@@ -990,9 +1000,9 @@ sub add_contents
    my $s = $self->f_str( $g_hlst, $g_hlvl);
    #print STDERR "prepare2: SQL>\n$s\n<\n ($path)\n" if ($main::debug > 0);
    my $sth = $self->{Database_conn}->prepare( $s )
-      or die $self->{Database_conn}->errstr; 
+      or die $self->{Database_conn}->errstr;
 
-   # in theory this should work, COOL! I didn't know you could 
+   # in theory this should work, COOL! I didn't know you could
    # give split a variable for the RE pattern. :-)
 
    my @params = split("\\$gen_sep", $path);
@@ -1001,7 +1011,7 @@ sub add_contents
    #print STDERR "add_contents: params0 >$params[0]<\n" if ($main::debug > 0);
    #print STDERR "add_contents: params1 >$params[1]<\n" if ($main::debug > 0);
 
-   # should we search $s for number of placeholders, 
+   # should we search $s for number of placeholders,
    # and restrict @params to that number?
 
    if ($self->{Database_type} ne 'Sybase') {
@@ -1107,19 +1117,19 @@ sub post_process_sql
    return;
 }
 
-=head2 create_button_bar 
+=head2 create_button_bar
 
 This creates a generic bar for placing active screen buttons upon.
 
 =cut
 
 sub create_button_bar {
- 
+
    my $self = shift;
 
    my ($button_bar_ref,
        $win_ref,
-  
+
       ) = @_;
 
    my(@lay) = qw/-side bottom -expand no -fill both/;
@@ -1130,7 +1140,7 @@ sub create_button_bar {
    return;
 }
 
-=head2 create_balloon_bars 
+=head2 create_balloon_bars
 
 This creates the necessary basic requirements for setting up
 message balloons within a status bar.
@@ -1138,25 +1148,80 @@ message balloons within a status bar.
 =cut
 
 sub create_balloon_bars {
- 
+
    my $self = shift;
 
    my ($button_bar_ref,
        $balloon_ref,
        $win_ref,
-  
+
       ) = @_;
 
    $self->balloon_bar($balloon_ref, $win_ref, undef, );
 
    $$button_bar_ref = $$win_ref->Frame(-relief=>'ridge',
                                        -bd=>2,
-                                      )->pack( -side => 'bottom', 
+                                      )->pack( -side => 'bottom',
                                                -fill => 'both',
                                                -expand => 'no',
                                              );
 
    return;
+}
+
+=head2 see_sql_but
+
+This creates a basic 'See SQL' button for viewing executed SQL.
+
+=cut
+
+sub see_sql_but {
+
+   my $self = shift;
+
+   my ($menu_ref, $win_ref, $cm_ref, $use_img, $balloon_ref, ) = @_;
+
+   if (!defined($use_img))
+   {
+      $use_img = 0;
+   }
+
+   my $b = $$menu_ref->Button(
+
+                          -command=> sub{
+
+                             $$win_ref->Busy;
+                             $self->see_sql($$win_ref,$$cm_ref);
+                             $$win_ref->Unbusy;
+
+                                        }
+
+                             )->pack(-side=>'left');
+
+   if ($use_img)
+   {
+      my $img;
+      $self->get_img( $win_ref, \$img, 'sql' );
+
+      $b->configure(-image=>$img);
+
+      if (defined($balloon_ref))
+      {
+         $$balloon_ref->attach(
+
+            $b,
+            -msg => $main::ssq,
+
+                              );
+      }
+   }
+   else
+   {
+      $b->configure(-text=>$main::ssq);
+   }
+
+   return \$b;
+
 }
 
 =head2 window_exit_button
@@ -1172,19 +1237,46 @@ sub window_exit_button {
 
    my ($button_bar_ref,
        $win_ref,
-  
+       $use_image,
+       $balloon_ref,
+
       ) = @_;
 
-   my $b = $$button_bar_ref->Button(
-                          -text=>$main::lg{exit},
-                          -command=> 
-                             sub{  
-                                $$win_ref->destroy();
-                                }
-              
-                                 )->pack(-side=>'right');
+   if (!defined($use_image))
+   {
+      $use_image = 0;
+   }
 
-   return $b;
+   my $b = $$button_bar_ref->Button(
+                          -command=>
+                             sub{
+                                $$win_ref->destroy();
+                                },
+
+                                   )->pack(-side=>'right');
+
+   if ($use_image)
+   {
+      my $img;
+      $self->get_img( $win_ref, \$img, 'exit' );
+      $b->configure(-image=>$img);
+
+      if (defined($balloon_ref))
+      {
+         $$balloon_ref->attach(
+
+            $b,
+            -msg => $main::lg{exit},
+
+                              );
+      }
+   }
+   else
+   {
+      $b->configure(-text=>$main::lg{exit});
+   }
+
+   return \$b;
 
 }
 
@@ -1256,7 +1348,7 @@ sub top_right_ball_message {
    {
       $gif_file = 'grn_ball.gif';
    }
-   my $ball = 
+   my $ball =
       $$win_ref->Photo(-file=>"$FindBin::RealBin/img/${gif_file}");
 
    $$frame_r->Label(-textvariable => $message_r,  # Remember, use the Ref.
@@ -1287,12 +1379,12 @@ sub balloon_bar {
    my ($balloon_r, $win_r, $width, ) = @_;
 
    my $status_bar = $$win_r->Frame( -relief => 'groove',
-                                    -bd => 2 
-                                  )->pack( -side => 'bottom', 
+                                    -bd => 2
+                                  )->pack( -side => 'bottom',
                                            -fill => 'both',
                                            -expand => 'no',
                                          );
-   
+
    my $balloon_status = $status_bar->Label(-relief => 'flat',
                                            -justify => 'left',
                                            -anchor=>'w',
@@ -1303,8 +1395,8 @@ sub balloon_bar {
    {
       $balloon_status->configure(-width=>$width);
    }
-   
-   $$balloon_r = $$win_r->Balloon(-statusbar => $balloon_status, 
+
+   $$balloon_r = $$win_r->Balloon(-statusbar => $balloon_status,
                                   -state => 'status',
                                  );
 
@@ -1314,7 +1406,7 @@ sub balloon_bar {
 
 =head2 orac_image_label
 
-Create a label with the basic Orac image on it, and packs it 
+Create a label with the basic Orac image on it, and packs it
 to the right of a frame.
 
 =cut
@@ -1325,9 +1417,8 @@ sub orac_image_label {
 
    my ( $frame_r, $win_r, ) = @_;
 
-   my $orac_li = 
-      $$win_r->Photo( -file=>"$FindBin::RealBin/img/orac.gif"
-                    );
+   my $orac_li;
+   $self->get_img( $win_r, \$orac_li, 'orac' );
 
    $$frame_r->Label(-image=>$orac_li,
                     -borderwidth=>2,
@@ -1336,6 +1427,24 @@ sub orac_image_label {
    return;
 }
 
+=head2 get_img
+
+Gets a window and image reference, and a file name, and fills the
+image variable with the desired image.
+
+=cut
+
+sub get_img {
+
+   my $self = shift;
+
+   my ( $win_r, $img_r, $file_n, ) = @_;
+
+   $$img_r =
+      $$win_r->Photo( -file => "$FindBin::RealBin/img/${file_n}.gif" );
+
+   return;
+}
 ################################################
 1;
 # vi: set sw=3 ts=3 et:

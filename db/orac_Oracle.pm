@@ -80,6 +80,15 @@ sub init1 {
 
    $main::ENV{TWO_TASK} = $l_instance;
    $main::ENV{ORACLE_SID} = $l_instance;
+
+   # Fix idea by Sean Kamath, positioned by Bruce Albrecht :)
+
+   if ((!defined($main::ENV{ORACLE_HOME})) ||
+       (length($main::ENV{ORACLE_HOME}) < 1))
+   {
+      die "You must make sure the environment variable ORACLE_HOME is set " .
+          "properly\n";
+   }
 }
 
 =head2 init1
@@ -97,18 +106,18 @@ sub init2 {
    $self->Dump;
 
    # Get the block size, as soon as we
-   # logon to a database.  Saves us having to 
+   # logon to a database.  Saves us having to
    # continually find it out again, and again.
 
    my $cm = $self->f_str('get_db','1');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_connector}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_connector}->errstr;
    $sth->execute;
    ($Block_Size) = $sth->fetchrow;
    $sth->finish;
 
-   # Enable the PL/SQL memory area, for this 
+   # Enable the PL/SQL memory area, for this
    # database connection
 
    $self->{Database_conn}->func(1000000,'dbms_output_enable');
@@ -116,7 +125,7 @@ sub init2 {
 
 ################ Database dependent code functions below here ##################
 
-=head2 tune_wait 
+=head2 tune_wait
 
 Works out if anything is waiting in the database and then
 produces the relevant report.
@@ -135,7 +144,7 @@ sub tune_wait {
 
 =head2 tune_pigs
 
-This function gives you two differing reports which measure the 
+This function gives you two differing reports which measure the
 Shared Pool disk reads for various SQL statements in the library.
 
 =cut
@@ -152,12 +161,12 @@ sub tune_pigs {
    my $title;
 
    if($type_flag == 1){
-      # If type 1, then we only want the highest 
+      # If type 1, then we only want the highest
       # summarised readings
       $title = $main::lg{mem_hogs1};
    }
    elsif($type_flag == 2){
-      # If type 1, then we only want the highest 
+      # If type 1, then we only want the highest
       # summarised readings
       $title = $main::lg{mem_hogs2};
    }
@@ -167,7 +176,7 @@ sub tune_pigs {
 
 }
 
-=head2 who_what 
+=head2 who_what
 
 Works out who is holding whom, so we can unblock needless locking.
 Gives you various options for trying to view the blocking SQL.
@@ -194,7 +203,7 @@ sub who_what {
 
    if( $flag == 1 ){
 
-      $self->show_sql(   'who_what', 
+      $self->show_sql(   'who_what',
                          '1',
                          $main::lg{hold_sql},
                          $param1,
@@ -215,7 +224,7 @@ sub who_what {
 
 =head2 all_stf
 
-Takes particular PL/SQL statements, and generates DDL to recreate ALL of a 
+Takes particular PL/SQL statements, and generates DDL to recreate ALL of a
 particular object in the database.
 
 =cut
@@ -224,15 +233,15 @@ sub all_stf {
    my $self = shift;
 
    # Takes particular PL/SQL statements,
-   # and generates DDL to recreate ALL of a 
+   # and generates DDL to recreate ALL of a
    # particular object in the database.
 
    my($module, $mod_number, $mod_binds) = @_;
 
    my $cm = $self->f_str($module, $mod_number);
 
-   my $sth = $self->{Database_conn}->prepare($cm) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare($cm) ||
+                die $self->{Database_conn}->errstr;
    my $i;
    for ( $i = 1 ; $i <= $mod_binds ; $i++ ){
       $sth->bind_param($i,'%');
@@ -255,7 +264,7 @@ sub all_stf {
 
 =head2 orac_create_db
 
-Generates a script with which you can completely regenerate the skeleton 
+Generates a script with which you can completely regenerate the skeleton
 of your database (files, users, etc).
 
 =cut
@@ -269,8 +278,8 @@ sub orac_create_db {
 
    my ($oracle_sid,$dum) = split(/\./, $main::v_db);
    my $cm = $self->f_str('orac_create_db','1');
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->bind_param(1,$oracle_sid);
    $sth->execute;
 
@@ -306,7 +315,7 @@ sub selected_error {
    my ($owner,$object) = split(/\./, $err_bit);
 
    $self->f_clr( $main::v_clr );
-   $self->show_sql( 'selected_error', 
+   $self->show_sql( 'selected_error',
                     '1',
                     "$main::lg{comp_errs_for} $err_bit",
                     $owner,
@@ -316,7 +325,7 @@ sub selected_error {
 
 =head2 univ_form
 
-A complex function for generating on-the-fly Forms for viewing database 
+A complex function for generating on-the-fly Forms for viewing database
 information.  This examines DBA tables, and works out how to build the
 form.  Then it asks the user to input SQL, and order the way it comes back.
 
@@ -325,9 +334,7 @@ with the required information.
 
 =cut
 
-# xxx
-
-sub univ_form { 
+sub univ_form {
 
    my $self = shift;
 
@@ -362,7 +369,7 @@ sub univ_form {
                           -anchor=>'n',
                         )->pack();
 
-   $univ_form_win->{text} = 
+   $univ_form_win->{text} =
       $univ_form_win->Scrolled( 'Text',
                                 -height=>16,
                                 -cursor=>undef,
@@ -374,7 +381,7 @@ sub univ_form {
 
    my $cm = $self->f_str('selected_dba','1');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
                 die $self->{Database_conn}->errstr;
 
    $sth->bind_param(1,$owner);
@@ -393,23 +400,23 @@ sub univ_form {
 
    for $i (0..3){
 
-      unless ( ($screen_type eq 'index') && 
+      unless ( ($screen_type eq 'index') &&
                ($i == 2)
              )
       {
 
-         $w = $univ_form_win->{text}->Entry( 
+         $w = $univ_form_win->{text}->Entry(
 
                               -textvariable=>\$entry_bubbles[$i],
                                            );
          if ($i == 3)
          {
             $w->configure(-width=>3);
-         } 
-         else 
+         }
+         else
          {
             $w->configure(-width=>16);
-         } 
+         }
 
          $w->configure(  -background=>$main::fc,
                          -foreground=>$main::ec,
@@ -453,7 +460,7 @@ sub univ_form {
 
          $sql_entry[$index_win_cnt] = "";
 
-         $w = $univ_form_win->{text}->Entry( 
+         $w = $univ_form_win->{text}->Entry(
 
                              -textvariable=>\$sql_entry[$index_win_cnt],
                              -foreground=>$main::fc,
@@ -464,7 +471,7 @@ sub univ_form {
 
          $univ_form_win->{text}->windowCreate('end',-window=>$w);
 
-         if ($counter == 1) 
+         if ($counter == 1)
          {
             $focus_r = \$w;
             $need_focus = 1;
@@ -473,7 +480,7 @@ sub univ_form {
       }
       $title_tabs[$index_win_cnt] = "$res[1] $res[2]";
 
-      $w = $univ_form_win->{text}->Entry( 
+      $w = $univ_form_win->{text}->Entry(
 
                              -textvariable=>\$title_tabs[$index_win_cnt],
                              -width=>16,
@@ -485,8 +492,9 @@ sub univ_form {
       $actual_entry[$index_win_cnt] = "$res[0]";
       $ordered_entry[$index_win_cnt] = 0;
 
-      $w = $univ_form_win->{text}->Checkbutton( 
+      $w = $univ_form_win->{text}->Checkbutton(
 
+                   -cursor=>'hand2',
                    -variable=>\$ordered_entry[$index_win_cnt],
                    -relief=>'flat'
 
@@ -520,11 +528,11 @@ sub univ_form {
 
    }
 
-   my $image = $univ_form_win->Photo( 
-            -file => "$FindBin::RealBin/img/forward.gif" );
+   my $image;
+   $self->get_img( \$univ_form_win, \$image, 'forward' );
 
    my $forward_b = $bb->Button( -image=>$image,
-                                -command=>sub{ 
+                                -command=>sub{
                                $self->selector( \$univ_form_win,
                                                 \$screen_type,,
                                                 \$screen_title,
@@ -536,12 +544,12 @@ sub univ_form {
                                                 \@sql_entry,
                                               );
                                              }
-                              )->pack (-side=>'left', 
+                              )->pack (-side=>'left',
                                        -anchor=>'w');
 
    $balloon->attach($forward_b, -msg => $help_txt );
 
-   $self->window_exit_button( \$bb, \$univ_form_win );
+   $self->window_exit_button( \$bb, \$univ_form_win, 1, \$balloon, );
    main::iconize( $univ_form_win );
 
    if ($need_focus)
@@ -552,7 +560,7 @@ sub univ_form {
 
 =head2 selector
 
-User may wish to narrow search for info with universal form, down to a 
+User may wish to narrow search for info with universal form, down to a
 particular set of rows, and order these rows.  This function helps
 univ_form() and allows them to do that.
 
@@ -562,7 +570,7 @@ sub selector {
 
    my $self = shift;
 
-   # User may wish to narrow search for info, down to 
+   # User may wish to narrow search for info, down to
    # a particular set of rows, and order these rows.
    # This function allows them to do that.
 
@@ -640,7 +648,7 @@ sub selector {
       if (defined($sql_bit) && length($sql_bit))
       {
 
-         $l_sel_str = $l_sel_str . $where_bit . 
+         $l_sel_str = $l_sel_str . $where_bit .
                       "$actual_entries[$i] $sql_bit ";
 
          $where_bit = "\nand ";
@@ -659,9 +667,9 @@ sub selector {
                      $screen_title_r,
                   );
 
-   $self->and_finally( $win_ref, 
-                       \$l_sel_str, 
-                       $index_cnt_r, 
+   $self->and_finally( $win_ref,
+                       \$l_sel_str,
+                       $index_cnt_r,
                        $entries_r,
                        $screen_title_r,
                      );
@@ -708,8 +716,8 @@ sub and_finally {
 
       my(@lb) = qw/-anchor n -side top -expand 1 -fill both/;
       my $top_frame = $out_screen->Frame->pack(@lb);
-   
-      $out_screen->{text} = 
+
+      $out_screen->{text} =
             $top_frame->Scrolled('Text',
                                  -height=>16,
                                  -cursor=>undef,
@@ -730,7 +738,7 @@ sub and_finally {
                                         );
 
          $out_screen->{text}->windowCreate('end',-window=>$w);
-   
+
          $w = $out_screen->{text}->Entry(-textvariable=>\$output[$i],
                         -foreground=>$main::fc,
                         -background=>$main::ec,
@@ -743,18 +751,19 @@ sub and_finally {
       $out_screen->{text}->pack(@lb);
 
       my $loc_menu;
-      $self->create_button_bar(\$loc_menu, \$out_screen );
-      $self->window_exit_button(\$loc_menu, \$out_screen );
+      my $balloon;
+      $self->create_balloon_bars(\$loc_menu, \$balloon, \$out_screen, );
+      $self->window_exit_button(\$loc_menu, \$out_screen, 1, \$balloon, );
 
       my $bot_f = $out_screen->Frame->pack( -fill=>'both',
                                             -side=>'bottom',
                                             -expand=>'no'
                                           );
-   
+
       my $univ_scale;
 
-      $univ_scale = 
-         $bot_f->Scale( 
+      $univ_scale =
+         $bot_f->Scale(
              -orient=>'horizontal',
              -label=>"$main::lg{rec_of} " . $max_row,
              -length=>400,
@@ -762,29 +771,25 @@ sub and_finally {
              -from=>1,-to=>$max_row,
              -tickinterval=>($max_row/8),
 
-             -command=>[ 
+             -command=>[
                 sub {   $self->calc_scale_record(  \$univ_scale,
                                                    \@output,
                                                    $univ_scale->get(),
-                                                   $ary_ref, 
+                                                   $ary_ref,
                                                    $count_r,
                                                 )
                     }  ]
 
                      )->pack(side=>'left');
 
-      $bot_f->Button(-text=>$main::ssq,
-                     -command=>sub{$self->see_sql($out_screen,$$cm_ref)}
-
-                   )->pack(side=>'right');
-
-      $self->go_for_gold( \$univ_scale, 
-                          \@output, 
-                          $min_row, 
-                          $ary_ref, 
+      $self->go_for_gold( \$univ_scale,
+                          \@output,
+                          $min_row,
+                          $ary_ref,
                           $count_r,
                         );
 
+      $self->see_sql_but(\$loc_menu, \$out_screen, $cm_ref, 1, \$balloon, );
       main::iconize( $out_screen );
    }
    return;
@@ -804,7 +809,7 @@ sub calc_scale_record {
 
    my( $univ_scale_ref,
        $output_r,
-       $normal_position, 
+       $normal_position,
        $ary_ref,
        $count_r,
 
@@ -814,7 +819,7 @@ sub calc_scale_record {
 
    $self->go_for_gold( $univ_scale_ref,
                        $output_r,
-                       $array_count_pos, 
+                       $array_count_pos,
                        $ary_ref,
                        $count_r,
                      );
@@ -838,7 +843,7 @@ sub go_for_gold {
        $count,
        $ary_ref,
        $count_r,
- 
+
       ) = @_;
 
    # Work out which row of information to display,
@@ -857,8 +862,8 @@ sub go_for_gold {
 
 =head2 build_ord
 
-It all gets a bit nasty here.  This works out the user's intentions on 
-how to order their required information for the univ_form() set of 
+It all gets a bit nasty here.  This works out the user's intentions on
+how to order their required information for the univ_form() set of
 functions.
 
 =cut
@@ -871,15 +876,15 @@ sub build_ord {
    # the user's intentions on how to order their
    # required information.
 
-   my( $win_ref, 
+   my( $win_ref,
        $screen_type_r,
        $index_count_r,
        $order_r,
        $select_string_r,
        $own_r,
        $obj_r,
-       $entries_r, 
-       $title_r, 
+       $entries_r,
+       $title_r,
 
      ) = @_;
 
@@ -910,10 +915,10 @@ sub build_ord {
                             \$total_indexed_count,
                             $index_count_r,
                             $entries_r,
-                            $title_r, 
-                            \@index_array, 
-                            \@index_head, 
-                            \@index_open, 
+                            $title_r,
+                            \@index_array,
+                            \@index_head,
+                            \@index_open,
                             $order_r,
                           );
 
@@ -923,8 +928,8 @@ sub build_ord {
                                     $own_r,
                                     $obj_r,
                                     \$total_indexed_count,
-                                    \@index_array, 
-                                    \@index_head, 
+                                    \@index_array,
+                                    \@index_head,
                                     $title_r,
                                   );
 
@@ -935,7 +940,7 @@ sub build_ord {
          for my $cl (1..$total_indexed_count)
          {
 
-            $$select_string_r = $$select_string_r . 
+            $$select_string_r = $$select_string_r .
                                 "$index_array[$index_head[$cl]] ";
 
             if ($dsc_n[$index_head[$cl]] == 1)
@@ -971,7 +976,7 @@ sub now_build_ord {
 
    # This helps build up the ordering SQL string.
 
-   my($win_ref, 
+   my($win_ref,
       $screen_type_r,
       $total_r,
       $index_count_r,
@@ -981,7 +986,7 @@ sub now_build_ord {
       $index_head_r,
       $index_open_r,
       $order_r,
-     
+
      ) = @_;
 
    my @entries = @$entries_r;
@@ -1000,7 +1005,7 @@ sub now_build_ord {
       }
    }
 
-   my $b_d = $$win_ref->DialogBox(-title=>$$title_r); 
+   my $b_d = $$win_ref->DialogBox(-title=>$$title_r);
 
    $b_d->Label(  -text=>$main::lg{ind_ord_arrng},
                  -anchor=>'n'
@@ -1049,10 +1054,10 @@ sub now_build_ord {
 
       $t->windowCreate('end',-window=>$t_l);
       $t->insert('end', "\n");
-   
-      my $sth = 
+
+      my $sth =
          $self->{Database_conn}->prepare($self->f_str('now_build_ord','1'))||
-                die $self->{Database_conn}->errstr; 
+                die $self->{Database_conn}->errstr;
       $sth->execute;
 
       my $i = 0;
@@ -1100,7 +1105,7 @@ sub now_build_ord {
    }
    $t->insert('end', "\n");
 
-   # The following is all a bit horrible.  I'm afraid 
+   # The following is all a bit horrible.  I'm afraid
    # you're going to have to work it out for yourself.
    # It's not nice, you may not want to bother.
 
@@ -1118,20 +1123,19 @@ sub now_build_ord {
          if ($j_col <= $$total_r){
 
             $w = $t->Radiobutton(
+                        -cursor=>'hand2',
                         -relief=>'flat',
                         -value=>$j_row,
                         -variable=>\$index_head_r->[$j_col],
                         -width=>4,
-                        -command=> sub {  
+                        -command=> sub {
 
-           $self->j_inri($index_head_r,
-                         $total_r,
-                         $index_open_r,
-                        )  
+            $self->j_inri($index_head_r,
+                          $total_r,
+                          $index_open_r,
+                         )
 
                                        },
-                                  
-
                                 );
 
             $t->windowCreate('end',-window=>$w);
@@ -1148,6 +1152,7 @@ sub now_build_ord {
                unless ($$screen_type_r eq 'index'){
 
                   $w = $t->Checkbutton( -variable=>\$dsc_n[$j_row],
+                                        -cursor=>'hand2',
                                         -relief=>'flat',
                                         -width=>6);
 
@@ -1178,8 +1183,8 @@ sub really_build_index {
    # Picks up everything finally reqd. to build
    # up the DDL for index creation
 
-   my( $win_ref, 
-       $own_r, 
+   my( $win_ref,
+       $own_r,
        $obj_r,
        $total_r,
        $index_array_r,
@@ -1188,12 +1193,11 @@ sub really_build_index {
 
      ) = @_;
 
-   my $d = $main::mw->Toplevel( 
+   my $d = $main::mw->Toplevel(
               -title=>"$main::lg{ind_crt_for} " . $$own_r . '.' . $$obj_r
                               );
 
    $d->{text} = $d->Scrolled( 'Text',
-                              -cursor=>undef,
                               -wrap=>'none',
                               -foreground=>$main::fc,
                               -background=>$main::bc,
@@ -1221,8 +1225,8 @@ sub really_build_index {
 
    $self->{Database_conn}->func(1000000, 'dbms_output_enable');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
 
    $sth->bind_param(1,$$own_r);
    $sth->bind_param(2,$$obj_r);
@@ -1240,10 +1244,10 @@ sub really_build_index {
          $self->ind_prep($self->f_str('build_ind','3'),$$own_r,$$obj_r);
 
       my($n_rows) =
-        $self->ind_prep($self->f_str('build_ind','4') . 
+        $self->ind_prep($self->f_str('build_ind','4') .
                         ' ' . $$own_r . '.' . $$obj_r . ' ');
 
-      my($avail_data_space) =   
+      my($avail_data_space) =
          $self->ind_prep($self->f_str('build_ind','5'),
              $Block_Size, $initrans, $pct_free);
 
@@ -1285,8 +1289,10 @@ sub really_build_index {
       print L_TXT "   pctfree ${pct_free};\n\n";
       print L_TXT "\nrem Average Index Entry Size:  ${avg_entry_size}   ";
 
-
-      my $b = $d->{text}->Button( -text=>"Calculation SQL",
+      my $calc_img;
+      $self->get_img(\$d, \$calc_img, 'sql');
+      my $b = $d->{text}->Button( -image=>$calc_img,
+                                  -cursor=>'hand2',
                                   -command=>sub {$self->see_sql($d,$cm)}
                                 );
 
@@ -1301,8 +1307,9 @@ sub really_build_index {
    }
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$d );
-   $self->window_exit_button(\$loc_menu, \$d );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$d, );
+   $self->window_exit_button(\$loc_menu, \$d, 1, \$balloon, );
 
    main::iconize( $d );
 }
@@ -1321,8 +1328,8 @@ sub ind_prep {
 
    my $cm = shift;
    my @bindees = @_;
-   my $sth = $self->{Database_conn}->prepare($cm) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare($cm) ||
+                die $self->{Database_conn}->errstr;
    my $num_bindees = @bindees;
    if ($num_bindees > 0){
       my $i;
@@ -1445,7 +1452,7 @@ sub add_item {
    }
    my $dst_f = ($Use_Pct/$chopper) + 0.4;
 
-   $c->create( ( 'rectangle', 
+   $c->create( ( 'rectangle',
                  "$dst_f" . 'c',
                  "$y_start". 'c',
                  '0.4c',
@@ -1454,7 +1461,7 @@ sub add_item {
                -fill=>$main::lg{bar_col},
 
              );
-  
+
    $y_start = $y_start - 0.4;
 
    my $this_text;
@@ -1463,15 +1470,15 @@ sub add_item {
 
       my $bit = '';
 
-      $this_text = "$main::lg{db} " . 
-                   sprintf("%5.2f", $Use_Pct) . 
-                   '% '. 
-                   $main::lg{full} . 
+      $this_text = "$main::lg{db} " .
+                   sprintf("%5.2f", $Use_Pct) .
+                   '% '.
+                   $main::lg{full} .
                    $bit;
    } else {
 
-      $this_text = "$tab_str $Fname " . 
-                   sprintf("%5.2f", $Use_Pct) . 
+      $this_text = "$tab_str $Fname " .
+                   sprintf("%5.2f", $Use_Pct) .
                    '%';
 
    }
@@ -1497,8 +1504,8 @@ sub add_item {
                     -justify=>'left',
                      -font => $main::font{name},
                     -text=>sprintf("%10.2fM Total %10.2fM Used %10.2fM Free",
-                                   $Total, 
-                                   $Used_Mg, 
+                                   $Total,
+                                   $Used_Mg,
                                    $Free_Mg
                                   )
                   )
@@ -1523,8 +1530,9 @@ sub dbwr_fileio {
    $d->title($t_tit);
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$d );
-   $self->window_exit_button(\$loc_menu, \$d );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$d, );
+   $self->window_exit_button(\$loc_menu, \$d, 1, \$balloon, );
 
    my $cf = $d->Frame;
    $cf->pack(-expand=>'1',-fill=>'both');
@@ -1539,12 +1547,12 @@ sub dbwr_fileio {
 
    my $cm = $self->f_str('dbwr_fileio','1');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my $max_value = 0;
    my $i = 0;
- 
+
    my @res;
    my @dbwr_fi;
 
@@ -1565,8 +1573,8 @@ sub dbwr_fileio {
 
       for $i (0 .. $i){
 
-         $self->dbwr_print_fileio(  $d->{text}, 
-                                    $max_value, 
+         $self->dbwr_print_fileio(  $d->{text},
+                                    $max_value,
                                     $i,
                                     $dbwr_fi[$i][0],
                                     $dbwr_fi[$i][1],
@@ -1579,27 +1587,17 @@ sub dbwr_fileio {
       }
    }
 
-   my $b = $d->{text}->Button(-text=>$main::ssq,
-                      -command=>sub{$self->see_sql($d,$cm)});
+   # Finally, give out a 'See SQL' button
 
-   my $y_start = $self->this_pak_get_y(($i + 1));
-
-   $d->{text}->create(  'window', 
-                '1c', 
-                "$y_start" . 'c',
-                -window=>$b,
-                -anchor=>'nw',
-                -tags=>'item'
-             );
+   $self->see_sql_but(\$loc_menu, \$d, \$cm, 1, \$balloon, );
 
    $d->{text}->configure(-scrollregion=>[ $d->{text}->bbox("all") ]);
-
    $d->{text}->pack(-expand=>'yes',-fill=>'both');
-   
+
    main::iconize( $d );
 }
 
-=head2 this_pak_get_y 
+=head2 this_pak_get_y
 
 Another small helper function to increment the Y-coord values
 on simple Canvas line graphs.
@@ -1643,7 +1641,7 @@ sub dbwr_print_fileio {
          $local_max = $stf[$i];
       }
    }
-   my @txt_stf = (   '', 
+   my @txt_stf = (   '',
                   'phyrds',
                   'phywrts',
                   'phyblkrd',
@@ -1680,8 +1678,8 @@ sub dbwr_print_fileio {
 
       $txt_y_start = $y_start - 0.15;
 
-      $c->create(   (   'text', 
-                        "$txt_name" . 'c', 
+      $c->create(   (   'text',
+                        "$txt_name" . 'c',
                         "$txt_y_start" . 'c',
                         -anchor=>'nw',
                         -justify=>'left',
@@ -1691,8 +1689,8 @@ sub dbwr_print_fileio {
                 );
 
 
-      $c->create(   (   'text', 
-                        "$act_figure_pos" . 'c', 
+      $c->create(   (   'text',
+                        "$act_figure_pos" . 'c',
                         "$txt_y_start" . 'c',
                         -anchor=>'nw',
                         -justify=>'left',
@@ -1705,8 +1703,8 @@ sub dbwr_print_fileio {
    }
    $txt_y_start = $y_start - 0.10;
 
-   $c->create(   (   'text', 
-                     "$x_start" . 'c', 
+   $c->create(   (   'text',
+                     "$x_start" . 'c',
                      "$txt_y_start" . 'c',
                      -anchor=>'nw',
                      -justify=>'left',
@@ -1720,7 +1718,7 @@ sub dbwr_print_fileio {
 =head2 errors_orac
 
 Creates Viewer window, for selecting invalid database objects.
-Once this is done, all the reported compilation errors on the 
+Once this is done, all the reported compilation errors on the
 object are printed in the main screen.
 
 =cut
@@ -1732,8 +1730,8 @@ sub errors_orac {
 
    my $cm = $self->f_str('errors_orac','1');
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
 
    $sth->execute;
    my $detected = 0;
@@ -1749,8 +1747,9 @@ sub errors_orac {
          $window->title($main::lg{err_obj});
 
          my $err_menu;
-         $self->create_button_bar(\$err_menu, \$window );
-         $self->window_exit_button(\$err_menu, \$window );
+         my $balloon;
+         $self->create_balloon_bars(\$err_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$err_menu, \$window, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my $err_top = $window->Frame->pack(-side=>'top',
@@ -1759,7 +1758,7 @@ sub errors_orac {
                                             -fill=>'both'
                                            );
 
-         $window->{text} = 
+         $window->{text} =
              $err_top->ScrlListbox(-width=>50,
                                    -font=>$main::font{name},
                                    -background=>$main::bc,
@@ -1782,7 +1781,7 @@ sub errors_orac {
       $window->{text}->pack();
 
       $window->{text}->bind(
-         '<Double-1>', 
+         '<Double-1>',
          sub{  $window->Busy;
                $self->selected_error(
                $window->{text}->get('active')
@@ -1805,8 +1804,8 @@ sub dbas_orac {
    # Creates DBA Viewer window
 
    my $cm = $self->f_str('dbas_orac','1');
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my $detected = 0;
 
@@ -1822,14 +1821,15 @@ sub dbas_orac {
          $window->title($main::lg{dba_views});
 
          my $dba_menu;
-         $self->create_button_bar(\$dba_menu, \$window );
-         $self->window_exit_button(\$dba_menu, \$window );
+         my $balloon;
+         $self->create_balloon_bars(\$dba_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$dba_menu, \$window, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my(@dba_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          my $dba_top = $window->Frame->pack(@dba_lay);
 
-         $window->{text} = 
+         $window->{text} =
             $dba_top->ScrlListbox(-width=>50,
                                   -font=>$main::font{name},
                                   -background=>$main::bc,
@@ -1851,7 +1851,7 @@ sub dbas_orac {
 
       $window->{text}->bind(
          '<Double-1>',
-         sub{ 
+         sub{
               $window->Busy;
               $self->{Main_window}->Busy;
 
@@ -1862,7 +1862,7 @@ sub dbas_orac {
 
               $self->{Main_window}->Unbusy;
               $window->Unbusy;
-            } 
+            }
 
                                    );
    }
@@ -1870,7 +1870,7 @@ sub dbas_orac {
 
 =head2 addr_orac
 
-Produces a list of all the PADDR addresses in the database, to 
+Produces a list of all the PADDR addresses in the database, to
 help a DBA examine what's running.  Useful info for deciding
 what to kill off in a locked up database.
 
@@ -1883,8 +1883,8 @@ sub addr_orac {
    # Creates DBA Viewer window
 
    my $cm = $self->f_str('addr_orac','1');
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my $detected = 0;
 
@@ -1898,14 +1898,15 @@ sub addr_orac {
          $window->title($main::lg{spec_addrss});
 
          my $addr_menu;
-         $self->create_button_bar(\$addr_menu, \$window );
-         $self->window_exit_button(\$addr_menu, \$window );
+         my $balloon;
+         $self->create_balloon_bars(\$addr_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$addr_menu, \$window, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my(@adr_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          my $adr_top = $window->Frame->pack(@adr_lay);
 
-         $window->{text} = 
+         $window->{text} =
             $adr_top->ScrlListbox(-width=>20,
                                   -font=>$main::font{name},
                                   -background=>$main::bc,
@@ -1929,8 +1930,8 @@ sub addr_orac {
       $window->{text}->pack();
 
       $window->{text}->bind(
-         '<Double-1>', 
-         sub{  
+         '<Double-1>',
+         sub{
                my $loc_addr = $window->{text}->get('active');
 
                $self->f_clr( $main::v_clr );
@@ -1938,7 +1939,7 @@ sub addr_orac {
                                 $main::lg{sel_addr} . ': ' . $loc_addr,
                                 $loc_addr );
 
-            }  
+            }
                                      );
 
    }
@@ -1946,7 +1947,7 @@ sub addr_orac {
 
 =head2 sids_orac
 
-Produces a list of all the SIDs in the database, to 
+Produces a list of all the SIDs in the database, to
 help a DBA examine what's running.  Useful info for deciding
 what to kill off in a locked up database.
 
@@ -1959,8 +1960,8 @@ sub sids_orac {
    # Creates DBA Viewer window
 
    my $cm = $self->f_str('sids_orac','1');
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my $detected = 0;
 
@@ -1974,14 +1975,15 @@ sub sids_orac {
          $window->title($main::lg{spec_sids});
 
          my $sid_menu;
-         $self->create_button_bar(\$sid_menu, \$window );
-         $self->window_exit_button(\$sid_menu, \$window );
+         my $balloon;
+         $self->create_balloon_bars(\$sid_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$sid_menu, \$window, 1, \$balloon, );
          $self->double_click_message(\$window);
 
          my(@sid_lay) = qw/-side top -padx 5 -expand yes -fill both/;
          my $sid_top = $window->Frame->pack(@sid_lay);
 
-         $window->{text} = 
+         $window->{text} =
             $sid_top->ScrlListbox(-width=>20,
                                   -font=>$main::font{name},
                                   -background=>$main::bc,
@@ -2002,7 +2004,7 @@ sub sids_orac {
       $window->{text}->pack();
 
       $window->{text}->bind(
-         '<Double-1>', 
+         '<Double-1>',
          sub { $window->Busy;
 
                $self->f_clr( $main::v_clr );
@@ -2026,8 +2028,8 @@ sub gh_roll_name {
    my $self = shift;
 
    my $cm = $self->f_str('time','2');
-   my $sth = $self->{Database_conn}->prepare($cm) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare($cm) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my($sample_time) = $sth->fetchrow;
 
@@ -2054,8 +2056,8 @@ sub gh_roll_stats {
    my $self = shift;
 
    my $cm = $self->f_str('time','2');
-   my $sth = $self->{Database_conn}->prepare($cm) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare($cm) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my($sample_time) = $sth->fetchrow;
    $sth->finish;
@@ -2120,20 +2122,27 @@ sub explain_plan {
    $window->title($main::lg{explain_plan});
 
    my $dmb;
-   $self->create_button_bar(\$dmb, \$window );
+   my $balloon;
+   $self->create_balloon_bars(\$dmb, \$balloon, \$window );
 
    # Add buttons.  Add a holder for the actual explain plan
    # button so we can enable/disable it later
 
    if($explain_ok){
 
-      $expl_butt = $dmb->Button(-text=>$main::lg{explain},
-                                -command=>sub{ $self->explain_it() }
+      my $img;
+      $self->get_img( \$window, \$img, 'explain' );
+
+      $expl_butt = $dmb->Button(-image=>$img,
+                                -command=>sub{ $self->explain_it(\$window) }
                                )->pack(side=>'left');
 
+      $balloon->attach($expl_butt, -msg => $main::lg{explain} );
 
-      $dmb->Button(  -text=>$main::lg{clear},
-                     -command=>sub{
+      $self->get_img( \$window, \$img, 'eraser' );
+
+      my $clr_b = $dmb->Button(  -image=>$img,
+                                 -command=>sub{
 
                          $window->Busy;
 
@@ -2143,10 +2152,12 @@ sub explain_plan {
                          $expl_butt->configure(-state=>'normal');
 
                          $window->Unbusy;
-                                                  }
-                  )->pack(side=>'left');
+                                              }
+                              )->pack(side=>'left');
+
+      $balloon->attach($clr_b, -msg => $main::lg{clear} );
    }
-   $self->window_exit_button(\$dmb, \$window );
+   $self->window_exit_button(\$dmb, \$window, 1, \$balloon, );
 
    # Set counter up
 
@@ -2179,18 +2190,6 @@ sub explain_plan {
    my(@exp_lay) = qw/-side top -padx 5 -expand yes -fill both/;
    my $top_slice = $window->Frame->pack(@exp_lay);
 
-   $window->{text} = 
-      $top_slice->Scrolled(  'Text',
-                             -cursor=>undef,
-                             -wrap=>'none',
-                             -height=>($l_entry_height + $num_cols + 3),
-                             -width=>($l_entry_width + $l_label_width + 5),
-                             -font=>$main::font{name},
-                             -foreground=>$main::fc,
-                             -background=>$main::bc
-                          );
-
-  
    for($i=0;$i<$num_cols;$i++){
 
       #  0  user
@@ -2198,48 +2197,73 @@ sub explain_plan {
       #  2  SQL
 
       $w_holders[$i] = '';
-      $w_explain[$i] = $window->{text}->Entry( 
+      $w_explain[$i] = $top_slice->Entry(
                               -textvariable=>\$w_titles[$i],
                               -width=>$l_label_width
-                                                  );
-      $window->{text}->windowCreate('end',
-                                                     -align=>'top',
-                                                     -window=>$w_explain[$i]);
+                                        );
+
+      Tk::grid(  $w_explain[$i],
+                 -row=>$i,
+                 -column=>0,
+                 -sticky=>'ne',
+              );
 
       if ($i == 2){
-         $w_explain[$i] = 
-            $window->{text}->Scrolled( 
-                                        'Text',
-                                        -height=>$l_entry_height,
-                                        -width=>$l_entry_width,
-                                        -font=>$main::font{name},
-                                        -foreground=>$main::fc,
-                                        -background=>$main::ec
-                                                      );
+         $w_explain[$i] =
+            $top_slice->Scrolled(
+                                  'Text',
+                                  -height=>$l_entry_height,
+                                  -width=>$l_entry_width,
+                                  -font=>$main::font{name},
+                                  -foreground=>$main::fc,
+                                  -background=>$main::ec
+                                );
+
+         Tk::grid(  $w_explain[$i],
+                    -row=>$i,
+                    -column=>1,
+                    -sticky=>'nsew',
+                 );
       }
       else {
-         $w_explain[$i] = 
-              $window->{text}->Entry( 
+         $w_explain[$i] =
+              $top_slice->Entry(
                                  -textvariable=>\$w_holders[$i],
                                  -width=>$l_entry_width
-                                                      );
+                               );
+
+         Tk::grid(  $w_explain[$i],
+                    -row=>$i,
+                    -column=>1,
+                    -sticky=>'w',
+                 );
       }
       $w_explain[$i]->configure(-background=>$main::ec,
                                 -foreground=>$main::fc,
                                 -font=>$main::font{name},
                                );
-
-      $window->{text}->windowCreate('end',
-                                                     -window=>$w_explain[$i]);
-      $window->{text}->insert('end', "\n");
    }
-   $window->{text}->pack( -expand=>1,
-                                           -fil=>'both');
-
-   # Stop anyone getting rid of text-embedded
-   # widgets with a dodgy delete key press
-
-   $window->{text}->configure( -state=>'disabled' );
+   my($columns,$rows) = $top_slice->gridSize();
+   for ($i = 0;$i < $columns; $i++){
+      unless ($i == ($columns - 1))
+      {
+        $top_slice->gridColumnconfigure($i, -weight => 0);
+      }
+      else
+      {
+        $top_slice->gridColumnconfigure($i, -weight => $l_entry_width);
+      }
+   }
+   for ($i = 0;$i < $rows; $i++){
+      unless ($i == ($rows - 1))
+      {
+         $top_slice->gridRowconfigure($i, -weight => 0);
+      }
+      else
+      {
+         $top_slice->gridRowconfigure($i, -weight => $l_entry_height);
+      }
+   }
 
    # Now build up the slider, which will trawl through v$sqlarea to
    # paste up various bits of SQL text currently in database.
@@ -2252,7 +2276,7 @@ sub explain_plan {
 
       # Build up scale slider button, and splatt onto window.
 
-      my $bot_slice = 
+      my $bot_slice =
              $window->Frame->pack( -before=>$top_slice,
                                                     -side=>'bottom',
                                                     -padx=>5,
@@ -2260,8 +2284,8 @@ sub explain_plan {
                                                     -fill=>'both'
                                                   );
 
-      $sql_slider = 
-         $bot_slice->Scale( 
+      $sql_slider =
+         $bot_slice->Scale(
             -orient=>'horizontal',
             -label=>"$main::lg{rec_of} " . $sql_max_row,
             -length=>400,
@@ -2273,12 +2297,7 @@ sub explain_plan {
                                                    $explain_ok)} ]
                           )->pack(side=>'left');
 
-      $bot_slice->Button(
-         -text=>$main::ssq,
-         -command=>sub { $self->see_sql( $window, $cm )}
-
-                        )->pack(side=>'right');
-
+      $self->see_sql_but(\$dmb, \$window, \$cm, 1, \$balloon, );
       $self->pick_up_sql($explain_ok);
 
    } else {
@@ -2293,8 +2312,8 @@ sub explain_plan {
 
 =head2 explain_it
 
-Takes the SQL statement directly from the screen and tries an 'Explain Plan' 
-on it.  I'm leaving the SQL hard-coded here so you can see EXACTLY 
+Takes the SQL statement directly from the screen and tries an 'Explain Plan'
+on it.  I'm leaving the SQL hard-coded here so you can see EXACTLY
 what's going on, particularly as we're dipping our toes into DML.
 
 =cut
@@ -2302,13 +2321,17 @@ what's going on, particularly as we're dipping our toes into DML.
 sub explain_it {
    my $self = shift;
 
+   my ($win_ref) = @_;
+
+   my $cm = "";
+
    # Takes the SQL statement directly from the screen
    # and tries an 'Explain Plan' on it.  I'm leaving the
    # SQL hard-coded here so you can see EXACTLY what's
    # going on, particularly as we're dipping our toes
    # into DML.
 
-   # BTW We're automatically set up for autocommit, with  
+   # BTW We're automatically set up for autocommit, with
    # DBI, so there's no need to commit the 'delete'
    # transaction
 
@@ -2324,9 +2347,22 @@ sub explain_it {
                  'where statement_id = \'orac_explain_plan\' ';
 
    my $rc  = $self->{Database_conn}->do( $del_sql );
+
+   # Stop warning messages appearing.  Instead, put them
+   # into an Explain plan window, should they occur.
+
+   $main::conn_comm_flag = 1;
+   my $output = "";
+
    $rc  = $self->{Database_conn}->do( $ex_sql );
 
-   my $cm =   ' select rtrim(lpad(\'  \',2*level)|| ' . "\n" .
+   if (defined($DBI::errstr)){
+      $output .= $DBI::errstr;
+      $cm .= $ex_sql;
+   }
+   else
+   {
+      $cm =   ' select rtrim(lpad(\'  \',2*level)|| ' . "\n" .
               ' rtrim(operation)||\' \'|| ' . "\n" .
               ' rtrim(options)||\' \'|| ' . "\n" .
               ' object_name) query_plan ' . "\n" .
@@ -2336,21 +2372,51 @@ sub explain_it {
               ' and statement_id = \'orac_explain_plan\' ' . "\n" .
               ' start with id = 0 and statement_id = \'orac_explain_plan\' ';
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
-   $sth->execute;
+      my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                   die $self->{Database_conn}->errstr;
 
-   # Clear screen where required.
-   $self->f_clr($main::v_clr);
+      if (defined($DBI::errstr)){
+         $output .= $DBI::errstr;
+      }
+      else
+      {
+         $sth->execute;
 
-   my @res;
-   while (@res = $sth->fetchrow) {
-      $self->{Text_var}->insert('end', "$res[0]\n");
+         if (defined($DBI::errstr)){
+            $output .= $DBI::errstr;
+         }
+         else
+         {
+            my @res;
+            while (@res = $sth->fetchrow) {
+               $output .= "$res[0]\n";
+            }
+            $sth->finish;
+         }
+      }
    }
-   $sth->finish;
 
-   $self->see_plsql( $cm );
+   # Turn error reporting back on again :-)
 
+   $main::conn_comm_flag = 0;
+
+   # Tag on the actual SQL
+
+   $output .= "\n\n${sql_bit}\n";
+
+   # Get the references so we can add another button to the screen
+
+   my($ss_menu_ref, $ss_ball_ref, $ss_win_ref, ) =
+      $self->see_sql( $$win_ref,
+                      $output,
+                      $main::lg{explain_plan},
+                    );
+
+   # Add on a 'See SQL' button
+
+   $self->see_sql_but($ss_menu_ref, $ss_win_ref, \$cm, 1, $ss_ball_ref, );
+
+   return;
 }
 
 =head2 calc_scale_sql
@@ -2364,7 +2430,7 @@ sub calc_scale_sql {
 
    my $self = shift;
 
-   # Whizz backwards and forwards through the 
+   # Whizz backwards and forwards through the
    # v$sqlarea records
 
    my($sv,$expl_ok) = @_;
@@ -2436,8 +2502,8 @@ sub check_exp_plan {
    # 'Explain Plan' results to insert into.
 
    my $cm = $self->f_str('explain_plan','1');
-   my $sth = $self->{Database_conn}->prepare($cm) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare($cm) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
    my $detected = 0;
 
@@ -2507,8 +2573,8 @@ sub who_hold
    my $scroll_box;
    my $scroll_label;
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
 
    my $l_counter = 0;
@@ -2529,14 +2595,16 @@ sub who_hold
 
          $l_counter = 1;
 
-         $scroll_label = 
-            $self->{Text_var}->Label( 
+         $scroll_label =
+            $self->{Text_var}->Label(
+               -cursor=>'hand2',
                -text=>"$main::lg{see_sql} $main::lg{doub_click}",
                -relief=>'raised'
                                     );
 
          $scroll_box =
             $self->{Text_var}->ScrlListbox(-width=>76,
+                                           -cursor=>'hand2',
                                            -height=>3,
                                            -background=>$main::ec,
                                            -foreground=>$main::fc
@@ -2547,9 +2615,9 @@ sub who_hold
 
          $self->{Text_var}->windowCreate('end',-window=>$scroll_box);
          $self->{Text_var}->insert('end', "\n");
-      } 
+      }
 
-      # Wait User first 
+      # Wait User first
 
       $l_username = $res[0];
       $l_osuser = $res[1];
@@ -2585,15 +2653,15 @@ sub who_hold
 
    if ($l_counter == 1){
       $scroll_box->bind(
-   
-            '<Double-1>', 
+
+            '<Double-1>',
             sub{  $self->{Main_window}->Busy;
                   my @first_string = split(',', $scroll_box->get('active') );
-   
+
                   my @v_osuser = split('\:', $first_string[1]);
                   my @v_username = split('\:', $first_string[0]);
                   my @v_sid = split('\:', $first_string[2]);
-   
+
                   $self->who_what( 1,
                                    $v_osuser[1],
                                    $v_username[1],
@@ -2613,7 +2681,7 @@ sub who_hold
 
 =head2 mts_mem
 
-Report for finding MTS statistics, and providing secondary button 
+Report for finding MTS statistics, and providing secondary button
 to reveal further stats.
 
 =cut
@@ -2640,8 +2708,8 @@ sub mts_mem
    my @res;
    my @title_values;
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
    $sth->execute;
 
    while ( @res = $sth->fetchrow ) {
@@ -2655,14 +2723,16 @@ sub mts_mem
 
          $l_counter = 1;
 
-         $scroll_label = 
-            $self->{Text_var}->Label( 
+         $scroll_label =
+            $self->{Text_var}->Label(
+               -cursor=>'hand2',
                -text=>"$main::lg{doub_click}",
                -relief=>'raised'
                                     );
 
          $scroll_box =
             $self->{Text_var}->ScrlListbox(-width=>40,
+                                           -cursor=>'hand2',
                                            -height=>3,
                                            -background=>$main::ec,
                                            -foreground=>$main::fc
@@ -2673,7 +2743,7 @@ sub mts_mem
 
          $self->{Text_var}->windowCreate('end',-window=>$scroll_box);
          $self->{Text_var}->insert('end', "\n");
-      } 
+      }
 
       $l_stat = $res[0];
 
@@ -2684,11 +2754,11 @@ sub mts_mem
 
    if ($l_counter == 1){
       $scroll_box->bind(
-   
-            '<Double-1>', 
+
+            '<Double-1>',
             sub{  $self->{Main_window}->Busy;
                   my @stat_str = split('\:', $scroll_box->get('active') );
-   
+
                   $self->who_what( 2,
                                    $stat_str[1],
                                    "${l_stat_title}:$stat_str[1]",
@@ -2696,12 +2766,12 @@ sub mts_mem
                   $self->{Main_window}->Unbusy
                }
                        );
-   
+
       $self->{Text_var}->insert('end', "\n");
    }
    $self->show_sql( 'sess_curr_max_mem' , '1',
                     $main::lg{mts_mem} );
-   
+
 }
 
 =head2 do_a_generic
@@ -2728,13 +2798,13 @@ sub do_a_generic {
    my $dum;
 
    ($owner, $generic, $dum) = split("\\$l_gen_sep", $input);
-   
+
    my $cm = $self->f_str( $l_hlst , '99' );
 
    $self->{Database_conn}->func(1000000, 'dbms_output_enable');
-   my $second_sth = $self->{Database_conn}->prepare( $cm ) || 
-      die $self->{Database_conn}->errstr; 
-   
+   my $second_sth = $self->{Database_conn}->prepare( $cm ) ||
+      die $self->{Database_conn}->errstr;
+
    $second_sth->bind_param(1,$owner);
    $second_sth->bind_param(2,$generic);
    $second_sth->execute;
@@ -2755,11 +2825,11 @@ sub do_a_generic {
 
    $self->create_balloon_bars(\$menu_bar, \$balloon, \$window );
 
-   if ( ($l_hlst eq 'Tables') || 
+   if ( ($l_hlst eq 'Tables') ||
         ($l_hlst eq 'Indexes') ||
         ($l_hlst eq 'Views') )
    {
-      foreach my $bit ( 'form', 
+      foreach my $bit ( 'form',
                         'freespace',
                         'index',
                         'sizeindex',
@@ -2768,25 +2838,17 @@ sub do_a_generic {
                         'comment',
                      )
       {
-         $b_images{$bit} = $window->Photo( 
-            -file => "$FindBin::RealBin/img/${bit}.gif" );
+         $self->get_img( \$window, \$b_images{$bit}, $bit );
       }
    }
- 
-   # An image for the 'See SQL' button
 
-   $b_images{sql} = $window->Photo( 
-      -file => "$FindBin::RealBin/img/sql.gif" );
-   
    # An image for the 'Lines' button
    # Also, store the final variable here, which
    # is used to store the text
 
    my $text_lines = '';
+   $self->get_img( \$window, \$b_images{lines}, 'lines' );
 
-   $b_images{lines} = $window->Photo( 
-      -file => "$FindBin::RealBin/img/lines.gif" );
-   
    my $label_text;
 
    if (!defined($generic)){
@@ -2798,7 +2860,7 @@ sub do_a_generic {
 
    $window->title($label_text);
 
-   $window->{text} = 
+   $window->{text} =
       $window->Scrolled(
                          'Text',
                          -height=>16,
@@ -2834,19 +2896,7 @@ sub do_a_generic {
 
    $window->{text}->insert('end', $text_lines);
 
-   my $b = $menu_bar->Button(-image=>$b_images{sql},
-
-                             -command=> sub{
-
-                         $window->Busy;
-                         $self->see_sql($window,$cm);
-                         $window->Unbusy;
-
-                                           }
-
-                             )->pack(-side=>'left');
-
-   $balloon->attach($b, -msg => $main::ssq );
+   $self->see_sql_but(\$menu_bar, \$window, \$cm, 1, \$balloon, );
 
    $b = $menu_bar->Button(-image=>$b_images{lines},
 
@@ -2861,9 +2911,9 @@ sub do_a_generic {
 
                          foreach my $line (@lines_of_txt)
                          {
-                            $final_txt = 
-                               $final_txt . 
-                               sprintf(  "%5d: %s", 
+                            $final_txt =
+                               $final_txt .
+                               sprintf(  "%5d: %s",
                                          $line_counter,
                                          $lines_of_txt[($line_counter - 1)]
                                       );
@@ -2882,7 +2932,7 @@ sub do_a_generic {
    if ( ($l_hlst eq 'Tables') || ($l_hlst eq 'Indexes') ){
 
       if ($l_hlst eq 'Tables') {
-       
+
             my $b = $menu_bar->Button(-image=>$b_images{form},
                                      -command=> sub{
 
@@ -2892,7 +2942,7 @@ sub do_a_generic {
                                                    $generic,
                                                    'form');
 
-                                  $window->Unbusy 
+                                  $window->Unbusy
 
                                                    }
 
@@ -2902,32 +2952,32 @@ sub do_a_generic {
 
             $b = $menu_bar->Button( -image=>$b_images{sizeindex},
                                     -command=> sub {
- 
+
                               $window->Busy;
                               $self->univ_form($owner,
                                                $generic,
                                                'index'
                                               );
-                              $window->Unbusy 
+                              $window->Unbusy
 
                                                    }
 
                                   )->pack(-side=>'left');
 
             $balloon->attach($b, -msg => $main::lg{sizeindex});
-   
+
       }
       my @tablist;
       my @tablist_2;
 
       if ($l_hlst eq 'Tables') {
 
-         @tablist = ('Tab_Inedexes', 
+         @tablist = ('Tab_Inedexes',
                      'Tab_FreeSpace',
                      'Tab_Constraints',
                      'Triggers',
                      'Comments');
-         @tablist_2 = ('index', 
+         @tablist_2 = ('index',
                        'freespace',
                        'constraint',
                        'trig',
@@ -2947,7 +2997,7 @@ sub do_a_generic {
          $b = $menu_bar->Button( -image=>$b_images{$tablist_2[$i]},
                -text=>$tablist_2[$i],
 
-               -command=> sub { 
+               -command=> sub {
 
                     $self->do_a_generic($window, '.', $this_txt, $input);
 
@@ -2959,7 +3009,7 @@ sub do_a_generic {
       }
 
    } elsif ($l_hlst eq 'Views'){
-      
+
          my $b = $menu_bar->Button(
             -image=>$b_images{form},
             -command=>sub{  $window->Busy;
@@ -2975,7 +3025,7 @@ sub do_a_generic {
          $balloon->attach($b, -msg => $main::lg{form});
    }
 
-   $self->window_exit_button(\$menu_bar, \$window );
+   $self->window_exit_button(\$menu_bar, \$window, 1, \$balloon, );
 
    main::iconize( $window );
 
@@ -2989,6 +3039,7 @@ Produces simple graphical representations of complex percentage style reports.
 =cut
 
 sub tab_det_orac {
+
    my $self = shift;
 
    # Produces simple graphical representations of complex
@@ -3000,8 +3051,9 @@ sub tab_det_orac {
    $d->title("$title: $main::v_db ($main::lg{blk_siz} $Block_Size)");
 
    my $loc_menu;
-   $self->create_button_bar(\$loc_menu, \$d );
-   $self->window_exit_button(\$loc_menu, \$d );
+   my $balloon;
+   $self->create_balloon_bars(\$loc_menu, \$balloon, \$d, );
+   $self->window_exit_button(\$loc_menu, \$d, 1, \$balloon, );
 
    my $cf = $d->Frame;
    $cf->pack(-expand=>'1',-fill=>'both');
@@ -3018,8 +3070,8 @@ sub tab_det_orac {
 
    my $cm = $self->f_str($func, $file_number, );
 
-   my $sth = $self->{Database_conn}->prepare( $cm ) || 
-                die $self->{Database_conn}->errstr; 
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
 
    if($func eq 'tab_det_orac'){
       my $i;
@@ -3070,7 +3122,7 @@ sub tab_det_orac {
      }
      if($func ne 'tab_det_orac'){
         $Fname = '';
-     } 
+     }
      if($func eq 'tune_health'){
         $Use_Pct = $Total;
      }
@@ -3103,22 +3155,13 @@ sub tab_det_orac {
                      );
    }
 
-   my $b = $d->{text}->Button( -text=>$main::ssq,
-                       -command=>sub{  $self->see_sql( $d , $cm )  });
+   # Finally, give out a 'See SQL' button
 
-   my $y_start = $self->work_out_why($i);
-
-   $d->{text}->create(  'window', 
-                '1c',
-                "$y_start" . 'c',
-                -window=>$b,
-                -anchor=>'nw',
-                -tags=>'item'
-             );
+   $self->see_sql_but(\$loc_menu, \$d, \$cm, 1, \$balloon, );
 
    $d->{text}->configure(-scrollregion=>[ $d->{text}->bbox("all") ]);
    $d->{text}->pack(-expand=>'yes',-fill=>'both');
-   
+
    main::iconize( $d );
 
 }

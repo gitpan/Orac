@@ -2,17 +2,17 @@
 ######################################################################
 # Copyright (c) 1998,1999 Andy Duncan
 #
-# You may distribute under the terms of either the GNU General 
-# Public License or the Artistic License,as specified in the Perl 
-# README file,with the exception that it cannot be placed on a CD-ROM 
-# or similar media for commercial distribution without the prior 
+# You may distribute under the terms of either the GNU General
+# Public License or the Artistic License,as specified in the Perl
+# README file,with the exception that it cannot be placed on a CD-ROM
+# or similar media for commercial distribution without the prior
 # approval of the author.
 #
-# This code is provided with no warranty of any kind,and is used 
-# entirely at your own risk. This code was written by the author as 
+# This code is provided with no warranty of any kind,and is used
+# entirely at your own risk. This code was written by the author as
 # a private individual, and is in no way endorsed or warrantied.
 #
-# Support questions and suggestions can be directed to 
+# Support questions and suggestions can be directed to
 # andy_j_duncan@yahoo.com
 #
 # Download from CPAN/authors/id/A/AN/ANDYDUNC
@@ -42,6 +42,8 @@ use Time::Local;
 use DBI;
 use File::Copy;
 use File::Basename;
+# Thanks to Sean Kamath :-)
+use File::Spec;
 use FindBin;
 use lib $FindBin::RealBin;
 
@@ -75,7 +77,7 @@ main::read_language();
 
 # Some hard-coded defaults
 
-$main::orac_version = '1.1.31';
+$main::orac_version = '1.1.33';
 
 $main::ssq = $main::lg{see_sql};
 $main::ec = $main::lg{def_fill_fld_col};
@@ -107,10 +109,10 @@ else {
    $main::do_shell = 0;
 }
 
-$main::conn_ball{green} = 
+$main::conn_ball{green} =
    $main::mw->Photo( -file => "$FindBin::RealBin/img/grn_ball.gif" );
 
-$main::conn_ball{red} = 
+$main::conn_ball{red} =
    $main::mw->Photo( -file => "$FindBin::RealBin/img/red_ball.gif" );
 
 # Build up frames
@@ -137,7 +139,7 @@ my $text_box = $main::mw->Frame->pack(-side => 'bottom',
                                      );
 
 # To do font stuff, we need to set up the main Text box here,
-# so we can determine its available fonts, as 
+# so we can determine its available fonts, as
 # unobtrusively as possible.  The orac_Font module
 # relies on $main::v_text having been set up, before
 # its blessed reference is created.
@@ -151,8 +153,8 @@ $main::v_text = $text_box->Scrolled(  'Text',
 #tie (*TEXT,'Tk::Text',$main::v_text);
 
 my $status_bar = $main::mw->Frame( -relief => 'groove',
-                                   -bd => 2 
-                                 )->pack( -side => 'bottom', 
+                                   -bd => 2
+                                 )->pack( -side => 'bottom',
                                           -before=> $text_box,
                                           -fill => 'x',
                                         );
@@ -186,12 +188,12 @@ $file_mb->separator();
 
 $file_mb->command(-label=>$main::lg{about_orac},
                   -command=>
-                      sub{ 
+                      sub{
 
    main::bz();
    $main::current_db->f_clr($main::v_clr);
    $main::current_db->see_sql( $main::mw,
-                               $main::current_db->gf_str( 
+                               $main::current_db->gf_str(
                                              "$FindBin::RealBin/README"
                                                         ),
                                'README',
@@ -227,7 +229,7 @@ foreach my $key (@file_viewers)
 }
 
 $file_mb->command(-label=>$main::lg{file_viewer},
-                  -command=> sub{ 
+                  -command=> sub{
       main::bz();
       my $fileselect = orac_FileSelect->new( $main::mw,
                                              $main::v_text,
@@ -268,16 +270,15 @@ close(COLOUR_FILE);
 # Now a Font option for KB :-)
 
 my $font_button;
-my $balloon;
 
 $file_mb->command(-label=>$main::lg{font_sel},
-                  -command=> sub{ 
+                  -command=> sub{
       main::bz();
       my $fonter = orac_Font->new( $main::mw,
                                    $main::v_text,
                                    $main::lg{font_sel},
                                  );
-      $fonter->orac_fonter(\$balloon, \$font_button);
+      $fonter->orac_fonter(\$main::balloon, \$font_button);
       main::ubz()
                                 }
                   );
@@ -311,8 +312,9 @@ my $balloon_status = $status_bar->Label(-relief=>'flat',
                                        )->pack(-side=>'left',
                                               );
 
-$balloon = $main::mw->Balloon(-statusbar => $balloon_status, 
-                              -state => 'status');
+$main::balloon = $main::mw->Balloon(-statusbar => $balloon_status,
+                                    -state => 'status',
+                                   );
 
 # The Reconnection Button
 
@@ -324,7 +326,7 @@ my $b = $bb->Button(-image=>$b_image,
                                   main::ubz()}
                    )->pack(side=>'left');
 
-$balloon->attach($b, -msg => $main::lg{reconn});
+$main::balloon->attach($b, -msg => $main::lg{reconn});
 
 # The Monitor Button
 
@@ -343,7 +345,7 @@ $b = $bb->Button(-image=>$b_image,
 
                 )->pack(side=>'left');
 
-$balloon->attach($b, -msg => $main::lg{db_mon});
+$main::balloon->attach($b, -msg => $main::lg{db_mon});
 
 # The Font Button
 
@@ -357,13 +359,13 @@ $font_button = $bb->Button(-image=>$b_image,
                                    $main::v_text,
                                    $main::lg{font_sel},
                                  );
-      $fonter->orac_fonter(\$balloon, \$font_button);
+      $fonter->orac_fonter(\$main::balloon, \$font_button);
       main::ubz();
                                            }
 
                              )->pack(side=>'left');
 
-main::font_button_message(\$balloon, \$font_button);
+main::font_button_message(\$main::balloon, \$font_button);
 
 # The Print Button
 
@@ -382,7 +384,7 @@ $b = $bb->Button(-image=>$b_image,
 
                 )->pack(side=>'left');
 
-$balloon->attach($b, -msg => $main::lg{print_sel});
+$main::balloon->attach($b, -msg => $main::lg{print_sel});
 
 $b_image = $main::mw->Photo(-file=>"$FindBin::RealBin/img/eraser.gif");
  	
@@ -392,7 +394,7 @@ $b = $bb->Button(-image=>$b_image,
                                main::ubz()}
                 )->pack(side=>'left');
 
-$balloon->attach($b, -msg => $main::lg{clear});
+$main::balloon->attach($b, -msg => $main::lg{clear});
 
 # Now Manual/Automatic clearing
 
@@ -404,32 +406,32 @@ my %man_auto_img;
 
 # Y is automatic, N is manual
 
-$man_auto_img{Y} = 
+$man_auto_img{Y} =
    $main::mw->Photo( -file => "$FindBin::RealBin/img/auto.gif" );
 
-$man_auto_img{N} = 
+$man_auto_img{N} =
    $main::mw->Photo( -file => "$FindBin::RealBin/img/manual.gif" );
 
 $man_auto_but->configure(-image => $man_auto_img{ $main::v_clr } );
-   $man_auto_but->configure(-command => sub {  
+   $man_auto_but->configure(-command => sub {
 
       if ( $main::v_clr eq 'Y' )
       {
          $main::v_clr = 'N';
-         $balloon->attach($man_auto_but, -msg => $main::lg{man_clear} );
+         $main::balloon->attach($man_auto_but, -msg => $main::lg{man_clear} );
       }
       else
       {
          $main::v_clr = 'Y';
-         $balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
+         $main::balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
       }
       $man_auto_but->configure(-image => $man_auto_img{ $main::v_clr } );
 
-                                           } 
+                                           }
                         );
 
 $man_auto_but->pack( -side => 'left' );
-$balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
+$main::balloon->attach($man_auto_but, -msg => $main::lg{auto_clear} );
 
 # The File Viewer, Orac Home, Help and Docs Buttons
 
@@ -439,7 +441,7 @@ foreach my $key (@file_viewers)
 
    $b = $bb->Button(-image=>$b_image,
                     -command=>sub{
-   
+
          main::bz();
          my $fileselect = orac_FileSelect->new( $main::mw,
                                                 $main::v_text,
@@ -451,10 +453,10 @@ foreach my $key (@file_viewers)
          main::ubz();
 
                                  }
-   
+
                    )->pack(side=>'left');
-   
-   $balloon->attach($b, -msg => $main::lg{$key});
+
+   $main::balloon->attach($b, -msg => $main::lg{$key});
 
 }
 
@@ -471,13 +473,13 @@ $bb->Label(-image=>$orac_li,
 
 $b = $bb->Button(
            -text=>$main::lg{shell},
-           -command=> 
-                 sub{  
-                       main::call_shell(); 
+           -command=>
+                 sub{
+                       main::call_shell();
                     }
                 )->pack(-side=>'right');
 
-$balloon->attach($b, -msg => $main::lg{dbish});
+$main::balloon->attach($b, -msg => $main::lg{dbish});
 
 # Slap up the main Output Box
 
@@ -496,7 +498,7 @@ $main::orac_orig_db = 'XXXXXXXXXX'; # I just love kludging :)
 # If no default database type selected,
 # pick it up.
 
-if ((!defined($main::orac_curr_db_typ)) || 
+if ((!defined($main::orac_curr_db_typ)) ||
     (length($main::orac_curr_db_typ) == 0)){
 
    $main::orac_curr_db_typ = main::select_dbtyp(1);
@@ -530,9 +532,9 @@ sub back_orac {
    if (defined($main::current_db)){
       my $rc  = $main::dbh->disconnect;
    }
-   main::fill_defaults(  $main::orac_curr_db_typ, 
-                         $main::sys_user, 
-                         $main::bc, 
+   main::fill_defaults(  $main::orac_curr_db_typ,
+                         $main::sys_user,
+                         $main::bc,
                          $main::v_db
                       );
    exit 0;
@@ -555,14 +557,14 @@ sub fill_defaults {
 
    open(DB_FIL,">$filename");
 
-   print DB_FIL $db_typ . 
-                '^' . 
-                $dba . 
-                '^' . 
-                $loc_bc . 
-                '^' . 
-                $db . 
-                '^' . 
+   print DB_FIL $db_typ .
+                '^' .
+                $dba .
+                '^' .
+                $loc_bc .
+                '^' .
+                $db .
+                '^' .
                 "\n";
 
    close(DB_FIL);
@@ -573,14 +575,14 @@ sub fill_defaults {
 
    open(FONT_FIL,">$filename");
 
-   print FONT_FIL $main::font{family} . 
-                  '^' . 
-                  $main::font{size} . 
-                  '^' . 
-                  $main::font{weight} . 
-                  '^' . 
-                  $main::font{slant} . 
-                  '^' . 
+   print FONT_FIL $main::font{family} .
+                  '^' .
+                  $main::font{size} .
+                  '^' .
+                  $main::font{weight} .
+                  '^' .
+                  $main::font{slant} .
+                  '^' .
                   "\n";
 
    close(FONT_FIL);
@@ -591,12 +593,12 @@ sub fill_defaults {
 
    open(PRINT_FIL,">$filename");
 
-   print PRINT_FIL $main::print{rotate} . 
-                  '^' . 
-                  $main::print{paper} . 
-                  '^' . 
-                  $main::print{command} . 
-                  '^' . 
+   print PRINT_FIL $main::print{rotate} .
+                  '^' .
+                  $main::print{paper} .
+                  '^' .
+                  $main::print{command} .
+                  '^' .
                   "\n";
 
    close(PRINT_FIL);
@@ -604,7 +606,7 @@ sub fill_defaults {
 
 =head2 get_connected
 
-Puts up the main dialogue to pick a new database.  Allows user to change 
+Puts up the main dialogue to pick a new database.  Allows user to change
 database type, if they wish.  Also, sets flag to help prevent connection
 error messages, except on the last attempt at connection.
 
@@ -644,7 +646,7 @@ sub get_connected {
          print STDERR "New Oracle object\n" if ($main::debug > 0);
 
          require db::orac_Oracle;
-         $main::current_db = orac_Oracle->new( $main::mw, 
+         $main::current_db = orac_Oracle->new( $main::mw,
                                                $main::v_text,
                                                $main::orac_version );
 
@@ -652,24 +654,24 @@ sub get_connected {
       elsif($main::orac_curr_db_typ eq 'Informix'){
 
          require db::orac_Informix;
-         $main::current_db = orac_Informix->new( $main::mw, 
+         $main::current_db = orac_Informix->new( $main::mw,
                                                  $main::v_text,
                                                  $main::orac_version );
 
       }
       elsif($main::orac_curr_db_typ eq 'Sybase'){
- 
+
          require db::orac_Sybase;
-         $main::current_db = orac_Sybase->new( $main::mw, 
+         $main::current_db = orac_Sybase->new( $main::mw,
                                                $main::v_text,
                                                $main::orac_version );
- 
+
       }
       else {
 
-         $main::current_db = 
-            orac_Base->new( 'Base', 
-                            $main::mw, 
+         $main::current_db =
+            orac_Base->new( 'Base',
+                            $main::mw,
                             $main::v_text,
                             $main::orac_version );
 
@@ -677,10 +679,10 @@ sub get_connected {
 
       print STDERR "After New object\n" if ($main::debug > 0);
 
-      my $c_d = 
+      my $c_d =
        $main::mw->DialogBox(-title=>$main::lg{login_txt},
-                            -buttons=>[ $main::lg{connect}, 
-                                        $main::lg{change_dbtyp}, 
+                            -buttons=>[ $main::lg{connect},
+                                        $main::lg{change_dbtyp},
                                         $main::lg{exit} ]
                            );
 
@@ -688,7 +690,7 @@ sub get_connected {
                            -anchor=>'e',
                            -justify=>'right');
 
-      my $db_list = 
+      my $db_list =
                  $c_d->BrowseEntry(-variable=>\$main::v_db,
                                    -foreground=>$main::fc,
                                    -background=>$main::ec);
@@ -707,11 +709,11 @@ sub get_connected {
          $ic = @ic;
          $ls_db{$ic[($ic - 1)]} = 101;
       }
- 
-      # Supplement these, with stored database to which they've
-      # successfully connected in the past 
 
-      my $open_dbfile = "$main::orac_home/txt/$main::orac_curr_db_typ" . 
+      # Supplement these, with stored database to which they've
+      # successfully connected in the past
+
+      my $open_dbfile = "$main::orac_home/txt/$main::orac_curr_db_typ" .
                         "/orac_db_list.txt";
 
       my $dirname = File::Basename::dirname($open_dbfile);
@@ -773,7 +775,7 @@ sub get_connected {
                             -justify=>'left');
 
 
-      # Go Grid crazy!  Assign the widgets to starting 
+      # Go Grid crazy!  Assign the widgets to starting
       # racetrack postitions
 
       Tk::grid($l1,-row=>0,-column=>0,-sticky=>'e');
@@ -807,13 +809,13 @@ sub get_connected {
          my $length_test_arr = @test_arr;
 
          if (($test_arr[0] =~ /dbi/i) && ($length_test_arr == 3)){
- 
+
             # Seems valid enough to me.
 
             $auto_log = 1;
          }
          else {
- 
+
             # Seems invalid to me.
 
             $auto_log = 0;
@@ -822,7 +824,7 @@ sub get_connected {
       else {
          $auto_log = 0;
       }
-  
+
       my $mn_b;
 
       if(!$auto_log) {
@@ -842,25 +844,25 @@ sub get_connected {
 
          $main::v_db = (split(/:/,$ENV{DBI_DSN}))[2];
       }
-  
+
       # Now verify all input and attempt connection to chosen database
-  
+
       if ($mn_b eq $main::lg{connect}) {
 
          $main::v_sys = $ps_u->get;
 
-         if ( ( $main::current_db->need_sys ) || 
+         if ( ( $main::current_db->need_sys ) ||
               (  defined($main::v_sys) && length($main::v_sys) )
             )
          {
             my $v_ps = $ps_e->get;
-            if ( $main::current_db->need_ps || 
+            if ( $main::current_db->need_ps ||
                  ( defined($v_ps) && length($v_ps)
                  )
                )
             {
                # Build up Primary database independent initialisation
-               # and set all environmental variables required for 
+               # and set all environmental variables required for
                # this database type
 
                $main::current_db->init1( $main::v_db );
@@ -877,13 +879,13 @@ sub get_connected {
                # except on the last one.  Try the full connection
                # option first, the one needed for NT.
 
-               my $data_source_1 = 'dbi:' . 
-                                   $main::orac_curr_db_typ . 
+               my $data_source_1 = 'dbi:' .
+                                   $main::orac_curr_db_typ .
                                    ':';
 
-               my $data_source_2 = 'dbi:' . 
-                                   $main::orac_curr_db_typ . 
-                                   ':' . 
+               my $data_source_2 = 'dbi:' .
+                                   $main::orac_curr_db_typ .
+                                   ':' .
                                    $main::v_db;
 
                $main::conn_comm_flag = 1;
@@ -905,11 +907,11 @@ sub get_connected {
 
                   $dn = 1;
 
-                  if ((!defined($ls_db{$main::v_db})) || 
+                  if ((!defined($ls_db{$main::v_db})) ||
                       ($ls_db{$main::v_db} != 102)){
 
-                     # If we connected successfully to a new 
-                     # database, store this fact, and put it 
+                     # If we connected successfully to a new
+                     # database, store this fact, and put it
                      # in the browse option for later use
 
                      my $dirname = "$main::orac_home/txt/" .
@@ -918,7 +920,7 @@ sub get_connected {
                      my $dir = File::Basename::dirname($dirname);
                      my $txt_dir = File::Basename::dirname($dir);
 
-                     mkdir ($txt_dir, 0755) 
+                     mkdir ($txt_dir, 0755)
                         unless -d $txt_dir;
 
                      mkdir ($dir, 0755) unless -d $dir;
@@ -955,12 +957,12 @@ sub get_connected {
             main::mes($main::mw,$main::lg{user_please});
          }
       } elsif ($mn_b eq $main::lg{change_dbtyp}) {
-         
-         # User may have decided to change database type 
+
+         # User may have decided to change database type
 
          $main::orac_curr_db_typ = main::select_dbtyp(2);
       } else {
-       
+
          undef $main::current_db;
          $dn = 1;
       }
@@ -973,7 +975,7 @@ sub get_connected {
 
 Actually attempts the DBI database connection.
 
-=cut 
+=cut
 
 sub connector {
    print STDERR "connecting: $_[0], $_[1], $_[2]\n" if ($main::debug > 0);
@@ -983,8 +985,8 @@ sub connector {
 
 =head2 select_dbtyp
 
-User may either be picking default database type for the first time, 
-or changing database type.  Either way, this builds up a dialogue to allow 
+User may either be picking default database type for the first time,
+or changing database type.  Either way, this builds up a dialogue to allow
 them to do this.
 
 =cut
@@ -1026,7 +1028,7 @@ sub select_dbtyp {
                                 -background=>$main::ec,
                                 -width=>40
                                );
-   
+
       # Check out which DBs we're currently allowed to pick from
 
       my $first_place = File::Spec->join($main::orac_home, 'all_dbs.txt');
@@ -1046,7 +1048,7 @@ sub select_dbtyp {
          $b_d->insert('end', $hold[0]);
       }
       close(DB_FIL);
-      
+
       # It's grid crazy time again.  Don't ya love it!
 
       Tk::grid($l1,-row=>0,-column=>1,-sticky=>'e');
@@ -1054,7 +1056,7 @@ sub select_dbtyp {
       Tk::grid($b_d,-row=>1,-column=>1,-sticky=>'ew');  # Eddie Irvine!!!
       $d->gridRowconfigure(1,-weight=>1);
       $d->Show;
-   
+
       # Check out that that they the correct DBI module loaded.
       # If not, give them a politically correct virtual slap!
 
@@ -1123,7 +1125,7 @@ sub get_db {
      main::back_orac();
    }
 
-   # Run the second initialisation routine 
+   # Run the second initialisation routine
    $main::current_db->init2( $main::dbh );
 
    # Now sort out Jared's tools and configurable menus
@@ -1178,7 +1180,7 @@ sub mes {
       $displayer->insert('end', $_[1]);
    }
    else
-   { 
+   {
       $displayer = $d->Label(-text=>$_[1],
                              -relief=>'flat',
                             );
@@ -1201,7 +1203,7 @@ sub bc_upd {
    # come in useful.
 
    eval {
-      $main::v_text->configure(-background=>$main::bc, 
+      $main::v_text->configure(-background=>$main::bc,
                                -font=>$main::font{name});
    };
    my $comp_str = "";
@@ -1215,7 +1217,7 @@ sub bc_upd {
          if ( exists( $kid->{text} ) )
          {
             eval {
-               $kid->{text}->configure(-background=>$main::bc, 
+               $kid->{text}->configure(-background=>$main::bc,
                                        -font=>$main::font{name},
                                       );
             }
@@ -1264,7 +1266,7 @@ sub get_language_data {
    # language file, and pick up all
    # the strings required by Orac
 
-   open(TITLES_FILE, "$FindBin::RealBin/txt/languages.txt") 
+   open(TITLES_FILE, "$FindBin::RealBin/txt/languages.txt")
       or die "can't open $FindBin::RealBin/txt/languages.txt";
 
    # expect to find:  language_label,language_file
@@ -1344,52 +1346,54 @@ sub config_menu {
    while(<MENU_F>){
 
       chomp;
-        next if m/^$/;  # Skip blank lines. 
+        next if m/^$/;  # Skip blank lines.
         my $chop_bit = $_;
       my @menu_line = split(/\^/, $chop_bit);
 
       if ($menu_line[0] eq 'Menubutton'){
-         $menu_command = 
-            $menu_command . 
+         $menu_command =
+            $menu_command .
             ' $main::tm_but_ct++; ' . "\n" .
             ' $main::tm_but[$main::tm_but_ct] = ' . "\n" .
-            ' $main::mb->Menubutton(-text=>$main::lg{' . 
+            ' $main::mb->Menubutton(-text=>$main::lg{' .
             $menu_line[1] . '},' . "\n" .
             ' )->pack(-side=>\'left\',-padx=>2); ' . "\n";
       }
 
-      if (($menu_line[0] eq 'command') || 
+      if (($menu_line[0] eq 'command') ||
           ($menu_line[0] eq 'casc_command')){
 
          if ($menu_line[1] ne '0'){
 
-            # The use of this has now been deprecated with the 
+            # The use of this has now been deprecated with the
             # constant use of Toplevel windows.  However,
             # we may use it again in the future,
             # therefore we'll leave it here.
 
-            #$menu_command = $menu_command . ' $main::this_button' . 
+            #$menu_command = $menu_command . ' $main::this_button' .
             #                ' = ';
          }
 
          if ($menu_line[0] eq 'command'){
 
-            $menu_command = 
-               $menu_command . 
-               ' $main::tm_but[$main::tm_but_ct]->command(-label=>$main::lg{' . 
-               $menu_line[3] . '},' . 
+            $menu_command =
+               $menu_command .
+               ' $main::tm_but[$main::tm_but_ct]->command(-label=>$main::lg{' .
+               $menu_line[3] . '},' .
                ' -command=>sub{main::bz();';
 
          } elsif ($menu_line[0] eq 'casc_command'){
 
-            $menu_command = $menu_command . 
-                            ' $main::but_' . $menu_line[3] . ' = $main::casc_item->command(-label=>$main::lg{' . 
-                            $menu_line[3] . '},' . 
+            $menu_command = $menu_command .
+                            ' $main::but_' .
+                            $menu_line[3] .
+                            ' = $main::casc_item->command(-label=>$main::lg{' .
+                            $menu_line[3] . '},' .
                             ' -command=>sub{main::bz();';
 
          }
          if ($menu_line[2] == 1){
-            $menu_command = $menu_command . 
+            $menu_command = $menu_command .
                             ' $main::current_db->f_clr($main::v_clr); ';
          }
          $menu_command = $menu_command . $menu_line[4] . '(';
@@ -1401,7 +1405,7 @@ sub config_menu {
 
             my @func_line = split(/\+/, $menu_line[5]);
             $func_line_ct = @func_line;
-   
+
             for ($i = 0;$i < $func_line_ct;$i++){
                $menu_command = $menu_command . $func_line[$i];
                if (($i + 1) < $func_line_ct){
@@ -1412,27 +1416,27 @@ sub config_menu {
          $menu_command = $menu_command . ');main::ubz()}); ' . "\n";
       }
       if ($menu_line[0] eq 'separator'){
-         $menu_command = $menu_command . 
-                         ' $main::tm_but[$main::tm_but_ct]->separator(); ' . 
+         $menu_command = $menu_command .
+                         ' $main::tm_but[$main::tm_but_ct]->separator(); ' .
                          "\n";
       }
       if ($menu_line[0] eq 'cascade'){
- 
+
          # Ok, it ain't pretty, but then are you first thing
          # of a morning?  :)
 
-         $menu_command = 
-            $menu_command . 
-            ' $main::tm_but[$main::tm_but_ct]->cascade(-label=>$main::lg{' . 
-            $menu_line[1] . '}); ' . 
+         $menu_command =
+            $menu_command .
+            ' $main::tm_but[$main::tm_but_ct]->cascade(-label=>$main::lg{' .
+            $menu_line[1] . '}); ' .
             "\n" .
-            ' $main::casc = $main::tm_but[$main::tm_but_ct]->cget(-menu); ' . 
+            ' $main::casc = $main::tm_but[$main::tm_but_ct]->cget(-menu); ' .
             "\n" .
-            ' $main::casc_item = $main::casc->Menu; ' . 
+            ' $main::casc_item = $main::casc->Menu; ' .
             "\n" .
-            ' $main::tm_but[$main::tm_but_ct]->entryconfigure($main::lg{' . 
-            $menu_line[1] . 
-            '}, -menu => $main::casc_item); ' . 
+            ' $main::tm_but[$main::tm_but_ct]->entryconfigure($main::lg{' .
+            $menu_line[1] .
+            '}, -menu => $main::casc_item); ' .
             "\n";
       }
       if ($menu_line[0] eq 'add_cascade_button') {
@@ -1446,27 +1450,27 @@ sub config_menu {
 
    # Here we go!  Slap up those menus.
 
-   print STDERR "config_menu: menu_command >\n$menu_command\n<\n" 
+   print STDERR "config_menu: menu_command >\n$menu_command\n<\n"
       if ($main::debug > 0);
 
    eval $menu_command ; warn $@ if $@;
 
    $main::tm_but_ct++;
-   $main::tm_but[$main::tm_but_ct] = 
+   $main::tm_but[$main::tm_but_ct] =
                    $main::mb->Menubutton(-text=>$main::lg{sql_menu},
                                         )->pack(-side=>'left',
                                                 -padx=>2);
    $main::tm_but[$main::tm_but_ct]->command(
 
                          -label=>$main::lg{dbish},
-                         -command=>sub{  
+                         -command=>sub{
                                           main::call_shell();
                                       }
                                            );
    return;
 }
 
-=head2 Jareds_tools 
+=head2 Jareds_tools
 
 Builds up the 'My Tools' options, where Orac users can specify their own
 local SQL files to generate Orac-like reports.
@@ -1481,8 +1485,8 @@ sub Jareds_tools {
 
       # Monster coming up.  You'll cope.
 
-      my $comm_str = 
-          ' $main::jareds_tool = $main::mb->Menubutton( ' . "\n" . 
+      my $comm_str =
+          ' $main::jareds_tool = $main::mb->Menubutton( ' . "\n" .
           ' -text=>$main::lg{my_tools},' . "\n" .
           ' -menuitems=> ' . "\n" .
           ' [[Button=>$main::lg{help_with_tools},' .
@@ -1534,35 +1538,35 @@ sub Jareds_tools {
             my @jt_casc = split(/\^/, $_);
             if ($jt_casc[0] eq 'C'){
 
-               $comm_str = $comm_str . 
-                           ' [Cascade  =>\'' . 
-                           $jt_casc[2] . 
+               $comm_str = $comm_str .
+                           ' [Cascade  =>\'' .
+                           $jt_casc[2] .
                            '\',-menuitems => [ ' . "\n";
 
-               my $jt_casc_butts_file = 
+               my $jt_casc_butts_file =
                      File::Spec->join($main::orac_home, 'config.tools');
 
                open(JT_CASC_BUTTS, $jt_casc_butts_file );
                while(<JT_CASC_BUTTS>){
                   my @jt_casc_butts = split(/\^/, $_);
-                  if (($jt_casc_butts[0] eq 'B') && 
+                  if (($jt_casc_butts[0] eq 'B') &&
                       ($jt_casc_butts[1] eq $jt_casc[1])){
 
                      # Bit of a pig below, but you'll get through it
                      # if you have a quick lager
 
-                     $comm_str = 
-                        $comm_str . 
-                        ' [Button=>\'' . 
-                        $jt_casc_butts[3] . 
+                     $comm_str =
+                        $comm_str .
+                        ' [Button=>\'' .
+                        $jt_casc_butts[3] .
                         '\',' .
                         '-command=>sub{main::bz(); ' .
-                        '$main::current_db->f_clr($main::v_clr); ' . 
+                        '$main::current_db->f_clr($main::v_clr); ' .
                         "\n" .
-                        ' main::run_Jareds_tool(\'' . 
-                        $jt_casc[1] . 
-                        '\',\'' . 
-                        $jt_casc_butts[2] . 
+                        ' main::run_Jareds_tool(\'' .
+                        $jt_casc[1] .
+                        '\',\'' .
+                        $jt_casc_butts[2] .
                         '\');main::ubz()}], ' . "\n";
                   }
                }
@@ -1572,7 +1576,7 @@ sub Jareds_tools {
          }
          close(JT_CASC);
       }
-      $comm_str = $comm_str . 
+      $comm_str = $comm_str .
                   ' ])->pack(-side=>\'left\',-padx=>2) ; ';
 
       eval $comm_str ; warn $@ if $@;
@@ -1624,31 +1628,31 @@ sub ed_butt {
    my $dirname = File::Basename::dirname($sql_file);
    my $basename = File::Basename::basename($sql_file);
    $sql_file = File::Spec->join($dirname, $basename);
-   
+
    my $window = $main::mw->Toplevel();
 
-   $window->title(  "$main::lg{cascade} $casc, 
+   $window->title(  "$main::lg{cascade} $casc,
                     $main::lg{button} $butt");
 
    my $ed_sql_txt = "$ed_fl_txt: $main::lg{ed_sql_txt}";
    my $ed_sql_txt_cnt = 0;
 
-   $window->Label( -textvariable  => \$ed_sql_txt, 
-                   -anchor=>'n', 
+   $window->Label( -textvariable  => \$ed_sql_txt,
+                   -anchor=>'n',
                    -relief=>'groove'
                  )->pack(-expand=>'no');
 
-   $window->{text} = 
+   $window->{text} =
       $window->Scrolled( 'Text',
                          -wrap=>'none',
                          -font=>$main::font{name},
                          -foreground=>$main::fc,
                          -background=>$main::bc
-   
+
                        )->pack(-expand=>'yes',
                                -fill=>'both'
                               );
-   
+
    my(@lay) = qw/-side bottom -padx 5 -fill both -expand no/;
 
    my $f = $window->Frame->pack(@lay);
@@ -1664,14 +1668,14 @@ sub ed_butt {
       -text => $main::lg{save},
       -command =>
 
-          sub { 
+          sub {
 
-          my $file_name = main::save_sql(  \$window->{text}, 
+          my $file_name = main::save_sql(  \$window->{text},
                                            $sql_file,
                                         );
           $ed_sql_txt_cnt++;
-          $ed_sql_txt = "$ed_fl_txt: $file_name $main::lg{saved}" . 
-                        ' #' . 
+          $ed_sql_txt = "$ed_fl_txt: $file_name $main::lg{saved}" .
+                        ' #' .
                         $ed_sql_txt_cnt;
               },
 
@@ -1687,8 +1691,8 @@ sub ed_butt {
 
    if(open(SQL_SAV,$sql_file)){
 
-      while(<SQL_SAV>){ 
-         $window->{text}->insert("end", $_); 
+      while(<SQL_SAV>){
+         $window->{text}->insert("end", $_);
       }
       close(SQL_SAV);
 
@@ -1704,7 +1708,7 @@ This function is fairly overloaded, and may require some
 detailed analysis, before it becomes clearer what it's doing.
 
 My apologies to those who may want to re-write this, and provide something
-much neater. 
+much neater.
 
 =cut
 
@@ -1761,7 +1765,7 @@ sub config_Jared_tools {
          my @inp_value;
          my $inp_count = 0;
 
-         my $jt_config_file = 
+         my $jt_config_file =
                File::Spec->join($main::orac_home, 'config.tools');
 
          if(open(JT_CONFIG, $jt_config_file )){
@@ -1772,12 +1776,12 @@ sub config_Jared_tools {
                # below.  If you can figure it out, can you let me know
                # what it's doing?  ;-)
 
-               if ((($param == 1) && 
+               if ((($param == 1) &&
                     ($hold[0] eq $main_check)) ||
-                   (($param == 99) && 
-                    ($hold[0] eq $main_check) && 
+                   (($param == 99) &&
+                    ($hold[0] eq $main_check) &&
                     ($hold[1] eq $loc_casc))) {
-      
+
                   $inp_value[ $inp_count ] = $hold[ $main_field ];
                   $inp_count++;
                }
@@ -1826,7 +1830,7 @@ sub config_Jared_tools {
       if(($param == 69)||
          ($param == 49)){
 
-         my $jt_config_read_file = 
+         my $jt_config_read_file =
                File::Spec->join($main::orac_home, 'config.tools');
 
          open(JT_CONFIG_READ, $jt_config_read_file );
@@ -1837,15 +1841,15 @@ sub config_Jared_tools {
 
             if($param == 69){
 
-               if (($hold[0] eq $main_check) && 
+               if (($hold[0] eq $main_check) &&
                    ($hold[1] eq $loc_casc)){
 
                   $inp_text = $hold[2];
                }
             } elsif($param == 49){
 
-               if (($hold[0] eq $main_check) && 
-                   ($hold[1] eq $loc_casc) && 
+               if (($hold[0] eq $main_check) &&
+                   ($hold[1] eq $loc_casc) &&
                    ($hold[2] = $loc_butt)){
 
                   $inp_text = $hold[3];
@@ -1876,42 +1880,42 @@ sub config_Jared_tools {
                return (1,$inp_text);
             } else {
 
-               my $jt_config_append_file = 
+               my $jt_config_append_file =
                      File::Spec->join($main::orac_home, 'config.tools');
 
                open(JT_CONFIG_APPEND,">>$jt_config_append_file");
                if($param == 1){
 
-                  print JT_CONFIG_APPEND $main_check . 
-                                         '^' . 
-                                         $main_inp_value . 
-                                         '^' . 
-                                         $inp_text . 
-                                         '^' . 
+                  print JT_CONFIG_APPEND $main_check .
+                                         '^' .
+                                         $main_inp_value .
+                                         '^' .
+                                         $inp_text .
+                                         '^' .
                                          "\n";
 
                } elsif($param == 99) {
 
-                  print JT_CONFIG_APPEND $main_check . 
-                                         '^' . 
-                                         $loc_casc . 
-                                         '^' . 
-                                         $main_inp_value . 
-                                         '^' . 
-                                         $inp_text . 
-                                         '^' . 
+                  print JT_CONFIG_APPEND $main_check .
+                                         '^' .
+                                         $loc_casc .
+                                         '^' .
+                                         $main_inp_value .
+                                         '^' .
+                                         $inp_text .
+                                         '^' .
                                          "\n";
                }
                close(JT_CONFIG_APPEND);
 
-               my $sort1 = 
+               my $sort1 =
                   File::Spec->join($main::orac_home, 'config.tools');
 
-               my $sort2 = 
+               my $sort2 =
                   File::Spec->join($main::orac_home, 'config.tools.sort');
 
                main::sort_this_file( $sort1,
-                                     $sort2, 
+                                     $sort2,
                                    );
 
                if($param == 99){
@@ -2016,8 +2020,8 @@ sub config_Jared_tools {
          while(<JT_CONFIG>){
             my @hold = split(/\^/, $_);
 
-            if(($param != 89) && 
-               ($param != 79) && 
+            if(($param != 89) &&
+               ($param != 79) &&
                ($param != 59)){
 
                if ($hold[0] eq $main_check){
@@ -2027,7 +2031,7 @@ sub config_Jared_tools {
                }
 
             } else {
-               if (($hold[0] eq $main_check) && 
+               if (($hold[0] eq $main_check) &&
                    ($hold[1] eq $loc_casc)){
 
                   $casc1[$i_count] = sprintf("%03d",$hold[2]) . ":$hold[3]";
@@ -2078,7 +2082,7 @@ sub config_Jared_tools {
             $i_count++;
          }
          close(JT_CONFIG);
-   
+
          # Let's do a chessboard, or is that a cheeseboard?
 
          Tk::grid($t_l,-row=>0,-column=>1,-sticky=>'e');
@@ -2104,19 +2108,19 @@ sub config_Jared_tools {
 
                   if($param == 6) {
 
-                     ($safe_flag,$ed_txt) = 
+                     ($safe_flag,$ed_txt) =
                         main::config_Jared_tools(69,$fin_inp);
 
                   } elsif($param == 7) {
 
-                     ($safe_flag,$sec_inp) = 
+                     ($safe_flag,$sec_inp) =
                         main::config_Jared_tools(59,$fin_inp);
 
-                     if ((defined($safe_flag)) && 
-                         (length($safe_flag)) && 
+                     if ((defined($safe_flag)) &&
+                         (length($safe_flag)) &&
                          ($safe_flag == 1)){
 
-                        ($safe_flag,$ed_txt) = 
+                        ($safe_flag,$ed_txt) =
                            main::config_Jared_tools(49,$fin_inp,$sec_inp);
                      }
 
@@ -2134,14 +2138,14 @@ sub config_Jared_tools {
                   # OK, Ok, I've forgotten how this works too, but it
                   # seemed to make sense at the time?
 
-                  if ((defined($safe_flag)) && 
-                      (length($safe_flag)) && 
+                  if ((defined($safe_flag)) &&
+                      (length($safe_flag)) &&
                       ($safe_flag == 1)){
 
-                    my $new_file = File::Spec->join($main::orac_home, 
+                    my $new_file = File::Spec->join($main::orac_home,
                                                     'config.tools');
 
-                    my $old_file = File::Spec->join($main::orac_home, 
+                    my $old_file = File::Spec->join($main::orac_home,
                                                     'config.tools.old');
 
                     copy(  $new_file,
@@ -2160,47 +2164,47 @@ sub config_Jared_tools {
                            }
                         } elsif($param == 6){
 
-                           unless (($hold[0] eq $main_check) && 
+                           unless (($hold[0] eq $main_check) &&
                                    ($hold[1] eq $fin_inp)){
 
                               print JT_CONFIG_WRITE "$_\n";
 
                            } else {
 
-                              print JT_CONFIG_WRITE $hold[0] . 
-                                                    '^' . 
-                                                    $hold[1] . 
-                                                    '^' . 
-                                                    $ed_txt . 
-                                                    '^' . 
+                              print JT_CONFIG_WRITE $hold[0] .
+                                                    '^' .
+                                                    $hold[1] .
+                                                    '^' .
+                                                    $ed_txt .
+                                                    '^' .
                                                     "\n";
                            }
                         } elsif($param == 7){
 
-                           unless (($hold[0] eq $sec_check) && 
-                                   ($hold[1] eq $fin_inp) && 
+                           unless (($hold[0] eq $sec_check) &&
+                                   ($hold[1] eq $fin_inp) &&
                                    ($hold[2] eq $sec_inp)){
 
                               print JT_CONFIG_WRITE "$_\n";
 
                            } else {
 
-                              print JT_CONFIG_WRITE $hold[0] . 
-                                                    '^' . 
-                                                    $hold[1] . 
-                                                    '^' . 
-                                                    $hold[2] . 
-                                                    '^' . 
-                                                    $ed_txt . 
-                                                    '^' . 
+                              print JT_CONFIG_WRITE $hold[0] .
+                                                    '^' .
+                                                    $hold[1] .
+                                                    '^' .
+                                                    $hold[2] .
+                                                    '^' .
+                                                    $ed_txt .
+                                                    '^' .
                                                     "\n";
                            }
 
                         } else {
 
-                           unless (($hold[0] eq $main_check) && 
-                                   ($hold[1] eq $loc_casc) && 
-                                   ($hold[2] eq $fin_inp)){ 
+                           unless (($hold[0] eq $main_check) &&
+                                   ($hold[1] eq $loc_casc) &&
+                                   ($hold[2] eq $fin_inp)){
 
                               print JT_CONFIG_WRITE "$_\n";
 
@@ -2210,9 +2214,9 @@ sub config_Jared_tools {
                      close(JT_CONFIG_READ);
                      close(JT_CONFIG_WRITE);
 
-                     my $sort1 = File::Spec->join($main::orac_home, 
+                     my $sort1 = File::Spec->join($main::orac_home,
                                                   'config.tools');
-                     my $sort2 = File::Spec->join($main::orac_home, 
+                     my $sort2 = File::Spec->join($main::orac_home,
                                                   'config.tools.sort');
 
                      main::sort_this_file(
@@ -2231,10 +2235,10 @@ sub config_Jared_tools {
 
                } elsif($param == 79) {
 
-                  my $filename = $main::orac_home .'/sql/tools/' . 
-                                 $loc_casc . 
-                                 '.' . 
-                                 $fin_inp . 
+                  my $filename = $main::orac_home .'/sql/tools/' .
+                                 $loc_casc .
+                                 '.' .
+                                 $fin_inp .
                                  '.sql';
 
                   my $dirname = File::Basename::dirname($filename);
@@ -2269,11 +2273,11 @@ sub config_Jared_tools {
    main::Jareds_tools();
 }
 
-=head2 sort_this_file 
+=head2 sort_this_file
 
 Configures and sorts the users generated SQL reports buttons.
 
-=cut 
+=cut
 
 sub sort_this_file {
 
@@ -2308,7 +2312,7 @@ sub sort_this_file {
 
 Pick up more information on the configurable buttons.
 
-=cut 
+=cut
 
 sub get_butt_text {
 
@@ -2338,7 +2342,7 @@ When user selects their own button, run the associated report.
 
 sub run_Jareds_tool {
 
-   # When user selects their own button, run the 
+   # When user selects their own button, run the
    # associated report
 
    my($casc,$butt) = @_;
@@ -2346,17 +2350,17 @@ sub run_Jareds_tool {
    # Before we run this, we have to change
    # the database type to 'tools', temporarily.
 
-   print STDERR "\n\nOld db type >" . $main::current_db->{Database_type} . 
+   print STDERR "\n\nOld db type >" . $main::current_db->{Database_type} .
                 "<\n" if ($main::debug > 0);
 
    my $old_db_type = $main::current_db->{Database_type};
 
    $main::current_db->{Database_type} = 'tools';
 
-   print STDERR "New db type >" . $main::current_db->{Database_type} . 
+   print STDERR "New db type >" . $main::current_db->{Database_type} .
                 "<\n" if ($main::debug > 0);
 
-   $main::current_db->show_sql ( $casc, 
+   $main::current_db->show_sql ( $casc,
                                  $butt,
                                  main::get_butt_text( $casc, $butt )
                                );
@@ -2365,7 +2369,7 @@ sub run_Jareds_tool {
 
    $main::current_db->{Database_type} = $old_db_type;
 
-   print STDERR "Cur db type >" . $main::current_db->{Database_type} . 
+   print STDERR "Cur db type >" . $main::current_db->{Database_type} .
                 "<\n\n\n" if ($main::debug > 0);
 
 }
@@ -2397,7 +2401,7 @@ Take a Window handle, and tie an icon to it.
 
 sub iconize {
 
-   # Take a Window handle, and tie an icon 
+   # Take a Window handle, and tie an icon
    # to it.
 
    my($w) = @_;
@@ -2407,7 +2411,7 @@ sub iconize {
 
 =head2 pick_up_defaults
 
-This allows user to select main database type.  Also allows selection 
+This allows user to select main database type.  Also allows selection
 of pre-defined background colour.  Assign some pre-defined values in case
 the config file not yet available.
 
@@ -2440,22 +2444,22 @@ sub pick_up_defaults {
    $main::orac_home = File::Spec->join($dirname, $basename);
 
    die "Please set environment variable ORAC_HOME to a " .
-       "directory for user customization and rerun.\n" 
+       "directory for user customization and rerun.\n"
       unless $main::orac_home;
-   
+
    unless (-d $main::orac_home)
    {
-	 die "Unable to create ORAC_HOME: $!\n" 
+	 die "Unable to create ORAC_HOME: $!\n"
             unless mkdir($main::orac_home, 0700);
 
          my $sql = File::Spec->join($main::orac_home, 'sql');
 
-	 die "Unable to create ORAC_HOME/sql: $!\n" 
+	 die "Unable to create ORAC_HOME/sql: $!\n"
             unless mkdir( $sql, 0700);
 
          my $tools = File::Spec->join($sql, 'tools');
 
-	 die "Unable to create ORAC_HOME/sql/tools: $!\n" 
+	 die "Unable to create ORAC_HOME/sql/tools: $!\n"
             unless mkdir( $tools, 0700);
    }
 
@@ -2493,7 +2497,7 @@ sub pick_up_defaults {
          $main::font{slant} = $hold[3];
       }
       close(FONT_FIL);
-   } 
+   }
    else
    {
       # No font has previously been saved, therefore,
@@ -2523,7 +2527,7 @@ sub pick_up_defaults {
       $main::font{weight} = $main::v_text->fontConfigure($font, -weight);
       $main::font{slant} = $main::v_text->fontConfigure($font, -slant);
    }
-   $main::font{name} = 
+   $main::font{name} =
       $main::v_text->fontCreate( -family => $main::font{family},
                                  -size => $main::font{size},
                                  -weight => $main::font{weight},
@@ -2546,7 +2550,7 @@ sub pick_up_defaults {
          $main::print{command} = $hold[2];
       }
       close(PRINT_FIL);
-   } 
+   }
    else
    {
       # No printing options have previously been saved, therefore,
@@ -2584,7 +2588,7 @@ BEGIN {
 
       my $warning = $_[0];
 
-      if ( (!defined($main::conn_comm_flag)) || 
+      if ( (!defined($main::conn_comm_flag)) ||
            ($main::conn_comm_flag == 0)
          )
       {
@@ -2595,29 +2599,29 @@ BEGIN {
 
 	 if (defined($main::orac_curr_db_typ))
          {
-	    if (($main::orac_curr_db_typ eq 'Sybase') && 
-                (($warning eq $loc_comp_str) || 
+	    if (($main::orac_curr_db_typ eq 'Sybase') &&
+                (($warning eq $loc_comp_str) ||
                  ($warning eq ' ')
                 )
-               ) 
+               )
             {
                return;
             }
          }
-	 if (defined $main::mw) 
+	 if (defined $main::mw)
          {
 	    main::mes($main::mw,$warning);
-	 } 
-         else 
+	 }
+         else
          {
             print STDOUT join("\n",@_),"n";
          }
 
-	 # Handle print command in SQL 
+	 # Handle print command in SQL
          # (sybase print sends output to message handler)
 
-      } 
-      elsif ($main::conn_comm_flag == 999) 
+      }
+      elsif ($main::conn_comm_flag == 999)
       {
          $main::store_msgs .= $warning;
       }
@@ -2637,15 +2641,15 @@ sub font_button_message {
 
    my ($balloon_ref, $font_button_ref) = @_;
 
-   my $font  = $main::font{family} . 
-               '-' . 
-               $main::font{size} . 
-               '-' . 
-               $main::font{weight} . 
-               '-' . 
+   my $font  = $main::font{family} .
+               '-' .
+               $main::font{size} .
+               '-' .
+               $main::font{weight} .
+               '-' .
                $main::font{slant};
 
-   my $message = $main::lg{font_sel} . 
+   my $message = $main::lg{font_sel} .
                  ' (' .
                  $font .
                  ')';

@@ -31,8 +31,7 @@ use File::Basename;
 
 @orac_Monitor::ISA = qw{orac_Base};
 
-use vars qw( 
-           );
+use vars qw();
 
 =head2 new
 
@@ -75,7 +74,7 @@ sub orac_monitor {
    my(@monitorsel_lay) = qw/-side top -expand no -fill both/;
    my $monitorsel_menu = $self->{window}->Frame->pack(@monitorsel_lay);
 
-   # Establish we have a directory for 
+   # Establish we have a directory for
    # storing all our stuff in locally
 
    my $dir = File::Spec->join($main::orac_home, 'monitor');
@@ -83,18 +82,19 @@ sub orac_monitor {
    mkdir ($dir, 0755) unless -d $dir;
    my $monitor_file = File::Spec->join($dir, 'monitor.txt');
 
-   my $mon_img = $self->{window}->Photo(
-	 	             -file => "$FindBin::RealBin/img/monitor.gif",
-                                        );
+   my $mon_img;
+   $self->get_img( \$self->{window}, \$mon_img, 'monitor' );
+
    $monitorsel_menu->Label(-image=>$mon_img,
-                         -anchor=>'w',
-                         -relief=>'flat',
-                         -justify=>'left',
-                        )->pack(-expand=>'no',
-                                -side=>'left',
-                               );
-   $self->top_right_ball_message( \$monitorsel_menu, 
-                                  \$monitor_file, 
+                           -anchor=>'w',
+                           -relief=>'flat',
+                           -justify=>'left',
+                          )->pack(-expand=>'no',
+                                  -side=>'left',
+                                 );
+
+   $self->top_right_ball_message( \$monitorsel_menu,
+                                  \$monitor_file,
                                   \$self->{window}
                                 );
 
@@ -108,107 +108,89 @@ sub orac_monitor {
 
    my $f0 = $self->{window}->Frame(-relief=>'ridge',
                                    -bd=>2,
-                                  )->pack( -side=>'top', 
-                                           -expand => 'n', 
+                                  )->pack( -side=>'top',
+                                           -expand => 'n',
                                            -fill => 'both'
                                          );
 
    my $add_but = $f0->Button;
    my $upd_but = $f0->Button;
    my $del_but = $f0->Button;
-   my $run_but = $f0->Button;
    my $title_but = $f0->Button;
    my $label_but = $f0->Button;
    my $ball_but = $f0->Button;
    my $help_but = $f0->Button;
 
    $add_but->configure(-text => 'Add');
-   $add_but->configure(-command => sub { 
+   $add_but->configure(-command => sub {
 
       $self->upd_monitor( 'Added',
-                        $monitor_file, 
-                        \@values, 
+                        $monitor_file,
+                        \@values,
                       );
-                                       } 
- 
+                                       }
+
                       );
 
    $upd_but->configure(-text => 'Update');
-   $upd_but->configure(-command => sub { 
+   $upd_but->configure(-command => sub {
 
       $self->upd_monitor( 'Updated',
-                        $monitor_file, 
-                        \@values, 
+                        $monitor_file,
+                        \@values,
                       );
-                                       } 
- 
+                                       }
+
                       );
 
    $del_but->configure(-text => 'Delete');
-   $del_but->configure(-command => sub { 
+   $del_but->configure(-command => sub {
 
       $self->upd_monitor( 'Deleted',
-                        $monitor_file, 
-                        \@values, 
+                        $monitor_file,
+                        \@values,
                       );
-                                       } 
- 
+                                       }
+
                       );
-
-   $run_but->configure(-text => 'Run' );
-   $run_but->configure(-command => sub { 
-                                            $self->run_monitor( $monitor_file );
-                                       } 
- 
-                      );
-
-   $balloon->attach(
-
-      $run_but, 
-      -msg => 'Prepare the Database Monitor for Launch',
- 
-                   );
 
    # Do we want a Database title?
    # Y is for labels, N is for no labels
 
    $self->{f_title}->{value} = 'Y';
 
-   $self->{f_title}->{Y} =
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/title.gif" );
-
-   $self->{f_title}->{N} =
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/notitle.gif" );
+   $self->get_img( \$self->{window}, \$self->{f_title}->{Y}, 'title' );
+   $self->get_img( \$self->{window}, \$self->{f_title}->{N}, 'notitle' );
 
    $title_but->configure(
       -image => $self->{f_title}->{ $self->{f_title}->{value} },
                         );
 
-   $title_but->configure(-command => sub {  
+   $title_but->configure(-command => sub {
 
       if ( $self->{f_title}->{value} eq 'Y')
       {
          $self->{f_title}->{value} = 'N';
          $balloon->attach(
-            $title_but, 
+            $title_but,
             -msg => 'No Database Titles on Flags - Press for Titles');
       }
       else
       {
          $self->{f_title}->{value} = 'Y';
          $balloon->attach(
-            $title_but, 
+            $title_but,
             -msg => 'Database Titles on Flags - Press for No Titles');
       }
       $title_but->configure(
          -image => $self->{f_title}->{ $self->{f_title}->{value} },
                            );
 
-                                           } 
+                                           }
                         );
 
    $balloon->attach(
-      $title_but, 
+      $title_but,
       -msg => 'Database Titles on Flags - Press for No Titles');
 
    # Do we want Labels?
@@ -216,41 +198,38 @@ sub orac_monitor {
 
    $self->{labs_req}->{value} = 'Y';
 
-   $self->{labs_req}->{Y} =
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/label.gif" );
-
-   $self->{labs_req}->{N} =
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/auto.gif" );
+   $self->get_img( \$self->{window}, \$self->{labs_req}->{Y}, 'label');
+   $self->get_img( \$self->{window}, \$self->{labs_req}->{N}, 'auto');
 
    $label_but->configure(
       -image => $self->{labs_req}->{ $self->{labs_req}->{value} },
                         );
 
-   $label_but->configure(-command => sub {  
+   $label_but->configure(-command => sub {
 
       if ( $self->{labs_req}->{value} eq 'Y')
       {
          $self->{labs_req}->{value} = 'N';
          $balloon->attach(
-            $label_but, 
+            $label_but,
             -msg => 'No Labels on Monitor Flags - Press for Labels');
       }
       else
       {
          $self->{labs_req}->{value} = 'Y';
          $balloon->attach(
-            $label_but, 
+            $label_but,
             -msg => 'Labels on Monitor Flags - Press for No Labels');
       }
       $label_but->configure(
          -image => $self->{labs_req}->{ $self->{labs_req}->{value} },
                            );
 
-                                           } 
+                                           }
                         );
 
    $balloon->attach(
-      $label_but, 
+      $label_but,
       -msg => 'Labels on Monitor Flags - Press for No Labels');
 
    # Do we want small Balls?
@@ -259,47 +238,44 @@ sub orac_monitor {
 
    $self->{ball_req}->{value} = 'Y';
 
-   $self->{ball_req}->{Y} =
-      $self->{window}->Photo(-file=>"$FindBin::RealBin/img/white_ball.gif");
-
-   $self->{ball_req}->{N} =
-      $self->{window}->Photo(-file=>"$FindBin::RealBin/img/s_white_ball.gif");
+   $self->get_img( \$self->{window}, \$self->{ball_req}->{Y}, 'white_ball');
+   $self->get_img( \$self->{window}, \$self->{ball_req}->{N}, 's_white_ball');
 
    $ball_but->configure(
       -image => $self->{ball_req}->{ $self->{ball_req}->{value} },
                         );
 
-   $ball_but->configure(-command => sub {  
+   $ball_but->configure(-command => sub {
 
       if ( $self->{ball_req}->{value} eq 'Y')
       {
          $self->{ball_req}->{value} = 'N';
          $balloon->attach(
-            $ball_but, 
+            $ball_but,
             -msg => 'Small Flags - Press for Large Flags');
       }
       else
       {
          $self->{ball_req}->{value} = 'Y';
          $balloon->attach(
-            $ball_but, 
+            $ball_but,
             -msg => 'Large Flags - Press for Small Flags');
       }
       $ball_but->configure(
          -image => $self->{ball_req}->{ $self->{ball_req}->{value} },
                            );
 
-                                           } 
+                                           }
                         );
 
    $balloon->attach(
-      $ball_but, 
+      $ball_but,
       -msg => 'Large Flags - Press for Small Flags');
 
    # Help Button
 
-   my $help_img = 
-      $self->{window}->Photo( -file => "$FindBin::RealBin/img/help.gif" );
+   my $help_img;
+   $self->get_img( \$self->{window}, \$help_img, 'help');
 
    $help_but->configure( -image => $help_img,
                          -command => sub {
@@ -319,14 +295,25 @@ sub orac_monitor {
    $add_but->pack(-side => 'left', -fill => 'both');
    $upd_but->pack(-side => 'left', -fill => 'both');
    $del_but->pack(-side => 'left', -fill => 'both');
-   $run_but->pack(-side => 'left', -fill => 'both');
    $title_but->pack(-side => 'left', -fill => 'both');
    $label_but->pack(-side => 'left', -fill => 'both');
    $ball_but->pack(-side => 'left', -fill => 'both');
    $help_but->pack(-side => 'left', -fill => 'both');
 
+   # Right hand side of screen
+
    $self->orac_image_label(\$f0, \$self->{window}, );
-   $self->window_exit_button(\$f0, \$self->{window}, );
+   my $b_ref = $self->window_exit_button(\$f0, \$self->{window}, 1, \$balloon,);
+
+   my $img;
+   $self->get_img( \$self->{window}, \$img, 'right');
+
+   my $run_but = $f0->Button(-image => $img,
+                             -command => sub {$self->run_monitor($monitor_file)}
+
+                            )->pack(-side => 'right',);
+
+   $balloon->attach($run_but, -msg => 'Run the Database Monitor');
 
    # Now we can do the original frame work
 
@@ -343,7 +330,7 @@ sub orac_monitor {
    $txt_labs[1] = 'User';
    $txt_labs[2] = 'Password';
 
-   # Go Grid crazy!  Assign the widgets to starting 
+   # Go Grid crazy!  Assign the widgets to starting
    # racetrack postitions. Haven't I seen this somewhere
    # before?  :)
 
@@ -412,11 +399,7 @@ sub upd_monitor {
    # Look no further.  It don't get much more primitive
    # than this :-)
 
-   my ( $switch, 
-        $file, 
-        $val_ref,
-
-      ) = @_;
+   my ($switch, $file, $val_ref) = @_;
 
    my @vals = @$val_ref;
 
@@ -429,7 +412,7 @@ sub upd_monitor {
       {
          if ($i == 0)
          {
-            main::mes($self->{window}, 
+            main::mes($self->{window},
                       'Database Connection String undefined.');
             return;
          }
@@ -440,7 +423,7 @@ sub upd_monitor {
       }
    }
 
-   if (($switch eq 'Updated') || 
+   if (($switch eq 'Updated') ||
        ($switch eq 'Added') ||
        ($switch eq 'Deleted'))
    {
@@ -454,7 +437,7 @@ sub upd_monitor {
          while(<KARMA_FIL>)
          {
             @hold = split(/\^/, $_);
-   
+
             unless ($hold[0] eq $vals[0])
             {
                $lines[$line_counter] = $_;
@@ -477,12 +460,12 @@ sub upd_monitor {
    {
       open(KARMA_FIL,">>${file}");
 
-      print KARMA_FIL $vals[0] . 
-                      '^' . 
-                      $vals[1] . 
-                      '^' . 
-                      $vals[2] . 
-                      '^' . 
+      print KARMA_FIL $vals[0] .
+                      '^' .
+                      $vals[1] .
+                      '^' .
+                      $vals[2] .
+                      '^' .
                       "\n";
 
       close(KARMA_FIL);
@@ -502,7 +485,7 @@ sub run_monitor {
    my $self = shift;
 
    my ($file,
-   
+
       ) = @_;
 
    unless (open(KARMA_FILE, "$file"))
@@ -543,7 +526,7 @@ sub run_monitor {
 
    # Make sure any loose connections are tidied up
 
-   $self->{mon_win}->bind( q{<Destroy>}, 
+   $self->{mon_win}->bind( q{<Destroy>},
                            sub {
 
          foreach my $db ( keys(%{$self->{nm}} ))
@@ -562,7 +545,7 @@ sub run_monitor {
 
    my(@lay) = qw/-side top -expand no -fill both/;
    my $mon_menu = $self->{mon_win}->Frame->pack(@lay);
- 
+
    # Balls - large or small?
    # (Frankie Howard roolz Ok)
 
@@ -576,21 +559,16 @@ sub run_monitor {
       $ball_prefix = 's_';
    }
 
-   $self->{ball}->{white} = $self->{mon_win}->Photo(
-      -file => "$FindBin::RealBin/img/${ball_prefix}white_ball.gif",
-                                                   );
+   my %b_hld = ( 'white' => 'white_ball', 'green' => 'grn_ball',
+                 'red' => 'red_ball', 'yellow' => 'yel_ball' );
 
-   $self->{ball}->{green} = $self->{mon_win}->Photo(
-      -file => "$FindBin::RealBin/img/${ball_prefix}grn_ball.gif",
-                                                   );
+   foreach my $b_key ( keys(%b_hld)){
+      $self->get_img( \$self->{mon_win},
+                      \$self->{ball}->{$b_key},
+                      $b_hld{$b_key}
+                    );
+   }
 
-   $self->{ball}->{red}   = $self->{mon_win}->Photo(
-      -file => "$FindBin::RealBin/img/${ball_prefix}red_ball.gif",
-                                                   );
-
-   $self->{ball}->{yellow}= $self->{mon_win}->Photo(
-      -file => "$FindBin::RealBin/img/${ball_prefix}yel_ball.gif",
-                                                   );
    # Get the filename of the Config file
 
    my $monitor_config =
@@ -605,9 +583,9 @@ sub run_monitor {
 
    my $mon_text = $monitor_config;
 
-   my $mon_img = $self->{mon_win}->Photo(
-	 	             -file => "$FindBin::RealBin/img/monitor.gif",
-                                        );
+   my $mon_img;
+   $self->get_img( \$self->{mon_win}, \$mon_img, 'monitor');
+
    $mon_menu->Label(-image=>$mon_img,
                     -anchor=>'w',
                     -relief=>'flat',
@@ -615,7 +593,7 @@ sub run_monitor {
                    )->pack(-expand=>'no',
                            -side=>'left',
                           );
-   $self->top_right_ball_message( \$mon_menu, 
+   $self->top_right_ball_message( \$mon_menu,
                                   \$mon_text,
                                   \$self->{window}
                                 );
@@ -627,20 +605,20 @@ sub run_monitor {
 
    my $f0 = $self->{mon_win}->Frame(-relief=>'ridge',
                                     -bd=>2,
-                                   )->pack( -side=>'top', 
-                                            -expand => 'n', 
+                                   )->pack( -side=>'top',
+                                            -expand => 'n',
                                             -fill => 'both'
                                           );
 
    my $f1 = $self->{mon_win}->Frame(
-                                   )->pack( -side=>'top', 
-                                            -expand => 'y', 
+                                   )->pack( -side=>'top',
+                                            -expand => 'y',
                                             -fill => 'both'
                                           );
 
    my $f2 = $self->{mon_win}->Frame(
-                                   )->pack( -side=>'top', 
-                                            -expand => 'n', 
+                                   )->pack( -side=>'top',
+                                            -expand => 'n',
                                             -fill => 'both',
                                             -before => $f1,
                                           );
@@ -654,11 +632,14 @@ sub run_monitor {
    my $time_delay;
    my $b_time_delay;
 
-   $start_but->configure(-text => 'Start');
-   $start_but->configure(-command => sub { 
+   my $img;
+   $self->get_img( \$self->{mon_win}, \$img, 'right');
+
+   $start_but->configure(-image => $img, );
+   $start_but->configure(-command => sub {
 
              $self->run_the_monkey( \$countdown,
-                                    \$mon_text, 
+                                    \$mon_text,
                                     \$stopper,
                                     \$self->{mon_win},
                                     \$prog_bar,
@@ -669,21 +650,34 @@ sub run_monitor {
                                     \$stop_but,
                                   );
 
-                                         } 
+                                         }
                         );
 
    $start_but->pack(-side => 'left', -padx=>2, -fill => 'both');
 
-   $stop_but->configure(-text => 'Stop');
-   $stop_but->configure(-command => sub { 
+   $balloon->attach(
+      $start_but,
+      -msg => 'Start Monitor',
+                   );
+
+   $self->get_img( \$self->{mon_win}, \$img, 'stop');
+
+   $stop_but->configure(-image => $img, );
+   $stop_but->configure(-command => sub {
                                                 $stopper = 0;
                                                 $mon_text = $monitor_config;
                                                 $countdown = 0;
-                                        } 
- 
+                                        }
+
                       );
 
    $stop_but->pack(-side => 'left', -padx=>2, -fill => 'both');
+
+   $balloon->attach(
+      $stop_but,
+      -msg => 'Stop Monitor',
+                   );
+
    $stop_but->configure(-state => 'disabled');
 
    # Set a default time delay to 60 seconds
@@ -702,26 +696,32 @@ sub run_monitor {
 
    $balloon->attach(
 
-      $b_time_delay, 
+      $b_time_delay,
       -msg => 'Time Delay Poll Loopback between Monitor Events (seconds)',
- 
+
                    );
 
    $self->orac_image_label(\$f0, \$self->{mon_win}, );
+   $self->get_img( \$self->{mon_win}, \$img, 'exit');
 
    $exit_but = $f0->Button(
-                          -text=>$main::lg{exit},
-                          -command=> 
+                          -image=>$img,
+                          -command=>
 
-                             sub{  
+                             sub{
                                    $stopper = 0;
                                    $mon_text = '';
                                    $countdown = 0;
 
                                    $self->{mon_win}->destroy();
                                 }
-              
+
                           )->pack(-side=>'right');
+
+   $balloon->attach(
+      $exit_but,
+      -msg => 'Exit from Monitor Run Screen',
+                   );
 
    # Now we can do the original frame work
 
@@ -743,7 +743,7 @@ sub run_monitor {
 
       if ($self->{f_title}->{value} eq 'Y')
       {
-         $tiler->Manage  ( $self->{nm}->{$db[$i]}->{labf} = 
+         $tiler->Manage  ( $self->{nm}->{$db[$i]}->{labf} =
                               $tiler->LabFrame(
                                                 -borderwidth=>2,
                                                 -labelside=>'acrosstop',
@@ -754,7 +754,7 @@ sub run_monitor {
       }
       else
       {
-         $tiler->Manage  ( $self->{nm}->{$db[$i]}->{labf} = 
+         $tiler->Manage  ( $self->{nm}->{$db[$i]}->{labf} =
                               $tiler->Label(
                                              -relief=>'groove',
                                              -borderwidth=>2,
@@ -762,7 +762,7 @@ sub run_monitor {
                          );
 
       }
- 
+
       # Set the passwords and the users
 
       $self->{nm}->{$db[$i]}->{user} = $user[$i];
@@ -772,7 +772,7 @@ sub run_monitor {
 
       if ($self->{labs_req}->{value} eq 'Y')
       {
-         $top_bits[$bits_counter] = 
+         $top_bits[$bits_counter] =
             $self->{nm}->{$db[$i]}->{labf}->Label( -text=> "up",
                                                  );
       }
@@ -781,15 +781,16 @@ sub run_monitor {
       # 'labf', from the bits of the Labframe we need to monitor
       # and update.
 
-      $bot_bits[$bits_counter] = 
+      $bot_bits[$bits_counter] =
       $self->{nm}->{$db[$i]}->{labf}->{flag}->{up} =
-         $self->{nm}->{$db[$i]}->{labf}->Button( 
+         $self->{nm}->{$db[$i]}->{labf}->Button(
+                                         -cursor=>'hand2',
                                          -image=> $self->{ball}->{white},
                                          -padx=>0,
                                          -pady=>0,
                                                         );
       $balloon->attach(
-         $bot_bits[$bits_counter], 
+         $bot_bits[$bits_counter],
          -msg => $db[$i] . ' ' . 'up' . ' ' . 'flag',
                       );
 
@@ -799,18 +800,18 @@ sub run_monitor {
 
       # Configure the Button, to return various information
 
-      $self->{nm}->{$loc_db}->{labf}->{flag}->{up}->{errstr} = 
+      $self->{nm}->{$loc_db}->{labf}->{flag}->{up}->{errstr} =
          $loc_db . ' ' . 'up' . ' ' . 'flag' . "\n\n" .
-         'Last Possible Error? : ' . 
+         'Last Possible Error? : ' .
          '<No Error Yet Found>';
 
       $self->{nm}->{$loc_db}->{labf}->{flag}->{up}->configure(
 
                -command => sub {
 
-             $self->see_sql(  
+             $self->see_sql(
 
-               $self->{mon_win}, 
+               $self->{mon_win},
                $self->{nm}->{$loc_db}->{labf}->{flag}->{up}->{errstr},
                $loc_db . ': up',
 
@@ -825,24 +826,25 @@ sub run_monitor {
          while(<KARMA_FILE>)
          {
             @k_hld = split(/\^/, $_);
-      
+
             if ($self->{labs_req}->{value} eq 'Y')
             {
-               $top_bits[$bits_counter] = 
+               $top_bits[$bits_counter] =
                   $self->{nm}->{$db[$i]}->{labf}->Label(
-                                                   -text=> $k_hld[1], 
+                                                   -text=> $k_hld[1],
                                                        );
             }
-            $bot_bits[$bits_counter] = 
+            $bot_bits[$bits_counter] =
             $self->{nm}->{$db[$i]}->{labf}->{flag}->{$k_hld[0]} =
-               $self->{nm}->{$db[$i]}->{labf}->Button( 
+               $self->{nm}->{$db[$i]}->{labf}->Button(
+                                         -cursor=>'hand2',
                                          -image=> $self->{ball}->{white},
                                          -padx=>0,
                                          -pady=>0,
                                                         );
 
             $balloon->attach(
-               $bot_bits[$bits_counter], 
+               $bot_bits[$bits_counter],
                -msg => $db[$i] . ' ' . $k_hld[0] . ' ' . 'flag',
                             );
 
@@ -858,7 +860,7 @@ sub run_monitor {
                -state => 'disabled',
                -command => sub {
 
-         my $text = 
+         my $text =
            $db . ' ' . $key . ' ' . 'flag' . "\n\n" .
            "Red flag given by less than   : " .
            $self->{nm}->{$db}->{labf}->{flag}->{$key}->{redf} .
@@ -871,14 +873,14 @@ sub run_monitor {
            "\n\n" .
            $self->{nm}->{$db}->{labf}->{flag}->{$key}->{sql_command};
 
-         $self->see_sql(  
-      
-           $self->{mon_win}, 
+         $self->see_sql(
+
+           $self->{mon_win},
            $text,
            $db . ': ' . $key,
 
                        );
-         
+
                                },
                                                                  );
 
@@ -1011,8 +1013,8 @@ sub run_the_monkey {
 
    my $self = shift;
 
-   my ($countdown_ref, 
-       $mon_text_ref, 
+   my ($countdown_ref,
+       $mon_text_ref,
        $stop_ref,
        $win_ref,
        $prog_bar_ref,
@@ -1032,12 +1034,12 @@ sub run_the_monkey {
 
    if ($$delay_ref < 15)
    {
-      main::mes($self->{mon_win}, 
+      main::mes($self->{mon_win},
                 "Time Delay must be at least 15 seconds",
                );
       return;
    }
-   
+
    # Size up the Progress Bar and shutdown the Browse Button,
    # and the Exit button.  Also flick round the
    # start and stop buttons.
@@ -1047,7 +1049,7 @@ sub run_the_monkey {
    $$start_but_ref->configure(-state => 'disabled');
    $$stop_but_ref->configure(-state => 'normal');
 
-   $$prog_bar_ref->configure( 
+   $$prog_bar_ref->configure(
       -to => $$delay_ref,
                             );
    $$prog_bar_ref->update;
@@ -1081,11 +1083,11 @@ sub run_the_monkey {
       {
          $$prog_bar_ref->update;
       }
-      else 
+      else
       {
          last;
       }
-   
+
       if (($$stop_ref) && ($$countdown_ref <= 0.05))
       {
          $$mon_text_ref = 'Houston, We Have Lift-Off...';
@@ -1126,9 +1128,9 @@ sub run_the_monkey {
          if ( Tk::Exists( $self->{nm}->{$key_db}->{labf}->{flag}->{$key} ) )
          {
             $self->{nm}->{$key_db}->{labf}->{flag}->{$key}->configure(
-    
+
                                           -image=> $self->{ball}->{white},
-    
+
                                                                      );
          }
       }
@@ -1143,7 +1145,7 @@ sub run_the_monkey {
 
    # Enable the Exit Button
 
-   
+
    if ( Tk::Exists($$exit_but_ref) )
    {
       $$exit_but_ref->configure(-state => 'normal');
@@ -1178,17 +1180,17 @@ sub check_the_monkey {
 
          $main::conn_comm_flag = 1;
 
-         my $data_source_1 = 'dbi:' . 
-                             $main::orac_curr_db_typ . 
+         my $data_source_1 = 'dbi:' .
+                             $main::orac_curr_db_typ .
                              ':';
 
-         my $data_source_2 = 'dbi:' . 
-                             $main::orac_curr_db_typ . 
-                             ':' . 
+         my $data_source_2 = 'dbi:' .
+                             $main::orac_curr_db_typ .
+                             ':' .
                              $db;
 
          $self->base_connector(  $db,
-                                 $data_source_2, 
+                                 $data_source_2,
                                  $self->{nm}->{$db}->{user},
                                  $self->{nm}->{$db}->{password},
                               );
@@ -1199,7 +1201,7 @@ sub check_the_monkey {
             # attempted connection
 
             $self->base_connector(  $db,
-                                    $data_source_1, 
+                                    $data_source_1,
                                     $self->{nm}->{$db}->{user},
                                     $self->{nm}->{$db}->{password},
                                  );
@@ -1219,7 +1221,7 @@ sub check_the_monkey {
             # We have connected
 
          }
-         else 
+         else
          {
             # Failed to Connect
          }
@@ -1282,7 +1284,7 @@ sub base_connector {
 
       ) = @_;
 
-   $self->{nm}->{$db}->{connect} = 
+   $self->{nm}->{$db}->{connect} =
               DBI->connect($dbi_string, $user, $password);
 
    return;
@@ -1312,13 +1314,13 @@ sub shutdown_db {
       {
          $colour = 'white';
          $self->{nm}->{$database}->{labf}->{flag}->{$key}->configure(
-       
+
                                     -state=> 'disabled',
 
                                                                     );
       }
       $self->{nm}->{$database}->{labf}->{flag}->{$key}->configure(
-       
+
                                     -image=> $self->{ball}->{$colour},
 
                                                            );
@@ -1344,7 +1346,7 @@ sub slap_the_banana {
    my $sql_file =
       $self->{nm}->{$db}->{labf}->{flag}->{$key}->{sql_file} =
 
-      File::Spec->join(  $self->{monitor_dir}, 
+      File::Spec->join(  $self->{monitor_dir},
                          $key . '.' . 'sql'
                       );
 
@@ -1365,7 +1367,7 @@ sub slap_the_banana {
 
    $main::conn_comm_flag = 1;
 
-   my $ary_ref = 
+   my $ary_ref =
       $self->{nm}->{$db}->{connect}->selectall_arrayref($sql_command);
 
    if (defined($DBI::errstr)){
@@ -1384,7 +1386,7 @@ sub slap_the_banana {
 
       my $curr_ref = $ary_ref->[0];
 
-      my $key_value = 
+      my $key_value =
          $self->{nm}->{$db}->{labf}->{flag}->{$key}->{lastval} =
          $curr_ref->[0];
 
@@ -1403,7 +1405,7 @@ sub slap_the_banana {
 
       $self->{nm}->{$db}->{labf}->{flag}->{$key}->configure(
 
-                                           -state=>'normal', 
+                                           -state=>'normal',
                                            -image=> $self->{ball}->{$colour},
 
                                                            );

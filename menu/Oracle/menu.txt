@@ -6,6 +6,7 @@ separator^
 command^0^1^db_files^$main::current_db->show_sql^'datafile_orac'+'1'+$main::lg{db_files}^
 command^0^1^ext_rep^$main::current_db->show_sql^'ext_orac'+'1'+$main::lg{ext_rep}^
 command^0^1^max_exts_free^$main::current_db->show_sql^'max_ext_orac'+'1'+$main::lg{max_exts_free}+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()+$main::current_db->block_size()^
+separator^
 command^0^0^dba_views^$main::current_db->dbas_orac^^
 Menubutton^obj^
 cascade^data_obj^

@@ -20,7 +20,7 @@ on the main configurable background widgets.
 =cut
 
 use vars qw( $curr_font @widths
-             @fonts @sizes @weights @slants @old_font_bits 
+             @fonts @sizes @weights @slants @old_font_bits
            );
 
 =head2 new
@@ -86,12 +86,12 @@ sub orac_fonter {
 
    my @font_names = $self->{Text_var}->fontNames();
 
-   $curr_font = 
+   $curr_font =
       main::font_button_message ($balloon_ref, $font_button_ref, );
 
    $self->top_left_message( \$fontsel_menu, $main::lg{font_message } );
-   $self->top_right_ball_message( \$fontsel_menu, 
-                                  \$curr_font, 
+   $self->top_right_ball_message( \$fontsel_menu,
+                                  \$curr_font,
                                   \$self->{window}
                                 );
 
@@ -102,33 +102,26 @@ sub orac_fonter {
 
    my $f0 = $self->{window}->Frame(-relief=>'ridge',
                                    -bd=>2,
-                                  )->pack( -side=>'top', 
-                                           -expand => 'n', 
+                                  )->pack( -side=>'top',
+                                           -expand => 'n',
                                            -fill => 'both'
                                          );
 
-   my $app_but = $f0->Button;
-
    my @values;
 
-   $app_but->configure(-text => $main::lg{apply});
-
-   $app_but->configure(-command => sub { 
-
-                             $self->apply_font( \@values,
-                                                $balloon_ref,                                                                   $font_button_ref,
-                                              );
- 
-                                       } 
- 
-                      );
-
-   $app_but->pack(-side => 'left', -padx=>2, -fill => 'both');
+   my $app_but = $f0->Button(-text => $main::lg{apply},
+                              -command => sub {
+                                 $self->apply_font( \@values,
+                                                    $balloon_ref,
+                                                    $font_button_ref
+                                                  )
+                                              }
+                            )->pack(-side => 'left', -padx=>2, -fill => 'both');
 
    $balloon->attach($app_but, -msg => $main::lg{font_warning});
 
    $self->orac_image_label(\$f0, \$self->{window}, );
-   $self->window_exit_button(\$f0, \$self->{window}, );
+   $self->window_exit_button(\$f0, \$self->{window}, 1, \$balloon,);
 
    # Now we can do the original frame work
 
@@ -153,7 +146,7 @@ sub orac_fonter {
 
    my @options = (\@fonts, \@sizes, \@weights, \@slants);
 
-   # Go Grid crazy!  Assign the widgets to starting 
+   # Go Grid crazy!  Assign the widgets to starting
    # racetrack postitions. Haven't I seen this somewhere
    # before?  :)
 
@@ -200,8 +193,8 @@ sub apply_font {
 
    my $self = shift;
 
-   my ( $vals_ref, 
-        $balloon_ref, 
+   my ( $vals_ref,
+        $balloon_ref,
         $font_button_ref,
 
       ) = @_;
@@ -229,7 +222,7 @@ sub apply_font {
    } else {
 
       main::bc_upd();
-      $curr_font = 
+      $curr_font =
          main::font_button_message ($balloon_ref, $font_button_ref, );
    }
 
