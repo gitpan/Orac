@@ -1,7 +1,0 @@
-pppweb
-sm2dev
-ukdcn
-uk2000
-estm
-estm_test
-fr2000

@@ -266,6 +266,10 @@ Orac-1.1.8  Back to public releases of developing code.
             Total use of generic_hlist() rather than gn_hl().
             Further improvement of windows handling.
             Known Oracle Bug with some interactive buttons, still on ice.
+Orac-1.1.9  Small fix in orac_Base for show_sql() and also had
+            to replace all the orac_Show() calls with the generic
+            $dialog->Show function, to prevent screen lock-ups
+            on NT.
        
 
 EXTRA NOTES FOR LINUX USERS:
@@ -338,6 +342,16 @@ The ActiveState URLs are:
 
 => http://www.activestate.com/ActivePerl/
 => http://www.activestate.com/packages/zips/
+
+Packages Required:
+------------------
+The ActiveState packages you will need, will be Tk, DBI and
+whichever DBD driver you need (eg: DBD::Oracle, DBD::Sybase).
+
+You may find problems with Win32-TieRegistry errors.  If
+this is the case, you may also need to install the Win32-TieRegistry
+package, also from packages/zips.
+
 
 You can download the latest Orac via:
 

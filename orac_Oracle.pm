@@ -209,7 +209,7 @@ sub who_what {
    $self->{Text_var} = $old_self_text;
    tie (*main::TEXT, 'Tk::Text', $self->{Text_var});
 
-   main::orac_Show($d);
+   $d->Show;
 
 }
 
@@ -432,7 +432,7 @@ sub univ_form {
               )->pack (-side=>'right', 
                        -anchor=>'e');
 
-   main::orac_Show($bd);
+   $bd->Show;
 }
 
 sub selector {
@@ -554,7 +554,7 @@ sub and_finally {
                    )->pack(side=>'right');
 
       $self->go_for_gold();
-      main::orac_Show($c_d);
+      $c_d->Show;
    }
    undef $ary_ref;
 }
@@ -878,7 +878,7 @@ sub really_build_index {
       print L_TXT "rem Space For Each Index:      ${space}\n";
       print L_TXT "rem Blocks Required:           ${blocks_req}\n\n";
    }
-   main::orac_Show($d);
+   $d->Show;
 }
 
 sub ind_prep {
@@ -1062,7 +1062,7 @@ sub tab_det_orac {
 
    $c->configure(-scrollregion=>[ $c->bbox("all") ]);
    $c->pack(-expand=>'yes',-fill=>'both');
-   main::orac_Show($d);
+   $d->Show;
 
 }
 
@@ -1251,7 +1251,7 @@ sub dbwr_fileio {
    $c->configure(-scrollregion=>[ $c->bbox("all") ]);
 
    $c->pack(-expand=>'yes',-fill=>'both');
-   main::orac_Show($d);
+   $d->Show;
 }
 sub this_pak_get_y {
    my $self = shift;
@@ -2417,7 +2417,7 @@ sub do_a_generic {
       $l_txt->window('create', 'end',-window=>$b[1]);
    }
    print L_TEXT "\n\n";
-   main::orac_Show($d);
+   $d->Show;
    $l_mw->Unbusy;
 }
 1;

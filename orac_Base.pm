@@ -375,7 +375,7 @@ sub live_update
 
       # put the new values on the screen
 
-      show_sql($sql, $title);
+      $self->show_sql($sql, $title);
 
       # cause the screen to show the new values
 
@@ -529,7 +529,7 @@ sub see_sql {
    $t->pack(-expand=>1,-fil=>'both');
    tie (*THIS_TEXT,'Tk::Text',$t);
    print THIS_TEXT "$_[1]\n";
-   main::orac_Show($d);
+   $d->Show;
    $_[0]->Unbusy;
 }
 sub about_orac {

@@ -714,7 +714,7 @@ sub mes {
 
    my $d = $_[0]->DialogBox();
    $d->Label(text=>$_[1])->pack();
-   main::orac_Show($d);
+   $d->Show;
 }
 sub orac_Show {
 
