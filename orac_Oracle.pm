@@ -101,8 +101,7 @@ sub tune_wait {
 
    # Works out if anything is waiting in the database
 
-   my $cm = $self->f_str( 'tune_wait' , '1' );
-   $self->show_sql( $cm , $main::lg{sess_wt_stats} );
+   $self->show_sql( 'tune_wait', '1' , $main::lg{sess_wt_stats} );
    $self->about_orac('txt/Oracle/tune_wait.1.txt');
 
 }
@@ -130,8 +129,7 @@ sub tune_pigs {
    }
    # Report for finding SQL monsters
 
-   my $cm = $self->f_str( 'tune_pigs' , $type_flag );
-   $self->show_sql( $cm , $title );
+   $self->show_sql( 'tune_pigs', $type_flag , $title );
 
 }
 
@@ -177,8 +175,8 @@ sub who_what {
 
    if( $flag == 1 ){
 
-      $cm = $self->f_str('who_what','1');
-      $self->show_sql(   $cm,
+      $self->show_sql(   'who_what', 
+                         '1',
                          $main::lg{hold_sql},
                          $param1,
                          $param2,
@@ -187,13 +185,12 @@ sub who_what {
 
    } elsif ( $flag == 2 ){
 
-      $cm = $self->f_str('statter','1');
-
       print STDERR "who_what: cm     >\n$cm\n<\n" if ($main::debug > 0);
       print STDERR "who_what: title  >$title<\n" if ($main::debug > 0);
       print STDERR "who_what: param1 >$param1<\n" if ($main::debug > 0);
 
-      $self->show_sql(   $cm,
+      $self->show_sql(   'statter',
+                         '1',
                          $title,
                          $param1
                         );
@@ -288,7 +285,8 @@ sub selected_error {
    my ($owner,$object) = split(/\./, $err_bit);
 
    $self->f_clr( $main::v_clr );
-   $self->show_sql( $self->f_str( 'selected_error' , '1' ),
+   $self->show_sql( 'selected_error', 
+                    '1',
                     "$main::lg{comp_errs_for} $err_bit",
                     $owner,
                     $object
@@ -1638,8 +1636,7 @@ sub addr_orac {
                print STDERR "addr_orac: a2\n" if ($main::debug > 0);
 
                $self->f_clr( $main::v_clr );
-               my $cm = $self->f_str( 'sel_addr' , '1' );
-               $self->show_sql( $cm , 
+               $self->show_sql( 'sel_addr' , '1',
                                 $main::lg{sel_addr} . ': ' . $loc_addr,
                                 $loc_addr );
 
@@ -1733,9 +1730,8 @@ sub sids_orac {
          sub { $main::swc{sids_orac}->Busy;
 
                $self->f_clr( $main::v_clr );
-               my $cm = $self->f_str( 'sel_sid' , '1' );
                my $sid_param = $main::swc{sids_orac}->{text}->get('active');
-               $self->show_sql( $cm , 
+               $self->show_sql( 'sel_sid' , '1',
                                 $main::lg{sel_sid} . ': ' . $sid_param,
                                 $sid_param );
 
@@ -1756,7 +1752,7 @@ sub gh_roll_name {
 
    $self->{Text_var}->insert('end', "$sample_time\n");
 
-   $self->show_sql( $self->f_str('roll_orac','2'),
+   $self->show_sql( 'roll_orac','2',
                     $main::lg{roll_seg_stats}
                   );
 
@@ -1774,7 +1770,7 @@ sub gh_roll_stats {
    $sth->finish;
 
    $self->{Text_var}->insert('end', "$sample_time\n");
-   $self->show_sql( $self->f_str('roll_orac','1'),
+   $self->show_sql( 'roll_orac','1',
                     $main::lg{roll_seg_stats}
                   );
    $self->about_orac('txt/Oracle/rollback.2.txt');
@@ -1785,7 +1781,7 @@ sub gh_pool_frag {
    my $self = shift;
 
    $self->about_orac('txt/Oracle/pool_frag.1.txt');
-   $self->show_sql( $self->f_str('pool_frag','1'),
+   $self->show_sql( 'pool_frag','1',
                     $main::lg{pool_frag}
                   );
    $self->about_orac('txt/Oracle/pool_frag.2.txt');
@@ -2296,7 +2292,8 @@ sub who_hold
 
    # And finally, thank goodness, the actual report.
 
-   $self->show_sql( $cm , $main::lg{who_hold} );
+   $self->show_sql( 'wait_hold' , '1',
+                    $main::lg{who_hold} );
 }
 
 sub mts_mem
@@ -2385,7 +2382,8 @@ sub mts_mem
    
       $self->{Text_var}->insert('end', "\n");
    }
-   $self->show_sql( $cm , $main::lg{mts_mem} );
+   $self->show_sql( 'sess_curr_max_mem' , '1',
+                    $main::lg{mts_mem} );
    
 }
 
@@ -2413,7 +2411,8 @@ sub do_a_generic {
    my $cm = $self->f_str( $l_hlst , '99' );
 
    $self->{Database_conn}->func(1000000, 'dbms_output_enable');
-   my $second_sth = $self->{Database_conn}->prepare( $cm ) || die $self->{Database_conn}->errstr; 
+   my $second_sth = $self->{Database_conn}->prepare( $cm ) || 
+      die $self->{Database_conn}->errstr; 
    
    $second_sth->bind_param(1,$owner);
    $second_sth->bind_param(2,$generic);

@@ -121,7 +121,7 @@ sub onstat_databases
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Databases", "1"));
+    $self->show_sql("Databases", "1");
 }
 
 =head2 onstat_dbspaces
@@ -135,7 +135,7 @@ sub onstat_dbspaces
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("DBSpaces", "1"));
+    $self->show_sql("DBSpaces", "1");
 }
 
 =head2 onstat_chunks
@@ -149,7 +149,7 @@ sub onstat_chunks
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Chunks", "1"));
+    $self->show_sql("Chunks", "1");
 }
 
 =head2 onstat_onconfig_params
@@ -170,7 +170,7 @@ sub onstat_onconfig_params
 #sub oncheck_extents
 #{
 #    # Do your stuff
-#    $self->show_sql($self->f_str("Extents", "1"));
+#    $self->show_sql("Extents", "1");
 #    # IT MAY not BE POSSIBLE TO DO THIS VIA THE SMI TABLES!!!
 #    execute_and_display("$ENV{INFORMIXDIR}/bin/oncheck -pe ", 1);
 #}
@@ -179,7 +179,7 @@ sub onstat_onconfig_params
 #{
 #    my $self = shift;
 #    # Do your stuff
-#    $self->show_sql($self->f_str("LogRpt", "1"));
+#    $self->show_sql("LogRpt", "1");
 #    # IT MAY not BE POSSIBLE TO DO THIS VIA THE SMI TABLES!!!
 #    execute_and_display("$ENV{INFORMIXDIR}/bin/oninit -l ", 0);
 #}
@@ -187,17 +187,17 @@ sub onstat_onconfig_params
 #sub onlog_log
 #{
 #    # Do your stuff
-#    $self->show_sql($self->f_str("ShowLog", "1"));
+#    $self->show_sql("ShowLog", "1");
 #}
 #sub dbschema_procs
 #{
 #    # Do your stuff
-#    $self->show_sql($self->f_str("Procedures", "1"));
+#    $self->show_sql("Procedures", "1");
 #}
 #sub dbschema_proc_list
 #{
 #    # Do your stuff
-#    $self->show_sql($self->f_str("ProcedureBody", "1"));
+#    $self->show_sql("ProcedureBody", "1");
 #}
 
 =head2 dbschema_syns
@@ -211,15 +211,13 @@ sub dbschema_syns
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Synonyms", "1"));
+    $self->show_sql("Synonyms", "1");
 }
 
 =head2 dbschema_grants
 
 Show the grants on this database.
 No args, no return value.
-
-NOT IMPLEMENTED YET!
 
 =cut
 
@@ -228,9 +226,12 @@ sub dbschema_grants
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Grants", "1"));
+    $self->{sql_name} = "Grants";
+    $self->{sql_num} = "1";
+    $self->show_sql("Grants", "1");
 }
 
+#kevin restart here
 =head2 dbschema_indices
 
 Show the list of the indicies for all tables, and info about them.
@@ -244,7 +245,7 @@ sub dbschema_indices
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Indicies", "1"));
+    $self->show_sql("Indicies", "1");
 }
 
 =head2 dbschema_schema
@@ -260,7 +261,7 @@ sub dbschema_schema
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Schema", "1"));
+    $self->show_sql("Schema", "1");
 
     # IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
     #execute_and_display("$ENV{INFORMIXDIR}/bin/dbschema -d ", 1);
@@ -279,7 +280,7 @@ sub onstat_threads
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Threads", "1"));
+    $self->show_sql("Threads", "1");
 }
 
 =head2 onstat_curr_sql
@@ -294,7 +295,7 @@ NOT IMPLEMENTED YET!
 sub onstat_curr_sql
 {
     # Do your stuff
-    #$self->show_sql($self->f_str("CurrSQL", "1"));
+    #$self->show_sql("CurrSQL", "1");
     # IN THEORY, IT SHOULD BE POSSIBLE TO DO THIS VIA THE SMI TABLES, BUT HOW?!!!
     #execute_and_display("$ENV{INFORMIXDIR}/bin/onstat -u ", 0);
 }
@@ -310,8 +311,9 @@ sub onstat_blobs
 {
     my $self = shift;
     # Do your stuff
-    $self->show_sql($self->f_str("Blobs", "1"));
+    $self->show_sql("Blobs", "1");
 }
+
 #sub finderr_num
 #{
 #    # Do your stuff
@@ -330,16 +332,15 @@ sub onstat_io_profile
 {
     my $self = shift;
     # Do your stuff
-    #$self->show_sql($self->f_str("IOProfile", "1"));
-    $self->live_update($self->f_str("IOProfile", 1), $main::lg{oi_io_profile_title});
+    $self->live_update("IOProfile", 1, $main::lg{oi_io_profile_title});
 }
 
-=head2 onstat_databases
+=head2 onstat_locks_held
 
-Show the list of locks being held, and info about them.
+Show the list of locks being held, and info about them, by:
+database, owner, table.
+It calls live_update() until the user hits STOP.
 No args, no return value.
-
-NOT IMPLEMENTED YET!
 
 =cut
 
@@ -347,7 +348,39 @@ sub onstat_locks_held
 {
     my $self = shift;
     # Do your stuff
-    $self->live_update($self->f_str("Locks", 1), $main::lg{locks_held});
+    $self->live_update("Locks", 1, $main::lg{locks_held});
+}
+
+=head2 onstat_tblspace_info
+
+Show what's going on in the table space arena.
+It calls live_update() until the user hits STOP.
+No args, no return value.
+
+=cut
+
+sub onstat_tblspace_info
+{
+    my $self = shift;
+    # Do your stuff
+    $self->live_update("TblSpace", 1, $main::lg{oi_tblspace_info});
+}
+
+=head2 onstat_sessions
+
+Show who's connected?
+It calls live_update() until the user hits STOP.
+No args, no return value.
+
+=cut
+
+sub onstat_sessions
+{
+    my $self = shift;
+    # Do your stuff
+    $self->{sql_name} = "Sessions";
+    $self->{sql_num} = "1";
+    $self->live_update("Sessions", 1, $main::lg{oi_sessions});
 }
 
 ###############################################################################
@@ -361,6 +394,71 @@ There are currently none, or at least none that care to tell anyone about. :-)
 
 =cut
 
+=head2 post_process_sql
+
+This subroutine is called with the results from show_sql() (or live_update)
+to allow DB modules to "post process" the output, if required,
+before it is analyzed to be shown.
+This is useful for turning numeric flags into words, and other such DB
+dependent things.
+
+=cut
+
+sub post_process_sql
+{
+    my ($self, $sql_name, $sql_num, $tar) = @_;
+    #print STDERR "post_process_sql: $self->{sql_name} $self->{sql_num}\n";
+    my $key = "$sql_name$sql_num";
+    my %care = ( "Sessions1" => 1,
+                 "Grants1" => 1
+               );
+    if ($care{$key})
+    {
+        my $j;
+        for ($j=0 ; $j < @{$tar} ; $j++)
+        {
+            if ($key eq "Sessions1")
+            {
+                # I may not want all of these later, but show them all for now.
+                # Put the the important ones in a cap.
+                my $state = $tar->[$j]->[7];
+                $tar->[$j]->[7] =
+                    ($state & 0x00000001 ? "u" : "-") . # user structure in use
+                    ($state & 0x00000002 ? "l" : "-") . # waiting for a latch
+                    ($state & 0x00000004 ? "c" : "-") . # waiting for a clock 
+                    ($state & 0x00000008 ? "B" : "-") . # waiting for a buffer
+                    ($state & 0x00000010 ? "C" : "-") . # waiting for a checkpoint
+                    ($state & 0x00000020 ? "r" : "-") . # in a read RSAM call
+                    ($state & 0x00000040 ? "l" : "-") . # writing logical-log file to backup tape
+                    ($state & 0x00000080 ? "o" : "-") . # ON-Monitor (UNIX-only)
+                    ($state & 0x00000100 ? "c" : "-") . # in a critical section
+                    ($state & 0x00000200 ? "d" : "-") . # special daemon
+                    ($state & 0x00000400 ? "a" : "-") . # archiving
+                    ($state & 0x00000800 ? "c" : "-") . # clean up dead processes
+                    ($state & 0x00001000 ? "w" : "-") . # waiting for write of log buffer
+                    ($state & 0x00002000 ? "f" : "-") . # special buffer-flushing thread
+                    ($state & 0x00004000 ? "r" : "-") . # remote database server
+                    ($state & 0x00008000 ? "D" : "-") . # deadlock timeout used to set RS_timeout
+                    ($state & 0x00010000 ? "L" : "-") . # regular lock timeout
+                    ($state & 0x00040000 ? "W" : "-") . # waiting for a transaction
+                    ($state & 0x00080000 ? "p" : "-") . # primary thread for a session
+                    ($state & 0x00100000 ? "i" : "-") . # thread for building indexes
+                    ($state & 0x00200000 ? "b" : "-")   # btree cleaner thread
+            }
+            elsif ($key eq "Grants1")
+            {
+                my $val = $tar->[$j]->[1];
+                if    ($val eq "D") { $val = "dba"; }
+                elsif ($val eq "C") { $val = "connect"; }
+                elsif ($val eq "R") { $val = "resource"; }
+                elsif ($val eq "G") { $val = "role"; }
+                $tar->[$j]->[1] = $val;
+            }
+        }
+    }
+    return;
+}
+
 ###############################################################################
 # Experimental functions
 ###############################################################################
@@ -371,235 +469,12 @@ These functions are ones that I'm developing and should not be called
 by anyone else, unless you like living dangerously. :-)  It is hoped that
 one day, they'll be good enough to move into orac_Base.
 
- &generic_hlist()
- &sql_file_exists()
+ None for now...they've been moved!
 
-Andy, you can move this if you want. (i.e. feel brave :-)
-
-=cut
-
-# variable to make generic_hlist() & friends work.
-# they must be outside all functions!
-my ($g_hlst, $g_hlvl, $gen_sep, $g_mw, $hlist);
-my ($open_folder_bitmap,$closed_folder_bitmap,$file_bitmap);
-
-=head2 generic_hlist
-
-A function to produce a dialog screen, with HList widget
-to show data--all generic.  It will go down as many levels as
-there are SQL files, which must be numbered sequentially.
-
-The function executes the SQL, and expects either a set of rows
-with 1 column each, or 1 row with a set of columns.  It takes the
-data, and makes each value an item in the HList widget.  If it
-can find another level below this SQL script, it gives the item
-a "folder" looking icon, else just a "file" looking icon.
-
-Clicking on closed folders executes the next level of SQL, and
-displays the results in the HList widget.  Icons on the new level
-are assigned as above.  The value clicked on is parsed, split by
-the separator char (ARG2) and those are the bind parameters to the SQL.
-It is assumed the SQL will take those and do the right thing.  If
-there is a mismatch on number of bind parameters, an error will
-occurr. [Implementation question: should we search the SQL and
-get the number of placeholders and send only that number of parameters?]
-
-Clicking on a file, or bottom level item, currently does nothing.
-[Implementation question: should we put a function to be called in
-orac_Base here, and let the various modules override that if they
-want to do more than just show items?]
-
- ARG1 = name of SQL, and title of dialog (e.g. Tables)
- ARG2 = separator character
-
-There is no return value.
-
-Note: this functoin calls orac_Show(), therefore, it does not really
-return until the dialog is dismissed.
+# Andy, you can move this if you want. (i.e. feel brave :-)
 
 =cut
 
-sub generic_hlist
-{
-   my $self = shift;
-   ($g_hlst,$gen_sep) = @_;
-   $g_hlvl = 1;
-
-   my $save_cb = $self->{Database_conn}->{ChopBlanks};
-   $g_mw = $self->{Main_window}->DialogBox(-title=>"$g_hlst", 
-                                           -buttons => ["OK"]);
-   $hlist = $g_mw->Scrolled('HList', 
-                            '-drawbranch'     => 1, 
-                            '-separator'      => $gen_sep,
-                            '-indent'         => 50,
-                            '-width'          => 80,
-                            '-height'         => 20,
-                            '-command'        => [ \&show_or_hide, $self ],
-                           )->pack('-fill'   => 'both',
-                                   '-expand' => 'both');
-
-   $open_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('openfolder.xbm'));
-   $closed_folder_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('folder.xbm'));
-   $file_bitmap = $g_mw->Bitmap(-file=>Tk->findINC('file.xbm'));
-
-   my $cm = $self->f_str( $g_hlst ,'1');
-   print STDERR "prepare1: $cm\n" if ($main::debug > 0);
-   my $sth = $self->{Database_conn}->prepare( $cm )
-             or die $self->{Database_conn}->errstr; 
-   $sth->execute;
-   
-   my $bitmap = (sql_file_exists($self->{Database_type}, $g_hlst, 2)
-                ? $closed_folder_bitmap
-                : $file_bitmap);
-   my @res;
-   while (@res = $sth->fetchrow)
-   {
-      my $owner = $res[0];
-      $hlist->add($owner,
-                  -itemtype=>'imagetext',
-                  -image=>$bitmap,
-                  -text=>$owner);
-   }
-   $sth->finish;
-   $g_mw->Show();
-   $self->{Database_conn}->{ChopBlanks} = $save_cb;
-}
-
-=head2 show_or_hide
-
-A support function of generic_hlist, DO NOT CALL DIRECTLY!!!
-
-This is called when an entry is double-clicked.  It decides what to do.
-Basically ripped off from the "Adv. Perl Prog." book. :-)
-
-=cut
-
-sub show_or_hide
-{
-   my $self = shift;
-   my ($path) = @_;
-   my $next_entry = $hlist->info('next', $path);
-   #print STDERR "path=$path   next_entry=$next_entry\n" if ($main::debug > 0);
-
-   # Is there another level?
-   my $x = $path;
-   $x =~ s/[^.$gen_sep]//ge;
-   $g_hlvl = length($x) + 1;
-   my $another_level = sql_file_exists($self->{Database_type},$g_hlst, $g_hlvl + 1);
-   if (!$another_level)
-   {
-      #print STDERR "no more levels!\n";
-      # change this next line if we desire
-      # $self->bottom_level_in_generic_hlist_do_something_function();
-      return;
-   }
-
-   # decide what to do
-   if (!$next_entry || (index ($next_entry, "$path$gen_sep") == -1))
-   {
-      # No. open it
-      #print "NO!\n";
-      $hlist->entryconfigure($path, '-image' => $open_folder_bitmap);
-      #add_contents($path, $parent);
-      $self->add_contents($path);
-   }
-   else
-   {
-      # Yes. Close it by changing the icon, and deleting its subnode.
-      #print "YES!\n";
-      $hlist->entryconfigure($path, '-image' => $closed_folder_bitmap);
-      $hlist->delete('offsprings', $path);
-   }
-}
-
-=head2 add_contents
-
-A support function of generic_hlist, DO NOT CALL DIRECTLY!!!
-
-show_or_hide calls this when it needs to add new items.
-Here is where the SQL is called.
-
-=cut
-
-sub add_contents
-{
-   my $self = shift;
-   my ($path) = @_;
-
-   #print STDERR "path=$path\n" if ($main::debug > 0);
-
-   # is there another level down?
-   my $x = $path;
-   $x =~ s/[^.$gen_sep]//ge;
-   $g_hlvl = length($x) + 2;
-   my $bitmap = (sql_file_exists($self->{Database_type}, $g_hlst, $g_hlvl + 1)
-                ? $closed_folder_bitmap
-                : $file_bitmap);
-
-   # get the SQL & execute!
-   my $s = $self->f_str( $g_hlst, $g_hlvl);
-   print STDERR "prepare2: $s ($path)\n" if ($main::debug > 0);
-   my $sth = $self->{Database_conn}->prepare( $s ) or die $self->{Database_conn}->errstr; 
-
-   # in theory this should work, COOL! I didn't know you could give split a variable
-   # for the RE pattern. :-)
-   my @params = split("\\$gen_sep", $path);
-
-   # should we search $s for number of placeholders, and restrict @params to that number?
-   $sth->execute(@params);
-
-   # fetch the values
-   my @res;
-   while (@res = $sth->fetchrow)
-   {
-      # if the result has multiple columns, assume there will only be 1 row,
-      # but we should display the columns as rows; but if there is only
-      # 1 column, assume we'll get multiple rows/fetchs
-      if ($#res > 0)
-      {
-         for (0 .. $#res)
-         {
-            my $gen_thing = "$path.$sth->{NAME}->[$_] = $res[$_]";
-            $hlist->add($gen_thing,
-                        -itemtype => 'imagetext',
-                        -image    => $bitmap,
-                        -text     => $gen_thing);
-         }
-         last;
-      }
-      else
-      {
-         my $gen_thing = "$path" . $gen_sep . "$res[0]";
-         $hlist->add($gen_thing,
-                     -itemtype => 'imagetext',
-                     -image    => $bitmap,
-                     -text     => $gen_thing);
-      }
-   }
-   $sth->finish;
-}
-
-=head2 sql_file_exists
-
-Does the SQL file exist?  This is normally used to find out if there is
-another level down.
-
- ARG1 = database type
- ARG2 = SQL subroutine name (e.g. Tables, Views, ...)
- ARG3 = level number
-
-It returns TRUE (non-zero) if the file exists and is readable, FALSE otherwise.
-
-=cut
-
-sub sql_file_exists
-{
-   my ($type, $sub, $number) = @_;
-   my $file = sprintf("sql/%s/%s.%d.sql",$type,$sub,$number);
-
-   #print STDERR "sql_file_exists: $file\n" if ($main::debug > 0);
-   return (-r $file);
-}
 ###############################################################################
 1;
 # vi: set sw=4 ts=4 et:

@@ -1,14 +1,69 @@
 package orac_Base;
 use Exporter;
 
+=head1 NAME
+
+orac_Base.pm - the base class for all database modules of the Orac tool
+
+=head1 DESCRIPTION
+
+This code is the base database object that can be created by the Orac tool.
+It has all the basic data and methods.
+Many of those are empty (do nothing) methods to be overridden, some are
+inherited and used as is.
+
+=head1 PUBLIC METHODS
+
+=pod   # please keep this sorted
+
+ &Dump()
+ &about_orac()
+ &add_contents()
+ &db_check_error()
+ &do_query()
+ &do_query_fetch_all()
+ &f_clr()
+ &f_str()
+ &generic_hlist()
+ &get_frm()
+ &get_lines()
+ &gf_str()
+ &init1()
+ &init2()
+ &live_update()
+ &must_f_clr()
+ &need_ps()
+ &need_sys()
+ &new()
+ &post_process_sql()
+ &print_lines()
+ &print_stack()
+ &see_plsql()
+ &see_sql()
+ &show_or_hide()
+ &show_sql()
+ &stop_live_update()
+
+=cut
+
 @ISA = ('Exporter');
-@EXPORT = qw( new Dump init1 init2 show_sql get_lines print_lines do_query do_query_fetch_all db_check_error print_stack live_update stop_live_update f_str get_frm f_clr must_f_clr see_plsql see_sql about_orac gf_str need_sys need_ps generic_hlist show_or_hide add_contents );
+@EXPORT = qw( new Dump init1 init2 show_sql get_lines print_lines do_query
+              do_query_fetch_all db_check_error print_stack live_update
+              stop_live_update f_str get_frm f_clr must_f_clr see_plsql
+              see_sql about_orac gf_str need_sys need_ps generic_hlist
+              show_or_hide add_contents post_process_sql );
 
 use strict;
 
 my $g_typ;
 my $v_yes_no_txt;
 my %all_the_owners;
+
+=head2 new
+
+Start documenting here next time...
+
+=cut
 
 sub new
 {
@@ -68,27 +123,37 @@ sub set_db_handle
 ###############################################################################
 # Generic execute query & auto-format results & print...
 ###############################################################################
-# Take an SQL statement, execute it, and show the results in a matrix-like 
-# format.
-# ARG1 = the SQL statement
-# ARG2 = a title (optional, if not sent, the first 40 chars of the SQL is used)
-# ARG3 = text widget to use (optional, if not sent it uses the main one)
-# consider adding ARG4, an optional function pointer to do post-processing 
-# on a row-by-row basis (useful for interpreting values 
-# [e.g. change 'U' to 'Unique', change 262 to 'varchar not null', ...]), 
-# how can we tell it concat rows?
+
+=head2 show_sql
+
+Take some SQL, execute it, format the results in a matrix-like style,
+and show it in the Text_var widget.
+
+ ARG1 = the SQL file name (main part, e.g. "Threads")
+ ARG2 = the SQL level number (e.g. 1)
+ ARG3 = a title (optional, if not sent, the first 40 chars of the SQL is used)
+ ARG4 = optional bind parameters array (note: array not ref to array)
+
+There is no return value.
+
+=cut
 
 sub show_sql
 {
    my $self = shift;
 
-   my ($sql, $title, @bindees) = @_;
+   my ($sql_name, $sql_num, $title, @bindees) = @_;
    my (@row, $id);
 
-   unless (defined($sql)) { return; }
+   # some sanity checking :-)
+   unless ($sql_name) { return; }
+   unless ($sql_num) { return; }
+   my $sql = $self->f_str($sql_name, $sql_num);
+   unless ($sql) { return; }
 
    # get patient id
-   my ($r_lines, $r_format, $r_tlen, $r_names, $header) = $self->get_lines($sql, @bindees);
+   my ($r_lines, $r_format, $r_tlen, $r_names, $header) =
+      $self->get_lines($sql_name, $sql_num, $sql, @bindees);
    my @lines = @{$r_lines};
 
    #@list = $tar->[0]; $list[0][0] $list[0][1] $list[0][2]
@@ -155,12 +220,14 @@ sub get_lines
 {
    my $self = shift;
 
-   my ($param1, @bindees) = @_;
+   my ($sql_name, $sql_num, $param1, @bindees) = @_;
 
    my $sth;
    my $tar = $self->do_query_fetch_all( $param1, \$sth , @bindees);
    my @tlen;
    my @names = @{$sth->{NAME}};
+
+   $self->post_process_sql($sql_name, $sql_num, $tar);
 
    # as this is new, how do I know if the user's version has 
    # this before I use it?
@@ -185,15 +252,15 @@ sub get_lines
          # find the type to set the justification; get these from DBI.pm
          SWITCH: {
             $_ = $types[$i];
-            ($_ == DBI::SQL_CHAR) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_VARCHAR) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_DATE) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_TIME) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_TIMESTAMP) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_LONGVARCHAR) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_BINARY) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_VARBINARY) && do { $just = '-'; last SWITCH; };
-            ($_ == DBI::SQL_LONGVARBINARY) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_CHAR) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_VARCHAR) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_DATE) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_TIME) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_TIMESTAMP) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_LONGVARCHAR) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_BINARY) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_VARBINARY) && do { $just = '-'; last SWITCH; };
+            #($_ == DBI::SQL_LONGVARBINARY) && do { $just = '-'; last SWITCH; };
             ($_ == DBI::SQL_NUMERIC) && do { $just = ''; last SWITCH; };
             ($_ == DBI::SQL_DECIMAL) && do { $just = ''; last SWITCH; };
             ($_ == DBI::SQL_INTEGER) && do { $just = ''; last SWITCH; };
@@ -345,12 +412,36 @@ sub print_stack
    }
 }
 ###############################################################################
+
+=head2 live_update
+
+Take some SQL, execute it, format the results in a matrix-like style,
+and show it in the Text_var widget (just like show_sql :-) AND do it
+once a second until the user presses the Stop button.
+
+ ARG1 = the SQL file name (main part, e.g. "Threads")
+ ARG2 = the SQL level number (e.g. 1)
+ ARG3 = a title (optional, if not sent, the first 40 chars of the SQL is used)
+
+There is no return value.
+
+Note:  it may take 1 or 2 seconds for the process to register the stop
+after the user presses Stop.  Not sure how to fix this; probably can't as
+the GUI will most likely be sleeping when the button is actually pressed,
+so it'll take a second or so for the button press to be found.:w
+
+=cut
+
 my $live_update_flag; # our control flag
 sub live_update
 {
    my $self = shift;
 
-   my ($sql, $title) = @_;
+   my ($sql_name, $sql_num, $title) = @_;
+
+   # some sanity checking :-)
+   unless ($sql_name) { return; }
+   unless ($sql_num) { return; }
 
    # give us a clean slate
    $self->must_f_clr();
@@ -375,7 +466,7 @@ sub live_update
 
       # put the new values on the screen
 
-      $self->show_sql($sql, $title);
+      $self->show_sql($sql_name, $sql_num, $title);
 
       # cause the screen to show the new values
 
@@ -831,6 +922,23 @@ sub sql_file_exists
    return (-r $file);
 }
 ###############################################################################
+
+=head2 post_process_sql
+
+This subroutine is called with the results from show_sql() to allow DB
+modules to "post process" the output, if required, before it is analyzed
+to be shown.
+This is useful for turning numeric flags into words, and other such DB
+dependent things.
+This generic one does NOTHING!
+
+=cut
+
+sub post_process_sql
+{
+   my $self = shift;
+   return;
+}
 
 ################################################
 1;

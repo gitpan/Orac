@@ -157,6 +157,7 @@ oi_schema^Schema^
 oi_synonyms^Synonyms^
 oi_tabinfo^Table Info^
 oi_tables^Tables^
+oi_tblspace_info^Table Space Info^
 oi_threads^Threads/Sessions^
 oi_trig_list^Trigger listing^
 oi_triggers^Triggers^

@@ -40,12 +40,13 @@ data_obj^Data Objects^
 datfils^Datafiles^
 db^Database^
 db_change_mess^Changing DB without correct DBI will cause failure report^
+db_crt^Create Database^
 db_files^Database Files^
 db_info^Database Info^
 db_recr_sql^Database Recreation SQL^
 db_type^Database Type^
 dba_views^DBA Tables Viewer^
-dbish^GUI Dbish^
+dbish^Orac Shell (GUI dbish)^
 dbwr^Database Writer^
 dbwr_io_rp^DBWR I/O Report^
 dbwr_lgwr^DBWR & LGWR^
@@ -53,8 +54,10 @@ dbwr_lgwr_wts^DBWR & LGWR Waits Monitor^
 dbwr_lru_ltch^DBWR LRU Latches^
 dbwr_mon^DBWR Monitor^
 def_backgr_col^steelblue2^
+def_bg_col^light gray^
 def_fg_col^black^
 def_fill_fld_col^white^
+defaults^Defaults^
 del^Delete^
 del_butt_mess2^This will delete the button and attached SQL^
 del_butt_mess^Please pick the cascade you wish to delete button from^
@@ -63,7 +66,13 @@ del_button^Delete Button^
 del_cascade^Delete Cascade^
 del_message^This will delete the cascade, and all attached buttons/SQL^
 det_tab_datafil^Detailed Chart by Tablespace/Datafile^
+dev_crt^Create Database Device^
+dev_dump_crt^Create Dump Device^
+dev_rev^Reverse Engineer Database Devices^
+diag^Diagnostics^
+diag_ind^Find Bad Indexes^
 disconn^Disconnected...^
+disk^Disk^
 dispatch_mts^Dispatcher Mts Related Info^
 doub_click^Double-Click Selection^
 ed_sql_mess2^Please pick a Button^
@@ -83,11 +92,13 @@ form_for^Form for^
 full^Full^
 funcs^Functions^
 gh_summ_sess^Summary of Session Waits & CPU^
+groups^Groups^
 help_with_tools^Help with My Tools^
 hits^Hit Ratios^
 hold_sql^Holding SQL^
 i_col^Column^
 i_dat_typ^Datatype^
+i_dat_typs^User-Defined Datatypes^
 i_desc^Descend?^
 i_ord^Ord^
 i_sel_sql^Select SQL^
@@ -108,7 +119,10 @@ ln_nums^Line Numbers^
 lnks^Links^
 logdon_usrs^Current Logged on Users^
 logical_struct^Logical Structures^
+login_crt^Create Server Login^
+login_rev^Reverse Engineer Login Creation^
 login_txt^DBA User Connection^
+ls_all^List All Objects in Current Database^
 lt_wtrs^Latch Waiters^
 ltchs^Latches^
 lw_ratio^Current Latch Wait Ratios^
@@ -154,10 +168,12 @@ oi_onconfig_params^Onconfig parameters^
 oi_proc_list^Procedure listing^
 oi_procedures^Procedures^
 oi_schema^Schema^
+oi_sessions^Sessions^
 oi_synonyms^Synonyms^
 oi_tabinfo^Table Info^
 oi_tables^Tables^
-oi_threads^Threads/Sessions^
+oi_tblspace_info^Table Space Info^
+oi_threads^Threads^
 oi_trig_list^Trigger listing^
 oi_triggers^Triggers^
 oi_view_dets^View details^
@@ -172,6 +188,7 @@ pl_sql^PL/SQL^
 please_pick_db^Please choose your default database^
 pool_frag^Pool Fragmentation?^
 procs^Procedures^
+procs_dep^RelatedProcedures^
 procss_wts^Processes Experiencing Waits^
 profiles^Profiles^
 profiles_db^Profiles on Database^
@@ -183,8 +200,10 @@ rec_of^Record of^
 reconn^Reconnect^
 recrt_base_sql^Recreation SQL for svrmgrl^
 reg_usrs^Registered Users on Database^
+rem_srv_crt^Create Remote Server^
 rep^Report^
 report^REPORT^
+rev^Reverse Engineering^
 rolegrnts^RoleGrants^
 roll_seg_stats^Rollback segment statistics^
 rollback^Rollback^
@@ -194,9 +213,11 @@ rollname^Rollback Sizings^
 rollsegs^Current States^
 rols^Roles^
 rols_db^Roles on Database^
+rules^Rules^
 save^Save^
 saved^Saved^
 see_sql^See SQL^
+segments^Segments^
 sel_addr^Paddr Results^
 sel_cols^Select Columns & then Build Index^
 sel_info^Select Information^
@@ -219,6 +240,9 @@ sql_crt_states^SQL Creation Statements^
 sql_for^SQL for^
 sql_menu^SQL^
 sql_quest^sql?^
+srv^Server^
+srv_prop^Server Info^
+srv_stat^Server Usage Statistics^
 stat^Stat^
 stop^Stop^
 struct^Structure^
@@ -226,6 +250,7 @@ summ_tabsp^Summary Chart by Tablespace^
 synyms^Synonyms^
 sys_pass^DBA User Password^
 sys_user^DBA User^
+systabs^System Tables^
 system_please^Please enter a DBA user password^
 tabs^Tables^
 tabsp^Tablespace^
@@ -233,8 +258,12 @@ tabsp_frag^Tablespace Fragmentation^
 tabsp_sp_shorts^Tablespace Space Shortages^
 tabsp_tune^Tablespace Tuning^
 tabsp_txt^Tablespace Text Report^
+tape^Tape^
+tbl_crt^Create Table^
+tbl_rev^Reverse Engineer All Objects in the Database^
 tot_sess_uga^Total Session UGA^
 trggrs^Triggers^
+trggrs_dep^RelatedTriggers^
 tune^Tune^
 upd^Update^
 upd_butt_text^Button for Update^

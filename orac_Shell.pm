@@ -1,4 +1,3 @@
-#
 # vim:ts=2:sw=2
 ################################################################################
 #
@@ -37,6 +36,7 @@ use strict;
 
 my ($sql_txt, $sql_entry_txt);
 my ($rslt_txt, $rslt_entry_txt);
+my ($ind_txt, $mv_ind_rslt);
 
 my ($opt_row_dis_c, $opt_dis_grid);
 my $entry_txt;
@@ -63,6 +63,9 @@ sub new
 		$color_ball{green} = $self->{mw}->Photo( -file => "img/grn_ball.gif" );
 		$color_ball{red}   = $self->{mw}->Photo( -file => "img/red_ball.gif" );
 		$color_ball{yellow}= $self->{mw}->Photo( -file => "img/yel_ball.gif" );
+
+		$color_ball{checkmark}= $self->{mw}->Photo( -file => "img/smChekmark.gif");
+
 
    return $self;
 }
@@ -108,137 +111,71 @@ sub dbish_open {
 
 		$sf->Label( -textvariable => \$dbistatus )->pack(-side => 'left');
 
-
-		$dbistatus = "Creating menu bar";
-		my $f = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
-		$f->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
-
-		# Put the logo on the menu bar.
-		my $orac_logo = $dbiwd->Photo(-file=>'img/orac.gif');
-		$f->Label(-image=> $orac_logo, -borderwidth=> 2,
-			-relief=> 'flat')->pack(  -side=> 'left', -anchor=>'w');
-
-		# Create a menu bar.
-                my @menus;
-		foreach (qw/File Edit Options Help/) {
-			push( @menus, $f->Menubutton( -text => $_ , -tearoff => 0 ) );
-		}
-
-		$menus[3]->pack(-side => 'right' ); # Help
-		$menus[0]->pack(-side => 'left' );  # File
-		$menus[1]->pack(-side => 'left' );  # Edit
-		$menus[2]->pack(-side => 'left' );  # Options
-
-		#
-		# Add some options to the menus.
-		#
-		# File menu
-		$menus[0]->AddItems(
-			[ "command" => "Load", -command => sub { $self->tba } ],
-			[ "command" => "Save", -command => sub { $self->tba } ],
-			"-",
-			[ "command" => "Properties", -command => sub { $self->tba } ],
-			"-",
-			[ "command" => "Exit", -command => sub { $self->tba } ],
-		);
-
-		# About menu
-		$menus[3]->AddItems(
-			[ "command" => "Index", -command => sub { $self->tba } ],
-			"-",
-			[ "command" => "About", -command => sub { $self->tba } ],
-		);
-
-		# Options menu
-		my $opt_disp = $menus[2]->menu->Menu;
-		foreach (qw/raw neat box grid html/) {
-			$opt_disp->radiobutton( -label => $_, 
-				-variable => \$opt_dis_grid,
-				-value => $_,
-				);
-		}
-
-		$menus[2]->cascade( -label => "Display format..."); 
-		$menus[2]->entryconfigure( "Display format...", -menu => $opt_disp);
-		$opt_dis_grid = 'neat';
-
-		# Create the entries for rows returned.
-		my $opt_row = $menus[2]->menu->Menu;
-		foreach (qw/1 10 25 50 100 all/) {
-			$opt_row->radiobutton( -label => $_, -variable => \$opt_row_dis_c,
-				-value => $_ );
-		}
-		$menus[2]->cascade( -label => "Rows return..." );
-		$menus[2]->entryconfigure( "Rows return...", -menu => $opt_row);
-		$opt_row_dis_c = 'all';
-
-		# Create a button bar.
-		$dbistatus = "Creating menu button bar";
-
-		my $bf = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
-		$bf->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
-
-		# need to invoke the execute in other parts of the application.
-		$button_exe = $bf->Button( -text=> 'Execute',
-			-command=> sub{ $self->execute_sql() }
-			)->pack(side=>'left');
-
-		$bf->Button( -text=> 'Clear',
-			-command=>sub{
-				$self->dbish_clear();
-			}
-		)->pack(side=>'left');
-
-		$bf->Button( -text=> 'Tables',
-			-command=> sub{ $self->tba() }
-		)->pack(side=>'left');
-
-		$bf->Button( -text=> 'Copy Results',
-			-command=> sub{ $self->tba() }
-		)->pack(side=>'left');
-
-		$dbistatus = "Creating Close button";
-
-		$bf->Button( -text => "Close",
-			-command => sub { $dbiwd->withdraw;
-			$self->{mw}->deiconify();
-			$main::sub_win_but_hand{dbish}->configure(-state=>'active');
-     } )->pack( -side => "right" ); #'
-
-		# Create Text widget for command entry
-		$dbistatus = "Creating Text entry widget";
-
-		$entry_txt = $dbiwd->Scrolled( "Text", 
-			-relief => 'groove',
-			-width => 78,
-			-height => 10,
-			-cursor=>undef,
-			-foreground=>$main::fc,
-			-background=>$main::ec,
-		)->pack( -side => 'bottom' );
-
-
-		# Pick up the Return key ... see return_press.
-		$entry_txt->bind( "<Return>", sub { $self->return_press() } );
-
-		$dbiwd->Label(-text => ' ',
-			-relief => 'groove' )->pack( -side => 'bottom', -fill => 'x' );
+		# Create the menu bar with entries.
+		$self->menu_bar();
+		# Create the menu button with entries.
+		$self->menu_button();
 
 		# Create Text widget for results display.
 		$dbistatus = "Creating Text results widget";
 
 		$rslt_txt = $dbiwd->Scrolled( "Text", 
-                                              -relief => 'groove',
-                                              -width => 78, 
-                                              -height => 20,
-                                              -cursor=>undef,
-                                              -foreground=>$main::fc,
-                                              -background=>$main::bc,
-																							-wrap => "none",
+			-relief => 'groove',
+			-width => 78, 
+			-height => 20,
+			-cursor=>undef,
+			-foreground=>$main::fc,
+			-background=>$main::bc,
+			-wrap => "none",
+		)->pack( -side => 'top' );
 
-			                    )->pack( -side => 'bottom' );
+		$dbiwd->Label(-text => ' ',
+			-relief => 'groove' )->pack( -side => 'top', -fill => 'x' );
 
-                $main::swc{dbish}->{text} = $rslt_txt;
+
+		# Create Text widget for command entry
+		my $entry_frm = $dbiwd->Frame()->pack( -side => 'top' );	
+		$dbistatus = "Creating Text entry widget";
+		my $scrl = $entry_frm->Scrollbar();
+		$scrl->pack( -side => 'left', -fill => 'y' );
+		$ind_txt = $entry_frm->Text( # 'Text',
+			-relief => 'groove',
+			-width => 3,
+			-height => 10,
+			-cursor=>undef,
+			-foreground=>$main::fc,
+			-background=>$main::ec,
+			-yscrollcommand => [ 'set', $scrl ] ,
+		)->pack( -side => 'left' );
+
+		$entry_txt = $entry_frm->Text( # 'Text',
+			-relief => 'groove',
+			-width => 74,
+			-height => 10,
+			-cursor=>undef,
+			-foreground=>$main::fc,
+			-background=>$main::ec,
+			-yscrollcommand => [ 'set', $scrl ] ,
+		)->pack( -side => 'top' );
+
+
+		# Pick up the Return key ... see return_press.
+		$entry_txt->bind( "<Return>", sub { $self->return_press() } );
+		$entry_txt->tagConfigure( "Exec", -foreground => "red", -relief => 'raised' );
+
+		$scrl->configure( -command => ['yview', $entry_txt] );
+
+		#my $listboxes = [ $ind_txt, $entry_txt ];
+		#foreach my $list (@$listboxes) {
+			#$list->configure( -yscrollcommand => [ sub { $self->sync_txt( $scrl, $list, $listboxes ) } ] );
+		#}
+
+		#$scrl->configure( -command => sub { foreach my $list (@$listboxes) {
+			#$list->yview(@_)
+			#} } );
+
+
+		$main::swc{dbish}->{text} = $rslt_txt;
 
 		# Tie the windows to the file types:
 		tie (*ENTRY_TXT, 'Tk::Text', $entry_txt);
@@ -279,16 +216,76 @@ sub auto_commit {
 # button, if the only character on a line is /, execute the above
 # statement.
 #
+my $exeStatement;
 sub return_press {
 	my $self = shift;
+
+	# Determine where the cursor is.
 	my $ind = $entry_txt->index( 'insert - 1 lines' );
-	my $end = $entry_txt->index( 'current' );
+
+	# Grab the last line of text.
 	my $txt = $entry_txt->get( $ind, 'insert' );
 	chomp $txt;
+
+
 	# The previously entered line is only a /, exeucte.
 	if ($txt =~ m:[/;]$:) {
+
+		print STDERR "An execute command ...\n";
+
+		# get current buffer finds the sql statement.
+		$self->get_current_buffer( $ind );
+		# now execute it;
 		$button_exe->invoke();
-	}
+
+
+	# Add just a line place for statement marker.
+  $mv_ind_rslt = $ind_txt->Button( # -text => '',
+			-command => sub { $self->move_to_results() },
+			-image => $color_ball{checkmark},
+			-background=>$main::ec,
+			-justify => 'center',
+			-height => 5,
+			-width => 6,
+	);
+
+	# Add the little check mark to the next line.
+	$ind_txt->windowCreate( 'end linestart', 
+		-stretch => 1,
+		-window => $mv_ind_rslt );
+
+	} 
+
+	$ind_txt->insert( 'end', "\n" );
+
+}
+
+my ($idxMark, $begLn);
+sub get_current_buffer() {
+	my $self = shift;
+	$idxMark = $entry_txt->index( 'insert' );
+	my $stinx;
+
+	print STDERR "Search entry start: $idxMark ";
+	my $inx = $entry_txt->search( 
+		-backwards, 
+		-regexp, 
+		'[;/]$',
+		$stinx = $entry_txt->index( 'insert - 1 lines'),
+		"1.0",
+	);
+	# The buffer could have more than one statement in it.
+	# Find the last statement. Look for the new statement on
+	# the next line.
+	$begLn = "1.0";
+	if (length($inx) > 0) {
+		$begLn = "$inx + 1 chars";# $entry_txt->index( '$inx + 1 lines' );
+		print STDERR " found at: $inx ";
+	} 
+	$exeStatement = $entry_txt->get( $begLn, $idxMark );
+	$entry_txt->tagAdd( 'Exec', $begLn, $idxMark );
+	print STDERR " getting text from $begLn to $idxMark: $exeStatement\n";
+
 }
 
 sub bind_message {
@@ -303,6 +300,7 @@ sub dbish_clear {
 
 	$rslt_txt->delete( "1.0", 'end' );
 	$entry_txt->delete( "1.0", 'end' );
+	$ind_txt->delete( "1.0", 'end' );
 	$self->release;
 }
 	
@@ -329,6 +327,7 @@ sub save_query {
 
 }
 
+
 sub red {
 	$auto_ball->configure( -image => $color_ball{red} );
 }
@@ -342,14 +341,153 @@ sub tba {
 	0;
 }
 
+my @menus;
+sub menu_bar {
+	my $self = shift;
+		$dbistatus = "Creating menu bar";
+		my $f = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
+		$f->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
+
+		# Put the logo on the menu bar.
+		my $orac_logo = $dbiwd->Photo(-file=>'img/orac.gif');
+		$f->Label(-image=> $orac_logo, -borderwidth=> 2,
+			-relief=> 'flat')->pack(  -side=> 'left', -anchor=>'w');
+
+		# Create a menu bar.
+		foreach (qw/File Edit Options Help/) {
+			push( @menus, $f->Menubutton( -text => $_ , -tearoff => 0 ) );
+		}
+
+		$menus[3]->pack(-side => 'right' ); # Help
+		$menus[0]->pack(-side => 'left' );  # File
+		$menus[1]->pack(-side => 'left' );  # Edit
+		$menus[2]->pack(-side => 'left' );  # Options
+
+		$self->menu_file();
+		$self->menu_edit();
+		$self->menu_options();
+		$self->menu_help();
+}
+
+
+sub menu_file {
+	my $self = shift;
+		#
+		# Add some options to the menus.
+		#
+		# File menu
+		$menus[0]->AddItems(
+			[ "command" => "Load", -command => sub { $self->tba } ],
+			[ "command" => "Save", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "Properties", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "Exit", -command => sub { $self->tba } ],
+		);
+}
+
+sub menu_edit {
+	my $self = shift;
+}
+
+sub menu_options {
+	my $self = shift;
+		# Options menu
+		my $opt_disp = $menus[2]->menu->Menu;
+		foreach (qw/raw neat box grid html/) {
+			$opt_disp->radiobutton( -label => $_, 
+				-variable => \$opt_dis_grid,
+				-value => $_,
+				);
+		}
+
+		$menus[2]->cascade( -label => "Display format..."); 
+		$menus[2]->entryconfigure( "Display format...", -menu => $opt_disp);
+		$opt_dis_grid = 'neat';
+
+		# Create the entries for rows returned.
+		my $opt_row = $menus[2]->menu->Menu;
+		foreach (qw/1 10 25 50 100 all/) {
+			$opt_row->radiobutton( -label => $_, -variable => \$opt_row_dis_c,
+				-value => $_ );
+		}
+		$menus[2]->cascade( -label => "Rows return..." );
+		$menus[2]->entryconfigure( "Rows return...", -menu => $opt_row);
+		$opt_row_dis_c = 'all';
+
+}
+
+sub menu_help {
+	my $self = shift;
+		# Help menu
+		$menus[3]->AddItems(
+			[ "command" => "Index", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "About", -command => sub { $self->tba } ],
+		);
+}
+
+sub menu_button {
+	my $self = shift;
+		# Create a button bar.
+		$dbistatus = "Creating menu button bar";
+
+		my $bf = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
+		$bf->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
+
+		# need to invoke the execute in other parts of the application.
+		$button_exe = $bf->Button( -text=> 'Execute',
+			-command=> sub{ $self->execute_sql() }
+			)->pack(side=>'left');
+
+		$bf->Button( -text=> 'Clear',
+			-command=>sub{
+				$self->dbish_clear();
+			}
+		)->pack(side=>'left');
+
+		$bf->Button( -text=> 'Tables',
+			-command=> sub{ $self->tba() }
+		)->pack(side=>'left');
+
+		$bf->Button( -text=> 'Copy Results',
+			-command=> sub{ $self->tba() }
+		)->pack(side=>'left');
+
+		$dbistatus = "Creating Close button";
+
+		$bf->Button( -text => "Close",
+			-command => sub { $dbiwd->withdraw;
+			$self->{mw}->deiconify();
+			$main::sub_win_but_hand{dbish}->configure(-state=>'active');
+     } )->pack( -side => "right" ); #'
+
+
+}
+
+sub move_to_results {
+	my $self = shift;
+	print STDOUT "Move to Results event\n";
+}
+
+#
+# As the names implies, this button executes all the statements in the
+# current entry buffer.
+#
+sub execute_all_buffer {
+
+}
+
+# Execute the most currently statement in the entry buffer.
 sub execute_sql {
 
    my $self = shift;
 
 	 $dbiwd->Busy;
-	 my $statement = $entry_txt->get("1.0", 'end' );
+	 # my $statement = $entry_txt->get("1.0", 'end' );
+	 my $statement = $exeStatement;
 	 chomp $statement;
-	 $statement =~ s:[/;](\s)+$::;  # Replace the last / with nothing.
+	 $statement =~ s:[/;]$::;  # Replace the last / with nothing.
 	 
 	 my $dbh = $self->{dbh};
 	 unless($dbh) {
@@ -357,8 +495,8 @@ sub execute_sql {
 	 	return;
 	 }
 
-	 my $sth = $self->do_prepare( $statement );
-
+	 print STDERR "\nexecuting statement: $statement\n";
+	my $sth = $self->do_prepare( $statement );
 	$sth->execute;
 
 	# print RSLT_TXT "Number of fields: " . $sth->{NUM_OF_FIELDS} . "\n";
@@ -368,14 +506,36 @@ sub execute_sql {
 	$dbh->{neat_maxlen} = 40004;
 	my $class = DBI::Format->formatter($opt_dis_grid);
 	my $r = $class->new($self);
+
+	# Move the results windows to the end, before starting the output.
+	$rslt_txt->see( 'end linestart '); #'
+	# $rslt_txt->markSet( "begin dis", $rslt_txt->index( 'end linestart')); #'
+
 	$r->header($sth, \*RSLT_TXT, ",");
 
 	my $row;
 	while( $row = $sth->fetchrow_arrayref() ) {
 		$r->row($row, \*RSLT_TXT, "," );
 	}
+	$rslt_txt->see( 'end linestart '); #'
 	$r->trailer(\*RSLT_TXT);
+
+	#$rslt_txt->yview( 'moveto', $rslt_txt->index( 'begin dis') ); #'
+	#$rslt_txt->markUnset( 'begin dis' );
+
 	$sth->finish;
+	$entry_txt->tagRemove( 'Exec', $begLn, $idxMark );
 	$dbiwd->Unbusy;
+}
+
+# This method is used to track the X text widgets with the scroll bar.
+sub sync_txt {
+	my $self = shift;
+	my ($sb, $scrolled, $lbs, @args) = @_;
+	$sb->set(@args);
+	my ($top, $bottom) = $scrolled->yview();
+	foreach my $list (@$lbs) {
+		$list->yviewMoveto($top);
+	}
 }
 1;

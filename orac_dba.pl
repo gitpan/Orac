@@ -37,11 +37,11 @@ require Tk::BrowseEntry;
 # flags for various database use.
 
 use orac_Base;
-use orac_QuickSQL;
 use orac_Shell;
 
 use orac_Oracle;
 use orac_Informix;
+#use orac_Sybase;
 
 # Read the menu/English.txt file to pick up all text
 # for use with the rest of the program
@@ -53,7 +53,7 @@ main::read_language();
 
 main::pick_up_defaults();
 
-$main::orac_version = '1.1.11';
+$main::orac_version = '1.1.14';
 
 $main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
@@ -64,8 +64,19 @@ $main::fc = $main::lg{def_fg_col};
 # for kevinb :)
 # and now for thomasl too :)
 
-$main::debug = exists($ENV{ORAC_DEBUG}) ? int($ENV{ORAC_DEBUG}) : 0;
-$main::do_shell = exists( $ENV{DBI_SHELL} ) ? 1:0;
+if(defined($ENV{ORAC_DEBUG})) {
+   $main::debug = int($ENV{ORAC_DEBUG});
+}
+else {
+   $main::debug = 0;
+}
+
+if(defined($ENV{DBI_SHELL})) {
+   $main::do_shell = int($ENV{DBI_SHELL});
+}
+else {
+   $main::do_shell = 0;
+}
 
 # Bring up the main "Worksheet" window
 
@@ -227,7 +238,8 @@ if ((!defined($main::orac_curr_db_typ)) ||
 
 main::get_db();
 
-$main::sub_win_but_hand{dbish}->[0]->invoke('GUI Dbish') if $main::do_shell;
+$main::sub_win_but_hand{dbish}->[0]->invoke('Orac Shell (GUI dbish)') 
+   if $main::do_shell;
 
 # Here we go, lights, cameras, action!
 
@@ -320,6 +332,13 @@ sub get_connected {
                                                  $main::orac_version );
 
       }
+#     elsif($main::orac_curr_db_typ eq 'Sybase'){
+#
+#         $main::current_db = orac_Sybase->new( $main::mw, 
+#                                               $main::v_text,
+#                                               $main::orac_version );
+#
+#      }
       else {
 
          $main::current_db = 
@@ -367,12 +386,13 @@ sub get_connected {
       # Supplement these, with stored database to which they've
       # successfully connected in the past 
 
-      open(DBFILE,"txt/" . $main::orac_curr_db_typ . "/orac_db_list.txt");
-      while(<DBFILE>){
-         chomp;
-         $ls_db{$_} = 102;
+      if (open(DBFILE,"txt/" . $main::orac_curr_db_typ . "/orac_db_list.txt")){
+         while(<DBFILE>){
+            chomp;
+            $ls_db{$_} = 102;
+         }
+         close(DBFILE);
       }
-      close(DBFILE);
 
       my $key;
       my @hd;
@@ -438,9 +458,39 @@ sub get_connected {
       # Determine if auto log on will work. If the env
       # variables are not set, no auto log.
 
-      $auto_log = ( defined($ENV{DBI_DSN}) &&
-                    defined($ENV{DBI_USER}) &&
-                    defined($ENV{DBI_PASS}) ) && $auto_log;
+      print STDERR "Before DBI dsn>$ENV{DBI_DSN}<\n" if ($main::debug > 0);
+      print STDERR "          user>$ENV{DBI_USER}<\n" if ($main::debug > 0);
+      print STDERR "          pass>$ENV{DBI_PASS}<\n" if ($main::debug > 0);
+
+      if ((defined($ENV{DBI_DSN}) && (length($ENV{DBI_DSN}) > 0)) &&
+          (defined($ENV{DBI_USER}) && (length($ENV{DBI_USER}) > 0)) &&
+          (defined($ENV{DBI_PASS}) && (length($ENV{DBI_PASS}) > 0)) &&
+          ($auto_log == 1))
+      {
+         # Right, they're all defined, is the DSN one valid?
+         # I'll define valid as it must be a colon-separated
+         # list of three elements, the first one of which must
+         # be 'dbi'.  Ok?
+
+         my @test_arr = (split(/:/,$ENV{DBI_DSN}));
+         my $length_test_arr = @test_arr;
+
+         if (($test_arr[0] =~ /dbi/i) && ($length_test_arr == 3)){
+ 
+            # Seems valid enough to me.
+
+            $auto_log = 1;
+         }
+         else {
+ 
+            # Seems invalid to me.
+
+            $auto_log = 0;
+         }
+      }
+      else {
+         $auto_log = 0;
+      }
   
       my $mn_b;
 
@@ -546,7 +596,14 @@ sub get_connected {
                   $main_label->configure( -image => $main::conn_ball{red} );
                   $main::l_top_t = $main::lg{not_conn};
                }
+
+               # Hiya Sean :)
+               # Let me know if this is the right place.
+
+               $auto_log = 0;
+
                main::ubz();
+
             } else {
                # Various error messages for invalid input
 
@@ -704,22 +761,6 @@ sub bz {
 sub ubz {
    # Make the main GUI pointer normalise to unbusy
    $main::mw->Unbusy;
-}
-sub get_Jared_sql {
-
-   # Takes pointers to which cascade and button the user
-   # wishes to run, and sucks SQL info out of the appropriate
-   # file, before returning as a Perl string variable
-
-   my($casc,$butt) = @_;
-   my $filename = 'tools/sql/' . $casc . '.' . $butt . '.sql';
-   my $cm = '';
-   open(JARED_FILE, "$filename");
-   while(<JARED_FILE>){
-      $cm = $cm . $_;
-   }
-   close(JARED_FILE);
-   return $cm;
 }
 
 sub mes {
@@ -946,20 +987,31 @@ sub config_menu {
                    $main::mb->Menubutton(-text=>$main::lg{sql_menu},
                                         )->pack(-side=>'left',
                                                 -padx=>2);
-   $main::sub_win_but_hand{quick_sql} =
-      $main::tm_but[$main::tm_but_ct]->command(
-                         -label=>$main::lg{quick_sql},
-
-                         -command=>sub{  main::bz();
-                                         orac_QuickSQL::quick_sql();
-                                         main::ubz()
-                                      }
-                                              );
    $main::sub_win_but_hand{dbish} =
       $main::tm_but[$main::tm_but_ct]->command(
                          -label=>$main::lg{dbish},
 
-                         -command=>sub{  main::bz();
+                         -command=>sub{  
+
+print STDERR "\n\n" . Tk::Pretty::Pretty( $main::mw->configure ) . "\n\n" 
+   if ($main::debug > 0);
+my $nt = "Special Note for 1.1.13\n" .
+         "-----------------------\n" .
+         "The orac_Shell utility is based partially upon a\n" .
+         "pre-official version of Format.pm, which will\n" .
+         "probably be released in a forthcoming the DBI distribution.\n" .
+         "In order to get orac_Shell to work, please move your\n" .
+         "current DBI::Format files from Format.pm to Format.pm.old,\n" .
+         "or whatever, and replace them with the Format.pm file\n" .
+         "in this directory.  We will let you know when this file\n" .
+         "is available in a 'real' DBI release, and will update\n" .
+         "this README file accordingly.  In the meantime, I hope\n" .
+         "you enjoy using Tom Lowery's excellent orac_Shell functionality.\n" .
+         "\n" .
+         "Rgds,\n" .
+         "AndyD :)";
+main::mes($main::mw, $nt);
+                                         main::bz();
 
          print STDERR "mw >$main::mw<,  dbh >$main::dbh< \n" if ($main::debug > 0);
 
@@ -1718,9 +1770,31 @@ sub run_Jareds_tool {
 
    my($casc,$butt) = @_;
 
-   $main::current_db->show_sql ( main::get_Jared_sql( $casc, $butt ),
+   # Before we run this, we have to change
+   # the database type to 'tools', temporarily.
+
+   print STDERR "\n\nOld db type >" . $main::current_db->{Database_type} . 
+                "<\n" if ($main::debug > 0);
+
+   my $old_db_type = $main::current_db->{Database_type};
+
+   $main::current_db->{Database_type} = 'tools';
+
+   print STDERR "New db type >" . $main::current_db->{Database_type} . 
+                "<\n" if ($main::debug > 0);
+
+   $main::current_db->show_sql ( $casc, 
+                                 $butt,
                                  main::get_butt_text( $casc, $butt )
                                );
+
+   # Now change the database type back again.
+
+   $main::current_db->{Database_type} = $old_db_type;
+
+   print STDERR "Cur db type >" . $main::current_db->{Database_type} . 
+                "<\n\n\n" if ($main::debug > 0);
+
 }
 
 sub del_Jareds_tools {
@@ -1798,6 +1872,9 @@ BEGIN {
    # on database connection, until the last variation
    # on database connection is attempted.
 
+# Old warning code, needed to be modified due
+# to Sybase's requirements.
+#
    $SIG{__WARN__} = sub{
       if ((!defined($main::conn_comm_flag)) || ($main::conn_comm_flag == 0)){
          if (defined $main::mw) {
@@ -1807,6 +1884,22 @@ BEGIN {
          }
       }
    };
+
+#   $SIG{__WARN__} = sub{
+#       my $warning = $_[0];
+#if ((!defined($main::conn_comm_flag)) || ($main::conn_comm_flag == 0)){
+#    chop $warning;
+#    return if ($main::orac_curr_db_typ eq 'Sybase' && ($warning eq 'Object does not have any declarative constraints.' || $warning eq ' '));
+#    if (defined $main::mw) {
+#      main::mes($main::mw,$warning);
+#    } else {
+#	print STDOUT join("\n",@_),"n";
+#    }
+#    # Handle print command in SQL (sybase print sends output to message handler)
+#} elsif ($main::conn_comm_flag == 999) {
+#    $main::store_msgs .= $warning;
+#}
+#   };
 }
 
 # my $e = $cw->Subwidget("top")->pack(side=>'top',fill=>'both',expand=>'y');
