@@ -155,8 +155,7 @@ sub who_what {
    } elsif ($flag == 2){
       $title = "$param2";
    }
-   my $d = $self->{Main_window}->DialogBox(-title=>$title
-                         );
+   my $d = $self->{Main_window}->DialogBox(  -title=>$title  );
 
    my $loc_text = $d->Scrolled('Text',
                                -wrap=>'none',
@@ -315,8 +314,13 @@ sub univ_form {
    print STDERR "univ_form: uf_type >$uf_type<\n\n" if ($main::debug > 0);
 
    $m_t = "$main::lg{form_for} $obj";
-   my $bd = $loc_d->DialogBox(-title=>$m_t,-buttons=>[ $main::lg{exit} ]);
+
+   my $bd = $loc_d->DialogBox(  -title=>$m_t,
+                                -buttons=>[ $main::lg{exit} ]
+                             );
+
    my $uf_txt;
+
    if ($uf_type eq 'index'){
       $uf_txt = "$own.$obj, $main::lg{sel_cols}";
    } else {
@@ -500,7 +504,9 @@ sub and_finally {
       main::mes($af_d, $main::lg{no_rows});
    } else {
       $gc = $min_row;
+
       my $c_d = $af_d->DialogBox(-title=>$m_t);
+
       my(@lb) = qw/-anchor n -side top -expand 1 -fill both/;
       my $top_frame = $c_d->Frame->pack(@lb);
    
@@ -1379,7 +1385,7 @@ sub errors_orac {
          my(@err_lay) = qw/-side top -padx 5 -expand no -fill both/;
 
          my $err_menu = $main::swc{errors_orac}->Frame->pack(@err_lay);
-         my $orac_li = $main::swc{errors_orac}->Pixmap(-file=>'img/orac.bmp');
+         my $orac_li = $main::swc{errors_orac}->Photo(-file=>'img/orac.gif');
 
          $err_menu->Label(-image=>$orac_li,
                           -borderwidth=>2,
@@ -1467,7 +1473,7 @@ sub dbas_orac {
          my(@dba_lay) = qw/-side top -padx 5 -expand no -fill both/;
 
          my $dba_menu = $main::swc{dbas_orac}->Frame->pack(@dba_lay);
-         my $orac_li = $main::swc{dbas_orac}->Pixmap(-file=>'img/orac.bmp');
+         my $orac_li = $main::swc{dbas_orac}->Photo(-file=>'img/orac.gif');
 
          $dba_menu->Label(-image=>$orac_li,
                           -borderwidth=>2,
@@ -1564,7 +1570,7 @@ sub addr_orac {
 
          my(@adr_lay) = qw/-side top -padx 5 -expand no -fill both/;
          my $addr_menu = $main::swc{addr_orac}->Frame->pack(@adr_lay);
-         my $orac_li = $main::swc{addr_orac}->Pixmap(-file=>'img/orac.bmp');
+         my $orac_li = $main::swc{addr_orac}->Photo(-file=>'img/orac.gif');
 
 
          $addr_menu->Label( -image=>$orac_li,
@@ -1667,7 +1673,7 @@ sub sids_orac {
 
          my(@sid_lay) = qw/-side top -padx 5 -expand no -fill both/;
          my $sid_menu = $main::swc{sids_orac}->Frame->pack(@sid_lay);
-         my $orac_li = $main::swc{sids_orac}->Pixmap(-file=>'img/orac.bmp');
+         my $orac_li = $main::swc{sids_orac}->Photo(-file=>'img/orac.gif');
 
          $sid_menu->Label(
                            -image=>$orac_li,
@@ -1811,7 +1817,7 @@ sub explain_plan {
    my(@exp_lay) = qw/-side top -padx 5 -expand no -fill both/;
    my $dmb = $main::swc{explain_plan}->Frame->pack(@exp_lay);
 
-   my $orac_li = $main::swc{explain_plan}->Pixmap(-file=>'img/orac.bmp');
+   my $orac_li = $main::swc{explain_plan}->Photo(-file=>'img/orac.gif');
 
    $dmb->Label( -image=>$orac_li,
                 -borderwidth=>2,
@@ -2132,35 +2138,44 @@ sub who_hold
 {
    my $self = shift;
 
-   # Report for finding Who's holding whom?
-   # First get the SQL, then run show_sql(),
-   # then print out a listing of buttons,
-   # for people to check the SQL with.
+   # Slightly complicated.
+   # Build up a scrolling list of all the users
+   # who're holding everyone back.  This can be
+   # double-clicked to bring up a 'See SQL' type
+   # screen.  After scroll-list, insert the report.
 
-   my $cm = $self->f_str( 'wait_hold' , '1' );
-   $self->show_sql( $cm , $main::lg{who_hold} );
-
-   my $l_counter = 0;
-
-   my $button;
-   my $butt_string;
+   my $scrllist_str;
 
    my $l_osuser;
    my $l_username;
    my $l_serial;
    my $l_sid;
+   my $l_pid;
 
+   my $l_wait_title;
+   my $l_hold_title;
    my $l_os_title;
-   my $l_user_title;
    my $l_ser_title;
    my $l_sid_title;
+   my $l_pid_title;
 
    my @res;
    my @title_values;
 
+   my $cm = $self->f_str( 'wait_hold' , '1' );
+
+   # Now show Report for finding Who's holding whom?
+   # Make sure the screen isn't cleared beforehand.
+
+
+   my $scroll_box;
+   my $scroll_label;
+
    my $sth = $self->{Database_conn}->prepare( $cm ) || 
                 die $self->{Database_conn}->errstr; 
    $sth->execute;
+
+   my $l_counter = 0;
 
    while ( @res = $sth->fetchrow ) {
 
@@ -2169,44 +2184,119 @@ sub who_hold
          for ($i = 0;$i < $sth->{NUM_OF_FIELDS};$i++){
             $title_values[$i] = $sth->{NAME}->[$i];
          }
+         $l_wait_title = $title_values[0];
          $l_os_title = $title_values[7];
-         $l_user_title = $title_values[6];
+         $l_hold_title = $title_values[6];
          $l_ser_title = $title_values[8];
          $l_sid_title = $title_values[9];
+         $l_pid_title = $title_values[10];
 
          $l_counter = 1;
+
+         $scroll_label = 
+            $self->{Text_var}->Label( 
+               -text=>"$main::lg{see_sql} $main::lg{doub_click}",
+               -relief=>'raised'
+                                    );
+
+         $scroll_box =
+            $self->{Text_var}->ScrlListbox(-width=>76,
+                                           -height=>3,
+                                           -background=>$main::ec,
+                                           -foreground=>$main::fc
+                                          );
+
+         print STDERR "who_hold: scroll_box>$scroll_box<\n" 
+            if ($main::debug > 0);
+
+         $self->{Text_var}->windowCreate('end',-window=>$scroll_label);
+         $self->{Text_var}->insert('end', "\n");
+
+         $self->{Text_var}->windowCreate('end',-window=>$scroll_box);
+         $self->{Text_var}->insert('end', "\n");
       } 
+
+      # Wait User first 
+
+      $l_username = $res[0];
+      $l_osuser = $res[1];
+      $l_serial = $res[2];
+      $l_sid = $res[3];
+      $l_pid = $res[4];
+
+      $scrllist_str = "$l_wait_title:$l_username," .
+                      "$l_os_title:$l_osuser," .
+                      "$l_ser_title:$l_serial," .
+                      "$l_sid_title:$l_sid," .
+                      "$l_pid_title:$l_pid";
+
+      print STDERR "who_hold: (wait) scrllist_str>$scrllist_str<\n" 
+         if ($main::debug > 0);
+
+      $scroll_box->insert('end', $scrllist_str);
+
+      # Hold User
 
       $l_username = $res[6];
       $l_osuser = $res[7];
       $l_serial = $res[8];
       $l_sid = $res[9];
+      $l_pid = $res[10];
 
-      $butt_string = "$main::lg{see_sql}   " .
-                     "${l_user_title}:$l_username    " .
-                     "${l_os_title}:$l_osuser    " .
-                     "${l_ser_title}:$l_serial    " .
-                     "${l_sid_title}:$l_sid";
+      print STDERR "who_hold: l_pid       >$l_pid<\n" 
+         if ($main::debug > 0);
 
-      my $button = 
-         $self->{Text_var}->Button(
-            -text=>$butt_string,
-            -padx=>0,
-            -pady=>0,
-            -command=>sub{ $self->{Main_window}->Busy;
-                           $self->who_what( 1,
-                                            $l_osuser,
-                                            $l_username,
-                                            $l_sid
-                                          );
+      print STDERR "who_hold: l_pid_title >$l_pid_title<\n" 
+         if ($main::debug > 0);
 
-                           $self->{Main_window}->Unbusy }
-                                  );
+      $scrllist_str = "$l_hold_title:$l_username," .
+                      "$l_os_title:$l_osuser," .
+                      "$l_ser_title:$l_serial," .
+                      "$l_sid_title:$l_sid," .
+                      "$l_pid_title:$l_pid";
 
-      $self->{Text_var}->window('create', 'end',-window=>$button);
-      $self->{Text_var}->insert('end', "\n");
+      print STDERR "who_hold: scrllist_str>$scrllist_str<\n" 
+         if ($main::debug > 0);
+
+      $scroll_box->insert('end', $scrllist_str);
    }
    $sth->finish;
+
+   if ($l_counter == 1){
+      $scroll_box->bind(
+   
+            '<Double-1>', 
+            sub{  $self->{Main_window}->Busy;
+                  my @first_string = split(',', $scroll_box->get('active') );
+   
+                  print STDERR "who_hold: first_string>@first_string<\n" 
+                     if ($main::debug > 0);
+   
+                  my @v_osuser = split('\:', $first_string[1]);
+                  my @v_username = split('\:', $first_string[0]);
+                  my @v_sid = split('\:', $first_string[2]);
+   
+                  print STDERR "who_hold: v_osuser  >$v_osuser[1]<\n" 
+                     if ($main::debug > 0);
+                  print STDERR "who_hold: v_username>$v_username[1]<\n" 
+                     if ($main::debug > 0);
+                  print STDERR "who_hold: v_sid     >$v_sid[1]<\n" 
+                     if ($main::debug > 0);
+   
+                  $self->who_what( 1,
+                                   $v_osuser[1],
+                                   $v_username[1],
+                                   $v_sid[1]
+                                 );
+                  $self->{Main_window}->Unbusy
+               }
+                       );
+      $self->{Text_var}->insert('end', "\n");
+   }
+
+   # And finally, thank goodness, the actual report.
+
+   $self->show_sql( $cm , $main::lg{who_hold} );
 }
 
 sub mts_mem
@@ -2217,15 +2307,16 @@ sub mts_mem
    # and providing secondary button to reveal further stats
 
    my $cm = $self->f_str( 'sess_curr_max_mem' , '1' );
-   $self->show_sql( $cm , $main::lg{mts_mem} );
 
    my $l_counter = 0;
 
-   my $button;
-   my $butt_string;
+   my $who_what_str;
 
    my $l_stat;
    my $l_stat_title;
+
+   my $scroll_label;
+   my $scroll_box;
 
    my @res;
    my @title_values;
@@ -2244,33 +2335,58 @@ sub mts_mem
          $l_stat_title = $title_values[0];
 
          $l_counter = 1;
+
+         $scroll_label = 
+            $self->{Text_var}->Label( 
+               -text=>"$main::lg{doub_click}",
+               -relief=>'raised'
+                                    );
+
+         $scroll_box =
+            $self->{Text_var}->ScrlListbox(-width=>40,
+                                           -height=>3,
+                                           -background=>$main::ec,
+                                           -foreground=>$main::fc
+                                          );
+
+         print STDERR "mts_mem: scroll_box>$scroll_box<\n" 
+            if ($main::debug > 0);
+
+         $self->{Text_var}->windowCreate('end',-window=>$scroll_label);
+         $self->{Text_var}->insert('end', "\n");
+
+         $self->{Text_var}->windowCreate('end',-window=>$scroll_box);
+         $self->{Text_var}->insert('end', "\n");
       } 
 
       $l_stat = $res[0];
 
-      my $who_what_title = "${l_stat_title}:$l_stat";
-
-      $butt_string = "$main::lg{see_sql}   " .
-                     $who_what_title;
-
-      my $button = 
-         $self->{Text_var}->Button(
-            -text=>$butt_string,
-            -padx=>0,
-            -pady=>0,
-            -command=>sub{ $self->{Main_window}->Busy;
-                           $self->who_what( 2,
-                                            $l_stat,
-                                            $who_what_title
-                                          );
-
-                           $self->{Main_window}->Unbusy }
-                                  );
-
-      $self->{Text_var}->window('create', 'end',-window=>$button);
-      $self->{Text_var}->insert('end', "\n");
+      $who_what_str = "${l_stat_title}:$l_stat";
+      $scroll_box->insert('end', $who_what_str);
    }
    $sth->finish;
+
+   if ($l_counter == 1){
+      $scroll_box->bind(
+   
+            '<Double-1>', 
+            sub{  $self->{Main_window}->Busy;
+                  my @stat_str = split('\:', $scroll_box->get('active') );
+   
+                  print STDERR "mts_mem: stat_str>@stat_str<\n" 
+                     if ($main::debug > 0);
+   
+                  $self->who_what( 2,
+                                   $stat_str[1]
+                                 );
+                  $self->{Main_window}->Unbusy
+               }
+                       );
+   
+      $self->{Text_var}->insert('end', "\n");
+   }
+   $self->show_sql( $cm , $main::lg{mts_mem} );
+   
 }
 
 sub do_a_generic {
@@ -2336,15 +2452,33 @@ sub do_a_generic {
    print L_TEXT "\n\n  ";
 
    my @b;
-   $b[0] = $l_txt->Button(-text=>$main::ssq,-command=>sub{$self->see_sql($d,$cm)});
+   $b[0] = $l_txt->Button( -text=>$main::ssq,
+                           -command=>sub{$self->see_sql($d,$cm)}
+                         );
+
    $l_txt->window('create', 'end',-window=>$b[0]);
 
-   if ($l_hlst eq 'Tables'){
+   if ( ($l_hlst eq 'Tables') || ($l_hlst eq 'Indexes') ){
       print L_TEXT "\n\n  ";
-      my(@tab_options) = 
-         qw/Indexes Table_Constraints Triggers Comments/;
+
       my $i = 1;
-      foreach ('Indexes','Table_Constraints','Triggers','Comments'){
+      my @tablist;
+
+      if ($l_hlst eq 'Tables') {
+
+         @tablist = ('Tab_FreeSpace', 
+                     'Tab_Indexes',
+                     'Table_Constraints',
+                     'Triggers',
+                     'Comments');
+      }
+      elsif ($l_hlst eq 'Indexes') {
+
+         @tablist = ('Index_FreeSpace');
+      }
+
+      foreach ( @tablist ) {
+
          my $this_txt = $_;
 
          $b[$i] = 
@@ -2360,40 +2494,42 @@ sub do_a_generic {
       }
       print L_TEXT "\n\n  ";
 
-      $b[$i] = 
-         $l_txt->Button(-text=>$main::lg{form},
-                        -command=>
-                           sub{$d->Busy;
+      if ($l_hlst eq 'Tables') {
+         $b[$i] = 
+            $l_txt->Button(-text=>$main::lg{form},
+                           -command=>
+                              sub{$d->Busy;
+   
+      print STDERR "\ndo_a_gen form: d    >$d<\n" if ($main::debug > 0);
+      print STDERR "do_a_gen form: owner  >$owner<\n" if ($main::debug > 0);
+      print STDERR "do_a_gen form: generic>$generic<\n\n" if ($main::debug > 0);
+  
+                                  $self->univ_form($d,
+                                                   $owner,
+                                                   $generic,
+                                                   'form');
+                                  $d->Unbusy }
+                          );
 
-   print STDERR "\ndo_a_gen form: d       >$d<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen form: owner   >$owner<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen form: generic >$generic<\n\n" if ($main::debug > 0);
+         $l_txt->window('create', 'end',-window=>$b[$i]);
+         $i++;
+         print L_TEXT " ";
 
-                               $self->univ_form($d,
-                                                $owner,
-                                                $generic,
-                                                'form');
-                               $d->Unbusy }
-                       );
-
-      $l_txt->window('create', 'end',-window=>$b[$i]);
-      $i++;
-      print L_TEXT " ";
-
-      $b[$i] = 
-         $l_txt->Button(
-            -text=>$main::lg{build_index},
-            -command=> sub{$d->Busy;
-
-   print STDERR "\ndo_a_gen index: d       >$d<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen index: owner   >$owner<\n" if ($main::debug > 0);
-   print STDERR "do_a_gen index: generic >$generic<\n\n" if ($main::debug > 0);
-
-                           $self->univ_form($d,$owner,$generic,'index');
-                           $d->Unbusy }
-                       );
-
-      $l_txt->window('create','end',-window=>$b[$i]);
+         $b[$i] = 
+            $l_txt->Button(
+               -text=>$main::lg{build_index},
+               -command=> sub{$d->Busy;
+   
+      print STDERR "\ndo_a_gen inx: d       >$d<\n" if ($main::debug > 0);
+      print STDERR "do_a_gen inx: owner   >$owner<\n" if ($main::debug > 0);
+      print STDERR "do_a_gen inx: generic >$generic<\n\n" if ($main::debug > 0);
+   
+                              $self->univ_form($d,$owner,$generic,'index');
+                              $d->Unbusy }
+                          );
+   
+         $l_txt->window('create','end',-window=>$b[$i]);
+      }
    } elsif ($l_hlst eq $main::lg{views}){
       print L_TEXT "\n\n  ";
 

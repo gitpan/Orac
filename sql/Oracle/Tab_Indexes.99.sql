@@ -5,11 +5,11 @@
 
 declare
 cursor dba_indexes_csr
-    (cp_owner varchar2,cp_index varchar2) is
+    (cp_owner varchar2,cp_table varchar2) is
     select *
       from sys.dba_indexes
      where table_owner=cp_owner
-       and index_name=cp_index
+       and table_name=cp_table
       order by uniqueness desc , index_name;
  cursor dba_tab_ind_cols_csr
     (cp_owner varchar2,cp_table varchar2,cp_index varchar2) is
@@ -20,7 +20,7 @@ cursor dba_indexes_csr
        and index_name=cp_index
       order by column_position;
  l_owner varchar2(255);
- l_index varchar2(255);
+ l_table varchar2(255);
  l_dummy number;
  l_counter number;
  l_comma_bit varchar2(10);
@@ -67,10 +67,10 @@ begin
 end orac_chop;
 begin
    l_owner := ?;
-   l_index := ?;
-   l_dummy := orac_write('/* Index '||l_owner||'.'||
-                         l_index||' */');
-   for index_row in dba_indexes_csr (l_owner,l_index) loop
+   l_table := ?;
+   l_dummy := orac_write('/* Indexes on '||l_owner||'.'||
+                         l_table||' */');
+   for index_row in dba_indexes_csr (l_owner,l_table) loop
       if ((index_row.uniqueness = 'UNIQUE') or
           (index_row.uniqueness = 'BITMAP')) then
           l_index_line := ' '||index_row.uniqueness||' ';
@@ -81,9 +81,9 @@ begin
       l_dummy := orac_write(chr(10)||'create'||l_index_line||
                             'index '||
                             l_owner||'.'||index_row.index_name||' on'||
-                            chr(10)||l_owner||'.'||index_row.table_name||' (');
+                            chr(10)||l_owner||'.'||l_table||' (');
       l_counter:=0;
-      for ind_col_row in dba_tab_ind_cols_csr(l_owner,index_row.table_name, 
+      for ind_col_row in dba_tab_ind_cols_csr(l_owner,l_table, 
                                               index_row.index_name) loop
          if (l_counter = 0) then
             l_comma_bit := ' ';

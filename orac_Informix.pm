@@ -1,5 +1,7 @@
 use strict;
+
 #use pretty_print; # for serious debugging
+
 package orac_Informix;
 require orac_Base;
 @orac_Informix::ISA = qw{orac_Base};
@@ -424,7 +426,8 @@ sub generic_hlist
    $g_hlvl = 1;
 
    my $save_cb = $self->{Database_conn}->{ChopBlanks};
-   $g_mw = $self->{Main_window}->DialogBox(-title=>"$g_hlst", -buttons => ["OK"]);
+   $g_mw = $self->{Main_window}->DialogBox(-title=>"$g_hlst", 
+                                           -buttons => ["OK"]);
    $hlist = $g_mw->Scrolled('HList', 
                             '-drawbranch'     => 1, 
                             '-separator'      => $gen_sep,

@@ -22,10 +22,10 @@ sub new
    # save off args...
    # or other encapsulated values, these do NOT inherit!
 
-   $self->{Version} = "1.1.5";
    $self->{Database_type} = $_[0];
    $self->{Main_window} = $_[1];
    $self->{Text_var} = $_[2];
+   $self->{Version} = $_[3];
    $self->{dont_need_sys} = 0;
    $self->{dont_need_ps} = 0;
 
@@ -639,7 +639,9 @@ sub generic_hlist
    $g_hlvl = 1;
 
    my $save_cb = $self->{Database_conn}->{ChopBlanks};
-   $g_mw = $self->{Main_window}->DialogBox(-title=>"$g_hlst", -buttons => ["OK"]);
+   $g_mw = $self->{Main_window}->DialogBox( -title=>"$g_hlst", 
+                                            -buttons => ["OK"]
+                                          );
    $hlist = $g_mw->Scrolled('HList', 
                             '-drawbranch'     => 1, 
                             '-separator'      => $gen_sep,

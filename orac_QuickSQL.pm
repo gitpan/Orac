@@ -13,7 +13,7 @@ sub quick_sql {
 
    my $dmb = $main::swc{quick_sql}->Frame->pack(@exp_lay);
 
-   my $orac_li = $main::swc{quick_sql}->Pixmap(-file=>'img/orac.bmp');
+   my $orac_li = $main::swc{quick_sql}->Photo(-file=>'img/orac.gif');
 
    $dmb->Label(  -image=>$orac_li,
                  -borderwidth=>2,

@@ -22,6 +22,9 @@ casc_command^0^0^usergrant^$main::current_db->generic_hlist^'UserGrants'+'.'^
 casc_command^0^0^rols^$main::current_db->generic_hlist^'Roles'+'.'^
 casc_command^0^0^rolegrnts^$main::current_db->generic_hlist^'RoleGrants'+'.'^
 casc_command^0^0^profiles^$main::current_db->generic_hlist^'Profiles'+'.'^
+cascade^logical_struct^
+casc_command^0^0^tabsp^$main::current_db->generic_hlist^'Tablespaces'+'.'^
+casc_command^0^0^rollback^$main::current_db->generic_hlist^'Rollbacks'+'.'^
 separator^
 cascade^pl_sql^
 casc_command^0^0^procs^$main::current_db->generic_hlist^'Procedures'+'.'^
@@ -63,7 +66,7 @@ command^addr_orac^0^spec_addrss^$main::current_db->addr_orac^^
 command^sids_orac^0^spec_sids^$main::current_db->sids_orac^^
 Menubutton^lck^
 command^0^1^lcks_held^$main::current_db->show_sql^$main::current_db->f_str('lock_orac','1')+$main::lg{lcks_held}^
-command^0^1^who_hold^$main::current_db->who_hold^^
+command^0^0^who_hold^$main::current_db->who_hold^^
 command^0^1^who_accs_obj^$main::current_db->show_sql^$main::current_db->f_str('lock_objects','1')+$main::lg{who_accs_obj}^
 command^0^1^rollbk_lcks^$main::current_db->show_sql^$main::current_db->f_str('rollback_locks','1')+$main::lg{rollbk_lcks}^
 command^0^1^sess_wt_stats^$main::current_db->tune_wait^^
@@ -89,7 +92,7 @@ casc_command^0^1^db_info^$main::current_db->show_sql^$main::current_db->f_str('d
 casc_command^0^1^vers_info^$main::current_db->show_sql^$main::current_db->f_str('vdoll_version','1')+$main::lg{vers_info}^
 casc_command^0^1^sh_prms^$main::current_db->show_sql^$main::current_db->f_str('vdoll_param_simp','1')+$main::lg{sh_prms}^
 cascade^mts^
-casc_command^0^1^mts_mem^$main::current_db->mts_mem^^
+casc_command^0^0^mts_mem^$main::current_db->mts_mem^^
 casc_command^0^1^mts_bzy^$main::current_db->show_sql^$main::current_db->f_str('dispatch_stuff','1')+$main::lg{mts_bzy}^
 casc_command^0^1^mts_wt_disp^$main::current_db->show_sql^$main::current_db->f_str('dispatch_stuff','2')+$main::lg{mts_wt_disp}^
 casc_command^0^1^mts_wait_srv^$main::current_db->show_sql^$main::current_db->f_str('dispatch_stuff','3')+$main::lg{mts_wait_srv}^

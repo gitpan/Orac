@@ -23,18 +23,22 @@
 
 
 package orac_Shell;
-@ISA = qw{Shell::Do};
+@ISA = qw{Shell::Do Shell::Grid};
 
 use Exporter;
 
 use Tk::Pretty;
 use Shell::Do;
+use Shell::Grid;
+use DBI::Format;
+use Data::Dumper;
 
 use strict;
 
 my ($sql_txt, $sql_entry_txt);
 my ($rslt_txt, $rslt_entry_txt);
 
+my ($opt_row_dis_c, $opt_dis_grid);
 my $entry_txt;
 my %color_ball;
 
@@ -81,13 +85,6 @@ sub dbish_open {
 		$dbiwd->deiconify();
 		$dbiwd->raise();
 
-		# If the auto commit is on, set the ball to green, else red.
-		# This is adjusted each time the window is entered. 
-		if($self->{dbh}->{AUTO_COMMIT}) {
-			$auto_ball->configure( -image => $color_ball{green} );
-		} else {
-			$auto_ball->configure( -image => $color_ball{red} );
-		}
 	} else { 
 		# Create a Toplevel window under the curren main.
 
@@ -111,34 +108,69 @@ sub dbish_open {
 
 		$sf->Label( -textvariable => \$dbistatus )->pack(-side => 'left');
 
-		$dbistatus = "Creating Close button";
-
-		$dbiwd->Button( -text => "Close",
-			-command => sub { $dbiwd->withdraw;
-			$self->{mw}->deiconify();
-			$main::sub_win_but_hand{dbish}->configure(-state=>'active');
-     }
-			      )->pack( -side => "bottom" ); #'
 
 		$dbistatus = "Creating menu bar";
 		my $f = $dbiwd->Frame( -relief => 'ridge', -borderwidth => 2 );
 		$f->pack( -side => 'top', -anchor => 'n', -expand => 1, -fill => 'x' );
 
 		# Put the logo on the menu bar.
-		my $orac_logo = $dbiwd->Pixmap(-file=>'img/orac.bmp');
+		my $orac_logo = $dbiwd->Photo(-file=>'img/orac.gif');
 		$f->Label(-image=> $orac_logo, -borderwidth=> 2,
 			-relief=> 'flat')->pack(  -side=> 'left', -anchor=>'w');
 
 		# Create a menu bar.
                 my @menus;
 		foreach (qw/File Edit Options Help/) {
-			push( @menus, $f->Menubutton( -text => $_ ) );
+			push( @menus, $f->Menubutton( -text => $_ , -tearoff => 0 ) );
 		}
 
-		$menus[3]->pack(-side => 'right' );
-		$menus[0]->pack(-side => 'left' );
-		$menus[1]->pack(-side => 'left' );
-		$menus[2]->pack(-side => 'left' );
+		$menus[3]->pack(-side => 'right' ); # Help
+		$menus[0]->pack(-side => 'left' );  # File
+		$menus[1]->pack(-side => 'left' );  # Edit
+		$menus[2]->pack(-side => 'left' );  # Options
+
+		#
+		# Add some options to the menus.
+		#
+		# File menu
+		$menus[0]->AddItems(
+			[ "command" => "Load", -command => sub { $self->tba } ],
+			[ "command" => "Save", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "Properties", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "Exit", -command => sub { $self->tba } ],
+		);
+
+		# About menu
+		$menus[3]->AddItems(
+			[ "command" => "Index", -command => sub { $self->tba } ],
+			"-",
+			[ "command" => "About", -command => sub { $self->tba } ],
+		);
+
+		# Options menu
+		my $opt_disp = $menus[2]->menu->Menu;
+		foreach (qw/raw neat box grid html/) {
+			$opt_disp->radiobutton( -label => $_, 
+				-variable => \$opt_dis_grid,
+				-value => $_,
+				);
+		}
+
+		$menus[2]->cascade( -label => "Display format..."); 
+		$menus[2]->entryconfigure( "Display format...", -menu => $opt_disp);
+		$opt_dis_grid = 'neat';
+
+		# Create the entries for rows returned.
+		my $opt_row = $menus[2]->menu->Menu;
+		foreach (qw/1 10 25 50 100 all/) {
+			$opt_row->radiobutton( -label => $_, -variable => \$opt_row_dis_c,
+				-value => $_ );
+		}
+		$menus[2]->cascade( -label => "Rows return..." );
+		$menus[2]->entryconfigure( "Rows return...", -menu => $opt_row);
+		$opt_row_dis_c = 'all';
 
 		# Create a button bar.
 		$dbistatus = "Creating menu button bar";
@@ -165,28 +197,26 @@ sub dbish_open {
 			-command=> sub{ $self->tba() }
 		)->pack(side=>'left');
 
-		$bf->Button( -text=> 'Red',
-			-command=> sub{ $self->red() }
-		)->pack(side=>'left');
+		$dbistatus = "Creating Close button";
 
-		$bf->Button( -text=> 'Green',
-			-command=> sub{ $self->green() }
-		)->pack(side=>'left');
+		$bf->Button( -text => "Close",
+			-command => sub { $dbiwd->withdraw;
+			$self->{mw}->deiconify();
+			$main::sub_win_but_hand{dbish}->configure(-state=>'active');
+     } )->pack( -side => "right" ); #'
 
 		# Create Text widget for command entry
 		$dbistatus = "Creating Text entry widget";
 
 		$entry_txt = $dbiwd->Scrolled( "Text", 
-			                       -relief => 'groove',
-                                               -width => 78,
-			                       -height => 20,
-                                               -cursor=>undef,
-                                               -foreground=>$main::fc,
-                                               -background=>$main::ec,
+			-relief => 'groove',
+			-width => 78,
+			-height => 10,
+			-cursor=>undef,
+			-foreground=>$main::fc,
+			-background=>$main::ec,
+		)->pack( -side => 'bottom' );
 
-                                             )->pack( -side => 'bottom' );
-
-		$entry_txt->insert('end', "Scrolled Text Widget to entry query\n" );
 
 		# Pick up the Return key ... see return_press.
 		$entry_txt->bind( "<Return>", sub { $self->return_press() } );
@@ -200,16 +230,15 @@ sub dbish_open {
 		$rslt_txt = $dbiwd->Scrolled( "Text", 
                                               -relief => 'groove',
                                               -width => 78, 
-                                              -height => 10,
+                                              -height => 20,
                                               -cursor=>undef,
                                               -foreground=>$main::fc,
                                               -background=>$main::bc,
+																							-wrap => "none",
 
 			                    )->pack( -side => 'bottom' );
 
                 $main::swc{dbish}->{text} = $rslt_txt;
-
-		$rslt_txt->insert('end', "Scrolled Text Widget to results\n" );
 
 		# Tie the windows to the file types:
 		tie (*ENTRY_TXT, 'Tk::Text', $entry_txt);
@@ -249,7 +278,7 @@ sub auto_commit {
 # Because I really dislike have to move the mouse up to the execute
 # button, if the only character on a line is /, execute the above
 # statement.
-use Data::Dumper;
+#
 sub return_press {
 	my $self = shift;
 	my $ind = $entry_txt->index( 'insert - 1 lines' );
@@ -257,8 +286,7 @@ sub return_press {
 	my $txt = $entry_txt->get( $ind, 'insert' );
 	chomp $txt;
 	# The previously entered line is only a /, exeucte.
-	$dbistatus = "Return key pressed: " . $txt . " ($ind) ($end)";
-	if ($txt =~ m:^/$:) {
+	if ($txt =~ m:[/;]$:) {
 		$button_exe->invoke();
 	}
 }
@@ -275,12 +303,20 @@ sub dbish_clear {
 
 	$rslt_txt->delete( "1.0", 'end' );
 	$entry_txt->delete( "1.0", 'end' );
+	$self->release;
 }
 	
 
 sub dbish {
 	my $self = shift;
    return;
+}
+
+sub opt_dis_grid {
+	my $self = shift;
+	if (! $opt_dis_grid ) {
+		$self->release();
+	}
 }
 
 # Get a file from the operating system.
@@ -309,11 +345,11 @@ sub tba {
 sub execute_sql {
 
    my $self = shift;
+
+	 $dbiwd->Busy;
 	 my $statement = $entry_txt->get("1.0", 'end' );
 	 chomp $statement;
-	 $statement =~ s:/(\s)+$::;  # Replace the last / with nothing.
-
-	 print RSLT_TXT $statement;
+	 $statement =~ s:[/;](\s)+$::;  # Replace the last / with nothing.
 	 
 	 my $dbh = $self->{dbh};
 	 unless($dbh) {
@@ -325,14 +361,21 @@ sub execute_sql {
 
 	$sth->execute;
 
-	print RSLT_TXT "Number of fields: " . $sth->{NUM_OF_FIELDS} . "\n";
-	for my $nam (@{$sth->{NAME}}) {
-		print RSLT_TXT "Column: " . $nam . "\n";
-	}
+	# print RSLT_TXT "Number of fields: " . $sth->{NUM_OF_FIELDS} . "\n";
+	#
+	# Dump return set to a grid.
+	#	
+	$dbh->{neat_maxlen} = 40004;
+	my $class = DBI::Format->formatter($opt_dis_grid);
+	my $r = $class->new($self);
+	$r->header($sth, \*RSLT_TXT, ",");
+
 	my $row;
-	while( $row = $sth->fetch ) {
-		print RSLT_TXT join( '  ', @{$row}, "\n" );
+	while( $row = $sth->fetchrow_arrayref() ) {
+		$r->row($row, \*RSLT_TXT, "," );
 	}
+	$r->trailer(\*RSLT_TXT);
 	$sth->finish;
+	$dbiwd->Unbusy;
 }
 1;

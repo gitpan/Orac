@@ -107,6 +107,7 @@ lgwr_redo_ltchs^LGWR Redo Buffer Latches^
 ln_nums^Line Numbers^
 lnks^Links^
 logdon_usrs^Current Logged on Users^
+logical_struct^Logical Structures^
 login_txt^DBA User Connection^
 lt_wtrs^Latch Waiters^
 ltchs^Latches^
@@ -161,11 +162,12 @@ oi_trig_list^Trigger listing^
 oi_triggers^Triggers^
 oi_view_dets^View details^
 oi_views^Views^
-orac_pan^Control Panel^
+orac_pan^Orac Control Panel^
 orig_exts^Original Extents^
 params^Parameters^
 pck_bods^PackageBods^
 pck_hds^PackageHeads^
+physical^Physical^
 pl_sql^PL/SQL^
 please_pick_db^Please choose your default database^
 pool_frag^Pool Fragmentation?^
@@ -179,7 +181,7 @@ quots^Quotas^
 raw_db_sql^Raw Database Component SQL^
 rec_of^Record of^
 reconn^Reconnect^
-recrt_base_sql^Recreation of Basic Database SQL for svrmgrl^
+recrt_base_sql^Recreation SQL for svrmgrl^
 reg_usrs^Registered Users on Database^
 rep^Report^
 report^REPORT^

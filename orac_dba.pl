@@ -24,6 +24,10 @@ use FileHandle;
 use Cwd;
 use Time::Local;
 use DBI;
+
+# A hunky clundgy kinda-of-a-thing
+# to handle screen resizing
+
 use Tk::DialogBox;
 use Tk::Pretty;
 use Tk::HList;
@@ -49,6 +53,8 @@ main::read_language();
 
 main::pick_up_defaults();
 
+$main::orac_version = '1.1.10';
+
 $main::hc = $main::lg{bar_col};
 $main::ssq = $main::lg{see_sql};
 $main::ec = $main::lg{def_fill_fld_col};
@@ -71,7 +77,7 @@ $main::mw = MainWindow->new();
 my(@layout_mb) = qw/-side top -padx 5 -expand no -fill both/;
 $main::mb = $main::mw->Frame->pack(@layout_mb);
 
-my $orac_li = $main::mw->Pixmap(-file=>'img/orac.bmp');
+my $orac_li = $main::mw->Photo(-file=>'img/orac.gif');
 
 $main::conn_ball{green} = $main::mw->Photo( -file => "img/grn_ball.gif" );
 $main::conn_ball{red} = $main::mw->Photo( -file => "img/red_ball.gif" );
@@ -202,7 +208,7 @@ $bb->Button(-text=>$main::lg{reconn},
 
 # Set main window title and set window icon
 
-$main::mw->title( $main::lg{orac_pan} );
+$main::mw->title( "$main::lg{orac_pan} $main::orac_version" );
 main::iconize($main::mw);
 
 # Sort out which database we're going to be working with
@@ -301,18 +307,26 @@ sub get_connected {
       if($main::orac_curr_db_typ eq 'Oracle'){
 
          print STDERR "New Oracle object\n" if ($main::debug > 0);
-         $main::current_db = orac_Oracle->new( $main::mw, $main::v_text );
+
+         $main::current_db = orac_Oracle->new( $main::mw, 
+                                               $main::v_text,
+                                               $main::orac_version );
 
       }
       elsif($main::orac_curr_db_typ eq 'Informix'){
 
-         $main::current_db = orac_Informix->new( $main::mw, $main::v_text );
+         $main::current_db = orac_Informix->new( $main::mw, 
+                                                 $main::v_text,
+                                                 $main::orac_version );
 
       }
       else {
 
          $main::current_db = 
-            orac_Base->new( 'Base', $main::mw, $main::v_text );
+            orac_Base->new( 'Base', 
+                            $main::mw, 
+                            $main::v_text,
+                            $main::orac_version );
 
       }
 
@@ -707,37 +721,20 @@ sub get_Jared_sql {
    close(JARED_FILE);
    return $cm;
 }
-sub mes {
 
-   # Orac messaging Dialogue function.  Have you
-   # ever seen a program without one of these?
+sub mes {
+   # Produce the box that contains viewable Error
 
    my $d = $_[0]->DialogBox();
-   $d->Label(text=>$_[1])->pack();
+   my $t = $d->Scrolled( 'Text',
+                         -cursor=>undef,
+                         -foreground=>$main::fc,
+                         -background=>$main::bc);
+   $t->pack(-expand=>1,-fil=>'both');
+   $t->insert('end', $_[1]);
    $d->Show;
 }
-sub orac_Show {
 
-   # The standard Dialogue "Show" functionality is a bit
-   # too clumsy for Orac.  Here we refine it's operation
-   # a little, to make window sizing a little nicer
-   # for Orac users, especially Czech ones :)
-
-   my($d) = @_;
-   my $old_focus = $d->focusSave;
-   my $old_grab = $d->grabSave;
-   my $e = $d->Subwidget("top")->pack(side=>'top',fill=>'both',expand=>'y');
-   $d->Subwidget("bottom")->pack(side=>'bottom',before=>$e,expand=>'n');
-   $d->Popup();
-   $d->grab;
-   $d->waitVisibility;
-   $d->focus;
-   $d->waitVariable(\$d->{"selected_button"});
-   $d->grabRelease;
-   $d->withdraw;
-   &$old_focus;
-   &$old_grab;
-}
 sub bc_upd {
 
    # Change the background colour on all open windows.
@@ -1259,8 +1256,8 @@ sub config_Jared_tools {
       # Now get to main dialogue and pick up the reqd. info
 
       my $d = $main::mw->DialogBox(-title=>"$title $main_inp_value",
-                             -buttons=>[ $action,
-                                         $main::lg{cancel} ]
+                                   -buttons=>[ $action,
+                                               $main::lg{cancel} ]
                             );
 
       my $l = $d->Label(-text=>$add_text . ':',
@@ -1479,8 +1476,8 @@ sub config_Jared_tools {
             if($i_count == 0){
 
                $d = $main::mw->DialogBox(-title=>$title,
-                                   -buttons=>[ $action,
-                                               $main::lg{cancel} ]
+                                         -buttons=>[ $action,
+                                                     $main::lg{cancel} ]
                                   );
 
                $t_l = $d->Label(-text=>$message,
@@ -1762,7 +1759,7 @@ sub iconize {
    # to it.
 
    my($w) = @_;
-   my $icon_img = $w->Photo('-file' => 'img/orac_med.gif');
+   my $icon_img = $w->Photo('-file' => 'img/orac.gif');
    $w->Icon('-image' => $icon_img);
 }
 sub pick_up_defaults {
@@ -1811,3 +1808,7 @@ BEGIN {
       }
    };
 }
+
+# my $e = $cw->Subwidget("top")->pack(side=>'top',fill=>'both',expand=>'y');
+# $cw->Subwidget("bottom")->pack(side=>'bottom',before=>$e,expand=>'n');
+
