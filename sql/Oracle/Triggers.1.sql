@@ -1,2 +1,2 @@
-select distinct owner from all_triggers
+select distinct owner from dba_triggers
 order by owner

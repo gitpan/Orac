@@ -1,3 +1,3 @@
 select distinct tablespace_name
-from all_tablespaces
+from dba_tablespaces
 order by 1

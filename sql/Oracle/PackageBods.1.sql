@@ -1,4 +1,4 @@
 select distinct owner
-from   all_source
+from   dba_source
 where  type = 'PACKAGE'
 order by owner

@@ -1,2 +1,2 @@
-select distinct owner from all_views
+select distinct owner from dba_views
 order by owner

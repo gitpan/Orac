@@ -1,3 +1,3 @@
 select distinct rowner
-from   all_refresh
+from   dba_refresh
 order by rowner

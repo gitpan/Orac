@@ -1,3 +1,3 @@
 select distinct owner
-from   all_db_links
+from   dba_db_links
 order by owner

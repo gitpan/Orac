@@ -49,7 +49,7 @@ main::splash_screen(0);
 # before the main loop.
 
 use DBI '1.13';
-$VERSION = '1.220';
+$VERSION = '1.230';
 
 # Now enter strict mode
 use strict;
@@ -540,7 +540,9 @@ sub back_orac {
    # options in the main configuration file
 
    if (defined($main::current_db)){
+      $main::conn_comm_flag = 1;
       my $rc  = $main::dbh->disconnect;
+      $main::conn_comm_flag = 0;
    }
    main::fill_defaults(  $main::orac_curr_db_typ,
                          $main::sys_user,
@@ -633,7 +635,9 @@ sub get_connected {
       $main::current_db->must_f_clr();
       $main_label->configure( -image => $main::conn_ball{red} );
       $main::l_top_t = $main::lg{disconn};
+      $main::conn_comm_flag = 1;
       my $rc = $main::dbh->disconnect;
+      $main::conn_comm_flag = 0;
       undef $main::current_db;
       $auto_log = 0;
    }
@@ -1135,7 +1139,9 @@ sub get_db {
    $main::current_db->init2( $main::dbh );
 
    # Now sort out Jared's tools and configurable menus
-   if ($main::orac_orig_db ne $main::orac_curr_db_typ){
+
+   if (($main::orac_orig_db ne $main::orac_curr_db_typ) ||
+       ($main::orac_curr_db_typ =~ /Oracle/)){
 
       # We do this, if either we're into the program for the first time,
       # or the user has changed the database type
@@ -1358,8 +1364,12 @@ sub config_menu {
 
    my $menu_file_name = "menu.txt";
    if ($main::orac_curr_db_typ eq "Oracle"){
-      if (!$main::current_db->dba_user){
-         $menu_file_name = "menu_dev.txt";
+      if (!$main::current_db->dba_user){                # PNG
+         if ($main::current_db->png_user){              # PNG
+            $menu_file_name = "menu_dev_png.txt";       # PNG
+         } else {                                       # PNG
+            $menu_file_name = "menu_dev.txt";           # PNG
+         }                                              # PNG
       }
    }
    my $file = "$FindBin::RealBin/menu/$main::orac_curr_db_typ/" .

@@ -1,4 +1,4 @@
 select name
-from   all_snapshots
+from   dba_snapshots
 where  UPPER(owner) = UPPER( ? )
 order by name

@@ -1,4 +1,5 @@
 about_orac^About Orac & Terms of Use^
+allobjcnt^All Object Count^
 apply^Apply^
 auto_clear^Automatic Clearance of Screen, Press Switch for Manual^
 ind_crt^Create Index^
@@ -22,6 +23,7 @@ cancel^Cancel^
 casc_text^Cascade Text^
 cascade^Cascade^
 change_dbtyp^Change DB^
+chart^Chart^
 choose_butt^Choose Button^
 choose_casc^Choose Cascade^
 clear^Clear Screen^
@@ -133,6 +135,8 @@ indexs^Indexes^
 info^Information^
 inval_obj^Invalid Object SQL^
 investgn^Investigation^
+invallobjcnt^Invalid All Object Count^
+invobjcnt^Invalid User Object Count^
 lck^Lock^
 lcks_held^Locks Currently Held^
 lgwr^Log Writer^
@@ -175,6 +179,7 @@ no_val_def^No Value Defined^
 normal^Normal^
 not_conn^Not Connected^
 obj^Object^
+objcnt^User Object Count^
 oi_blobs^Blobs^
 oi_chunks^Chunks^
 oi_col_attbs^Column attributes^
@@ -290,6 +295,7 @@ tabsp_frag^Tablespace Fragmentation^
 tabsp_sp_shorts^Tablespace Space Shortages^
 tabsp_tune^Tablespace Tuning^
 tabsp_txt^Tablespace Text Report^
+tabspace^Free Tablespace^
 tape^Tape^
 tbl_crt^Create Table^
 tbl_rev^Reverse Engineer All Objects in the Database^

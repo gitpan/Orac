@@ -1,3 +1,3 @@
 select distinct owner
-from   all_snapshots
+from   dba_snapshots
 order by owner

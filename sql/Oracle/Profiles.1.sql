@@ -1,3 +1,3 @@
 select distinct profile
-from   all_profiles
+from   dba_profiles
 order by 1

@@ -1,4 +1,4 @@
 select rname
-from   all_refresh
+from   dba_refresh
 where  UPPER(rowner) = UPPER( ? )
 order by rname

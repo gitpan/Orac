@@ -1,3 +1,3 @@
 select distinct owner
-from all_indexes
+from dba_indexes
 order by owner

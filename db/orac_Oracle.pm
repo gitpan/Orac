@@ -28,28 +28,31 @@ my @w_titles;
 my @w_explain;
 
 my $oracle_dba_user;
+my $png_user;    # PNG
 my $view;
 
 my %l_hlst_to_type =
 (
-  Constraints  => 'constraint',
-  Functions    => 'function',
-  Indexes      => 'index',
-  Links        => 'database link',
-  PackageBods   => 'package body',
-  PackageHeads  => 'package',
-  Procedures    => 'procedure',
-  Profiles      => 'profile',
-  Roles         => 'role',
-  Rollbacks     => 'rollback segment',
-  Sequences     => 'sequence',
-  SnapshotLogs  => 'snapshot log',
-  Snapshots     => 'snapshot',
-  Synonyms      => 'synonym',
-  Tables        => 'table',
-  Tablespaces   => 'tablespace',
-  Users         => 'user',
-  Views         => 'view',
+  Constraints      => 'constraint',
+  Functions        => 'function',
+  Indexes          => 'index',
+  Index_FreeSpace  => 'index',
+  Links            => 'database link',
+  PackageBods      => 'package body',
+  PackageHeads     => 'package',
+  Procedures       => 'procedure',
+  Profiles         => 'profile',
+  Roles            => 'role',
+  Rollbacks        => 'rollback segment',
+  Sequences        => 'sequence',
+  SnapshotLogs     => 'snapshot log',
+  Snapshots        => 'snapshot',
+  Synonyms         => 'synonym',
+  Tables           => 'table',
+  Tablespaces      => 'tablespace',
+  Tab_FreeSpace    => 'table',
+  Users            => 'user',
+  Views            => 'view',
 );
 
 =head1 NAME
@@ -184,6 +187,19 @@ sub init2 {
       $oracle_dba_user = 1;
    }
 
+   $png_user = 0;                  # PNG
+   $main::conn_comm_flag = 1;      # PNG
+   eval {                          # PNG
+      require DBD::Chart;          # PNG
+      require Tk::PNG;             # PNG
+   };                              # PNG
+   if ($@) {                       # PNG
+      $png_user = 0;               # PNG
+   } else {                        # PNG
+      $png_user = 1;               # PNG
+   }                               # PNG
+   $main::conn_comm_flag = 0;      # PNG
+
    eval {
       require DDL::Oracle;
    };
@@ -200,7 +216,7 @@ sub init2 {
         DDL::Oracle->configure( 
                   dbh      => $self->{Database_conn},
                   resize   => 0,
-#                  view     => 'user',
+                  view     => $view,
                   heading  => 0,
                   prompt   => 0,
                 );
@@ -216,6 +232,11 @@ sub dba_user {
    my $self = shift;
    return $oracle_dba_user;
 }
+
+sub png_user {        # PNG
+   my $self = shift;  # PNG
+   return $png_user;  # PNG
+}                     # PNG
 
 ################ Database dependent code functions below here ##################
 
@@ -2973,10 +2994,8 @@ sub do_a_generic {
 
    if (
            $l_hlst eq 'Comments'
-        or $l_hlst eq 'Index_FreeSpace'
         or $l_hlst eq 'Refreshgroups'
         or $l_hlst eq 'RoleGrants'
-        or $l_hlst eq 'Tab_FreeSpace'
         or $l_hlst eq 'UserGrants'
       )
    {
@@ -3083,6 +3102,22 @@ sub do_a_generic {
                                  list => $aref,
                                );
      $text_lines = $obj->create ;
+   }
+   elsif (
+              $l_hlst eq 'Index_FreeSpace'
+           or $l_hlst eq 'Tab_FreeSpace'
+         )
+   {
+     my $obj = DDL::Oracle->new(
+                                 type => $l_hlst_to_type{ $l_hlst },
+                                 list => [
+                                           [
+                                             $owner,
+                                             $generic || $owner,
+                                           ]
+                                         ],
+                               );
+     $text_lines = $obj->show_space ;
    }
    else
    {
@@ -3555,6 +3590,141 @@ sub dev_tables {
               $window->Unbusy;
             }
                                    );
+   }
+}
+
+=head2 dev_png
+
+Creates various graphs and inserts them into a pop-up screen.
+
+=cut
+
+sub dev_png {
+   my $self = shift;
+   my ( $graph_type ) = @_;
+
+   # Creates Tables Viewer window
+
+   my $cm = $self->f_str('dev_png',$graph_type);
+   my $sth = $self->{Database_conn}->prepare( $cm ) ||
+                die $self->{Database_conn}->errstr;
+   $sth->execute;
+   my $detected = 0;
+
+   my @res;
+   my $window;
+
+   my $dbh;
+   my $rsth;
+   my $csth;
+   my $title_element;
+   my $x_axis;
+   my $y_axis;
+
+   while (@res = $sth->fetchrow) {
+      $detected++;
+
+      if($detected == 1){
+
+         $dbh = DBI->connect('dbi:Chart:');
+
+         $dbh->do('CREATE TABLE bars (objtype CHAR(20), objcnt FLOAT)');
+         $csth = $dbh->prepare('INSERT INTO bars VALUES( ?, ?)');
+
+         $window = $self->{Main_window}->Toplevel();
+
+         if (($graph_type =~ /OBJCNT/)) {
+            $title_element = "User Objects";
+            $x_axis = "Object Type";
+            $y_axis = "Object Count";
+         } elsif (($graph_type =~ /ALLOBJCNT/)) {
+            $title_element = "All Objects";
+            $x_axis = "Object Type";
+            $y_axis = "Object Count";
+         } elsif (($graph_type =~ /INVALLOBJCNT/)) {
+            $title_element = "All Invalid Objects";
+            $x_axis = "Invalid Object Type";
+            $y_axis = "Invalid Object Count";
+         } elsif (($graph_type =~ /INVOBJCNT/)) {
+            $title_element = "Invalid User Objects";
+            $x_axis = "Invalid Object Type";
+            $y_axis = "Invalid Object Count";
+         } elsif (($graph_type =~ /TABSPACE/)) {
+            $title_element = "Free TableSpace";
+            $x_axis = "TableSpace";
+            $y_axis = "Free Space (MB)";
+         } else {
+            $title_element = $graph_type;
+            $x_axis = "X-Axis";
+            $y_axis = "Y-Axis";
+         }
+
+         $window->title("Orac " . $title_element . " Chart");
+
+         my $dev_menu;
+         my $balloon;
+         $self->create_balloon_bars(\$dev_menu, \$balloon, \$window, );
+         $self->window_exit_button(\$dev_menu, \$window, 1, \$balloon, );
+
+         my(@dev_lay) = qw/-side top -padx 5 -expand yes -fill both/;
+         my $dev_top = $window->Frame->pack(@dev_lay);
+
+         $window->{canv} =
+            $dev_top->Scrolled( 'Canvas',
+                                -relief=>'sunken',
+                                -bd=>2,
+                                -width=>730,
+                                -height=>330,
+                                -background=>$main::bc
+                              );
+         main::iconize($window);
+      }
+      $csth->execute($res[0], $res[1]);
+   }
+   $sth->finish;
+
+   if($detected == 0){
+      $self->{Main_window}->Busy(-recurse=>1);
+      main::mes($self->{Main_window},$main::lg{no_rows_found});
+      $self->{Main_window}->Unbusy;
+   } else {
+      $csth->finish;
+      $rsth = $dbh->prepare(
+         'SELECT BARCHART FROM bars ' .
+         'WHERE WIDTH=700 AND HEIGHT=300 ' .
+         'AND X-AXIS=\'' . $x_axis . 
+         '\' AND Y-AXIS=\'' . $y_axis . '\' AND ' .
+         'TITLE = \'' . $title_element . '\' AND 3-D=1 AND SHOWVALUES=1 AND ' .
+         'COLOR=(lred, lgreen, lorange, marine, pink, yellow, lpurple)');
+
+         # white, lgray, gray, dgray, black, 
+         # lblue, blue, dblue, gold, lyellow, yellow, 
+         # dyellow, lgreen, green. dgreen,
+         # lred, red, dred, lpurple, purple, 
+         # dpurple, lorange, orange, pink, 
+         # dpink, marine, cyan, lbrown, dbrown. 
+      
+      my $buf;
+
+      $rsth->execute;
+      $rsth->bind_col(1, \$buf);
+      $rsth->fetch;
+      open OUTF, ">$FindBin::RealBin/img/dev_png.png";
+      binmode OUTF;
+      print OUTF $buf;
+      close OUTF;
+      $rsth->finish;
+      $dbh->do('DROP CHART bars');
+      $dbh->disconnect;
+      
+      my $img = 
+         $window->{canv}->Photo( -file => "$FindBin::RealBin/img/dev_png.png",
+                                 -format => 'png');
+      $window->{canv}->create( 'image',5,5, 
+                               '-anchor' => 'nw', 
+                               '-image'  => $img );
+      
+      $window->{canv}->pack(-expand=>'yes',-fill=>'both');
    }
 }
 

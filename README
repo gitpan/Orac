@@ -3,6 +3,9 @@ Orac  --  DBA GUI tool for Perl/Tk; Oracle, Informix and Sybase
 NB: ....Oracle Development Usage Gradually Being Added...
     .........By Andy Duncan & Richard Sutherland.........
 
+NB: ....Further Oracle DBA Development Gradually Being Added...
+    ..................By Richard Sutherland....................
+
 THIS IS A DEVELOPMENT VERSION OF ORAC, AND AN ATTEMPT TO ADD ORACLE 
 DEVELOPMENT TOOLS TO ORAC, AS WELL AS DBA ONES.  FOR STABLE DBA USAGE,
 UNTIL FURTHER NOTICE, USE THE Orac-1.2.0 DOWNLOAD.
@@ -59,7 +62,6 @@ IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
 NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 
-
 PREREQUISITES (For Everybody)
 
    At least: perl5.005_02
@@ -78,6 +80,27 @@ PREREQUISITES (For Everybody)
 
    For an indefinite period, the latest DDL::Oracle package will
    come automatically with the Orac download.  This may change.
+
+ORACLE DEVELOPER GRAPHICAL OPTION:
+
+   If you have DBD-Chart installed, Oracle developers also acquire
+   a graphical option automatically.
+
+   1.  You can get hold of DBD-Chart from:
+
+       => http://home.earthlink.net/~darnold/dbdchart/
+
+       This module also requires the installation of GD.pm and the full
+       instructions for installing this are within the DBD-Chart
+       documentation. Hopefully GD.pm will eventually become part
+       of the standard Perl distribution.
+    
+   2.  Use of DBD-Chart also requires the separate Perl/Tk installation of
+       Tk::PNG (at least version 2.005) which is available from:
+    
+       => http://www.perl.com/CPAN-local/modules/by-module/Tk/
+    
+       Hopefully Tk::PNG will be part of standard Perl/Tk shortly.
 
 LINUX USERS:
 
@@ -350,6 +373,16 @@ Orac-1.2.2  Much more embodiement of Richard Sutherland's DDL-Oracle
             detection of DBA or normal development user.  Wishlists
             are welcome of where Oracle Development functionality
             should go next.  We're just making this up as we go along! :-)
+Orac-1.2.3  On the Oracle DBA side, Richard Sutherland has added a new 
+            instance method -- show_space -- to DDL::Oracle.  It produces 
+            a space analysis report similar to the old 
+            Tab_FreeSpace.99.sql and Index_FreeSpace.99.sql.  These are
+            now no longer called, therefore we move closer to full GPL.
+            On the VERY experimental Oracle developer side of life, Andy
+            has added further developer options based on DDL-Oracle,
+            and a graphics option, if Perl has GD, Tk::PNG and DBD::Chart
+            installed.  AD fixed some disconnection warning errors
+            and the menu switches between Oracle developer and DBA.
 
 EXTRA NOTES FOR LINUX USERS:
 
